@@ -6,12 +6,14 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { id } = context.params;
+
   const { appointeeToken } = await req.json();
 
   const appointment = await prisma.appointment.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!appointment) {
