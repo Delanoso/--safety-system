@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+/* -------------------------------------------------------
+   GLOBAL THEME — LIGHT MODE ONLY
+------------------------------------------------------- */
+:root {
+  /* Background: static teal → purple gradient */
+  --background: linear-gradient(to right, #4fd1c5, #805ad5);
+
+  /* Text color */
+  --foreground: #000000;
+
+  /* Card background: white glassmorphic */
+  --card-bg: rgba(255, 255, 255, 0.40);
+  --card-border: rgba(255, 255, 255, 0.30);
+
+  --gold: #d4af37;
+
+  /* -------------------------------------------------------
+     GLOBAL BUTTON COLORS
+     (Used across ALL pages)
+  ------------------------------------------------------- */
+
+  /* Save buttons (green) */
+  --button-save-bg: #16a34a;      /* Green 600 */
+  --button-save-text: #ffffff;
+
+  /* Delete buttons (red) */
+  --button-delete-bg: #dc2626;    /* Red 600 */
+  --button-delete-text: #ffffff;
+
+  /* Download-to-PDF buttons (orange) */
+  --button-pdf-bg: #ea580c;       /* Orange 600 */
+  --button-pdf-text: #ffffff;
+
+  /* Optional: neutral button */
+  --button-neutral-bg: #1e3a8a;   /* Navy */
+  --button-neutral-text: #ffffff;
+}
+
+/* -------------------------------------------------------
+   APPLY THEME TO BODY
+------------------------------------------------------- */
+body {
+  background: var(--background);
+  background-size: cover;
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* -------------------------------------------------------
+   SMOOTH TRANSITIONS
+------------------------------------------------------- */
+* {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    backdrop-filter 0.25s ease;
+}
+
+/* -------------------------------------------------------
+   GLOBAL BUTTON SYSTEM
+------------------------------------------------------- */
+
+.button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.25s ease;
+}
+
+/* Save (green) */
+.button-save {
+  background: var(--button-save-bg);
+  color: var(--button-save-text);
+}
+.button-save:hover {
+  opacity: 0.85;
+}
+
+/* Delete (red) */
+.button-delete {
+  background: var(--button-delete-bg);
+  color: var(--button-delete-text);
+}
+.button-delete:hover {
+  opacity: 0.85;
+}
+
+/* Download to PDF (orange) */
+.button-pdf {
+  background: var(--button-pdf-bg);
+  color: var(--button-pdf-text);
+}
+.button-pdf:hover {
+  opacity: 0.85;
+}
+
+/* Neutral / default button */
+.button-neutral {
+  background: var(--button-neutral-bg);
+  color: var(--button-neutral-text);
+}
+.button-neutral:hover {
+  opacity: 0.85;
+}
+
+/* -------------------------------------------------------
+   OPTIONAL ANIMATIONS
+------------------------------------------------------- */
+@keyframes fadeIn {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0 }
+  to { transform: scale(1); opacity: 1 }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.25s ease-out;
+}
+

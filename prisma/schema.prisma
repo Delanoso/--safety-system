@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Appointment {
+  id                 String   @id @default(cuid())
+  type               String
+  appointee          String
+  appointer          String
+  department         String
+  date               DateTime
+  status             String   @default("draft")
+
+  appointeeEmail     String?
+  appointerEmail     String?
+
+  appointeeSignature String?
+  appointerSignature String?
+
+  appointeeSignedAt  DateTime?
+  appointerSignedAt  DateTime?
+
+  appointeeToken     String?
+  appointerToken     String?
+}
+
+model Inspection {
+  id          String   @id        // frontend-controlled ID
+  type        String
+  department  String
+  inspector   String
+  createdAt   DateTime @default(now())
+  data        String   // JSON
+}
+
+model DailyInspection {
+  id          String   @id        // frontend-controlled ID
+  department  String
+  inspector   String
+  createdAt   DateTime @default(now())
+  data        String   // JSON: { columns, legendItems, rows }
+}
+
+model WeeklyInspection {
+  id          String   @id        // frontend-controlled ID
+  department  String
+  inspector   String
+  createdAt   DateTime @default(now())
+  data        String   // JSON: { columns, legendItems, rows }
+}
+
+model MonthlyInspection {
+  id          String   @id        // frontend-controlled ID
+  department  String
+  inspector   String
+  createdAt   DateTime @default(now())
+  data        String   // JSON: { columns, legendItems, rows }
+}
+
+model NcrReport {
+  id         String     @id @default(cuid())
+  createdAt  DateTime   @default(now())
+  department String?
+  status     String     @default("open")
+  items      NcrItem[]
+}
+
+model NcrItem {
+  id          String    @id @default(cuid())
+  description String
+  date        DateTime
+  comment     String?
+  department  String?
+  report      NcrReport @relation(fields: [reportId], references: [id])
+  reportId    String
+  images      NcrImage[]
+}
+
+model NcrImage {
+  id     String  @id @default(cuid())
+  url    String
+  item   NcrItem @relation(fields: [itemId], references: [id])
+  itemId String
+}
+
+model Incident {
+  id          String                    @id @default(cuid())
+  type        String
+  title       String
+  description String?
+  department  String?
+  employee    String?
+  employeeId  String?
+  location    String?
+  date        DateTime
+  severity    String
+  status      String                    @default("draft")
+  linkId      String?
+
+  // JSON stored as TEXT
+  details     String?
+
+  images      IncidentImage[]
+  team        InvestigationTeamMember[]   // relation to team members
+
+  company     Company?                    @relation(fields: [companyId], references: [id])
+  companyId   String?
+
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+}
+
+model IncidentImage {
+  id         String   @id @default(cuid())
+  url        String
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  incidentId String
+  createdAt  DateTime @default(now())
+}
+
+model Company {
+  id          String      @id @default(cuid())
+  name        String
+  logoUrl     String?
+  brandColor  String?
+  incidents   Incident[]
+}
+
+model InvestigationTeamMember {
+  id          String    @id @default(cuid())
+  name        String
+  designation String
+  signature   String?
+
+  incident    Incident  @relation(fields: [incidentId], references: [id])
+  incidentId  String
+
+  createdAt   DateTime  @default(now())
+}
+
+model SignatureToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  teamId      String
+  incidentId  String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+}
