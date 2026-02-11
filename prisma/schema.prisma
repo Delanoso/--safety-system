@@ -159,3 +159,34 @@ model User {
   role      String   @default("user")
   createdAt DateTime @default(now())
 }
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  section   String
+  files     File[]
+  createdAt DateTime @default(now())
+}
+
+model File {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  size      Int?
+  folderId  String
+  folder    Folder   @relation(fields: [folderId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Certificate {
+  id             Int      @id @default(autoincrement())
+  employee       String
+  certificateName String
+  certificateType String?
+  issueDate      DateTime
+  expiryDate     DateTime
+  notes          String?
+  fileUrl        String?   // Cloudinary or local storage
+  createdAt      DateTime  @default(now())
+}
+

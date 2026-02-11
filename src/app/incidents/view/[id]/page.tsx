@@ -300,6 +300,315 @@ export default function IncidentViewerPage() {
               </Section>
             </>
           )}
+
+          {/* ------------------------------------------------------- */}
+          {/* COST ANALYSIS VIEWER SECTION */}
+          {/* ------------------------------------------------------- */}
+
+          {incident.type === "cost_analysis" && (
+            <>
+              <Divider />
+              <Section title="Cost Analysis Summary">
+                <InfoGrid>
+                  <Info label="Currency" value={details.currency} bigLabel />
+                  <Info
+                    label="Grand Total"
+                    value={
+                      details.grandTotal
+                        ? `${details.currency === "USD"
+                            ? "$"
+                            : details.currency === "EUR"
+                            ? "€"
+                            : "R"
+                          } ${details.grandTotal.toFixed(2)}`
+                        : "N/A"
+                    }
+                    bigLabel
+                  />
+                </InfoGrid>
+              </Section>
+
+              {/* CLASSIFICATION */}
+              {details.classification && (
+                <>
+                  <Divider />
+                  <Section title="Incident Classification">
+                    <PillList
+                      items={Object.entries(details.classification)
+                        .filter(([_, v]) => v)
+                        .map(([k]) =>
+                          k
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (c) => c.toUpperCase())
+                        )}
+                    />
+                  </Section>
+                </>
+              )}
+
+              {/* BASIC COST INFO */}
+              {details.basic && (
+                <>
+                  <Divider />
+                  <Section title="Basic Cost Information">
+                    <InfoGrid>
+                      <Info label="Person Name" value={details.basic.personName} />
+                      <Info label="Age" value={details.basic.age} />
+                      <Info label="Date" value={details.basic.date} />
+                      <Info label="Time" value={details.basic.time} />
+                      <Info label="Department" value={details.basic.department} />
+                    </InfoGrid>
+                  </Section>
+                </>
+              )}
+
+              {/* NATURE OF INJURY */}
+              {details.natureOfInjury && (
+                <>
+                  <Divider />
+                  <Section title="Nature of Injury">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {details.natureOfInjury}
+                    </p>
+                  </Section>
+                </>
+              )}
+
+              {/* MEDICAL COSTS */}
+              {details.medicalCosts && (
+                <>
+                  <Divider />
+                  <Section title="Medical Costs">
+                    <InfoGrid>
+                      <Info
+                        label="Clinic Cost"
+                        value={details.medicalCosts.clinicCost}
+                      />
+                      <Info
+                        label="Doctor Cost"
+                        value={details.medicalCosts.doctorCost}
+                      />
+                      <Info
+                        label="Hospital Cost"
+                        value={details.medicalCosts.hospitalCost}
+                      />
+                      <Info
+                        label="Subtotal"
+                        value={`${details.currency === "USD"
+                            ? "$"
+                            : details.currency === "EUR"
+                            ? "€"
+                            : "R"
+                          } ${details.medicalCosts.subtotal.toFixed(2)}`}
+                        bigLabel
+                      />
+                    </InfoGrid>
+                  </Section>
+                </>
+              )}
+
+              {/* TIME COSTS */}
+              {details.timeCosts && (
+                <>
+                  <Divider />
+                  <Section title="Time-Based Costs">
+                    <div className="space-y-4">
+                      {details.timeCosts.rows.map((row, i) => (
+                        <div
+                          key={i}
+                          className="rounded-xl p-4"
+                          style={{
+                            background: "var(--card-bg)",
+                            border: "1px solid var(--card-border)",
+                          }}
+                        >
+                          <InfoGrid>
+                            <Info label="Description" value={row.label} />
+                            <Info label="Hours" value={row.hours} />
+                            <Info label="Rate" value={row.rate} />
+                            <Info
+                              label="Total"
+                              value={`${details.currency === "USD"
+                                  ? "$"
+                                  : details.currency === "EUR"
+                                  ? "€"
+                                  : "R"
+                                } ${(Number(row.hours) * Number(row.rate)).toFixed(
+                                  2
+                                )}`}
+                            />
+                          </InfoGrid>
+                        </div>
+                      ))}
+
+                      <p className="font-bold text-lg">
+                        Subtotal:{" "}
+                        {details.currency === "USD"
+                          ? "$"
+                          : details.currency === "EUR"
+                          ? "€"
+                          : "R"}{" "}
+                        {details.timeCosts.subtotal.toFixed(2)}
+                      </p>
+                    </div>
+                  </Section>
+                </>
+              )}
+
+              {/* ADDITIONAL COSTS */}
+              {details.additionalCosts && (
+                <>
+                  <Divider />
+                  <Section title="Additional Direct Costs">
+                    <InfoGrid>
+                      <Info
+                        label="Overtime Cost"
+                        value={details.additionalCosts.overtimeCost}
+                      />
+                      <Info
+                        label="Replacement Cost"
+                        value={details.additionalCosts.replacementCost}
+                      />
+                      <Info
+                        label="Subtotal"
+                        value={`${details.currency === "USD"
+                            ? "$"
+                            : details.currency === "EUR"
+                            ? "€"
+                            : "R"
+                          } ${details.additionalCosts.subtotal.toFixed(2)}`}
+                        bigLabel
+                      />
+                    </InfoGrid>
+                  </Section>
+                </>
+              )}
+
+              {/* DAMAGE */}
+              {details.damage && (
+                <>
+                  <Divider />
+                  <Section title="Property Damage">
+                    <div className="space-y-4">
+                      {details.damage.rows.map((row, i) => (
+                        <div
+                          key={i}
+                          className="rounded-xl p-4"
+                          style={{
+                            background: "var(--card-bg)",
+                            border: "1px solid var(--card-border)",
+                          }}
+                        >
+                          <InfoGrid>
+                            <Info label="Description" value={row.description} />
+                            <Info label="Cost" value={row.cost} />
+                          </InfoGrid>
+                        </div>
+                      ))}
+
+                      <p className="font-bold text-lg">
+                        Subtotal:{" "}
+                        {details.currency === "USD"
+                          ? "$"
+                          : details.currency === "EUR"
+                          ? "€"
+                          : "R"}{" "}
+                        {details.damage.subtotal.toFixed(2)}
+                      </p>
+                    </div>
+                  </Section>
+                </>
+              )}
+
+              {/* PRODUCT LOSS */}
+              {details.productLoss && (
+                <>
+                  <Divider />
+                  <Section title="Product Loss">
+                    <div className="space-y-4">
+                      {details.productLoss.rows.map((row, i) => (
+                        <div
+                          key={i}
+                          className="rounded-xl p-4"
+                          style={{
+                            background: "var(--card-bg)",
+                            border: "1px solid var(--card-border)",
+                          }}
+                        >
+                          <InfoGrid>
+                            <Info label="Description" value={row.description} />
+                            <Info label="Quantity" value={row.quantity} />
+                            <Info label="Cost" value={row.cost} />
+                          </InfoGrid>
+                        </div>
+                      ))}
+
+                      <p className="font-bold text-lg">
+                        Subtotal:{" "}
+                        {details.currency === "USD"
+                          ? "$"
+                          : details.currency === "EUR"
+                          ? "€"
+                          : "R"}{" "}
+                        {details.productLoss.subtotal.toFixed(2)}
+                      </p>
+                    </div>
+                  </Section>
+                </>
+              )}
+
+              {/* ENVIRONMENTAL IMPACT */}
+              {details.environmentalImpact && (
+                <>
+                  <Divider />
+                  <Section title="Environmental Impact">
+                    <div className="space-y-4">
+                      {details.environmentalImpact.rows.map((row, i) => (
+                        <div
+                          key={i}
+                          className="rounded-xl p-4"
+                          style={{
+                            background: "var(--card-bg)",
+                            border: "1px solid var(--card-border)",
+                          }}
+                        >
+                          <InfoGrid>
+                            <Info label="Description" value={row.description} />
+                            <Info label="Item Affected" value={row.itemAffected} />
+                            <Info label="Cost" value={row.cost} />
+                          </InfoGrid>
+                        </div>
+                      ))}
+
+                      <p className="font-bold text-lg">
+                        Subtotal:{" "}
+                        {details.currency === "USD"
+                          ? "$"
+                          : details.currency === "EUR"
+                          ? "€"
+                          : "R"}{" "}
+                        {details.environmentalImpact.subtotal.toFixed(2)}
+                      </p>
+                    </div>
+                  </Section>
+                </>
+              )}
+
+              {/* GRAND TOTAL */}
+              <Divider />
+              <Section title="Grand Total">
+                <h2 className="text-3xl font-bold">
+                  {details.currency === "USD"
+                    ? "$"
+                    : details.currency === "EUR"
+                    ? "€"
+                    : "R"}{" "}
+                  {details.grandTotal.toFixed(2)}
+                </h2>
+              </Section>
+            </>
+          )}
+
         </div>
       </div>
     </div>
@@ -320,7 +629,12 @@ function Section({ title, children }) {
 }
 
 function Divider() {
-  return <div className="my-6" style={{ borderBottom: "1px solid var(--card-border)" }} />;
+  return (
+    <div
+      className="my-6"
+      style={{ borderBottom: "1px solid var(--card-border)" }}
+    />
+  );
 }
 
 function InfoGrid({ children }) {
@@ -382,4 +696,3 @@ function Badge({ children }) {
     </span>
   );
 }
-

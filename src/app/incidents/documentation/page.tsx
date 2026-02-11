@@ -1,147 +1,115 @@
 "use client";
 
-import { useState } from "react";
-
-export default function DocumentationPage() {
-  const [form, setForm] = useState({
-    linkId: "",
-    incidentId: "",
-    title: "",
-    fileName: "",
-    fileType: "",
-    filePath: "",
-  });
-  const [message, setMessage] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const update = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage(null);
-
-    const res = await fetch("/api/incidents/docs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        linkId: form.linkId || null,
-        incidentId: form.incidentId || null,
-      }),
-    });
-
-    if (!res.ok) {
-      setMessage("Failed to save document metadata.");
-    } else {
-      setMessage("Document metadata saved.");
-    }
-
-    setSaving(false);
-  };
+export default function RelevantDocumentsPage() {
+  const docs = [
+    {
+      title: "WCL 1 – Employer’s Report of Accident",
+      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL1.pdf",
+      description:
+        "Completed by employers to report an accident at work. Must be submitted within 7 days of the incident. Includes employer details, employee details, and accident description.",
+    },
+    {
+      title: "WCL 2 – Notice of Accident and Claim for Compensation",
+      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL2.pdf",
+      description:
+        "Completed by the injured employee to notify the Compensation Commissioner of an accident and to claim compensation.",
+    },
+    {
+      title: "WCL 3 – Employer’s Report of Occupational Disease",
+      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL3.pdf",
+      description:
+        "Used by employers to report an occupational disease caused by workplace exposure. Must be submitted within 14 days of diagnosis.",
+    },
+    {
+      title: "WCL 4 – First Medical Report",
+      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL4.pdf",
+      description:
+        "Completed by the treating doctor after the first consultation. Includes diagnosis, injury details, and estimated time off work.",
+    },
+    {
+      title: "WCL 5 – Progress Medical Report",
+      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL5.pdf",
+      description:
+        "Completed by a medical practitioner to provide updates on the employee’s recovery and treatment progress.",
+    },
+    {
+      title: "WCL 6 – Final Medical Report",
+      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL6.pdf",
+      description:
+        "Completed by a medical practitioner once the employee has recovered or reached maximum medical improvement.",
+    },
+    {
+      title: "WCL 14 – Exposure Incident Report",
+      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL14.pdf",
+      description:
+        "Used to report exposure to hazardous biological or chemical agents, even if no injury has occurred yet.",
+    },
+    {
+      title: "WCL 22 – Final Progress Report",
+      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL22.pdf",
+      description:
+        "Completed by a medical practitioner to provide final progress details before the final medical report.",
+    },
+    {
+      title: "WCL 26 – Resumption Report",
+      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL26.pdf",
+      description:
+        "Completed by employers when an injured employee returns to work. Includes return date and work capacity.",
+    },
+    {
+      title: "RMA – First Medical Report",
+      link: "https://www.randmutual.co.za/media/First-Medical-Report.pdf",
+      description:
+        "Completed by a medical practitioner for injuries covered under Rand Mutual Assurance (mining & metals sectors).",
+    },
+    {
+      title: "RMA – Progress Medical Report",
+      link: "https://www.randmutual.co.za/media/Progress-Medical-Report.pdf",
+      description:
+        "Used to provide updates on treatment and recovery for RMA-covered employees.",
+    },
+    {
+      title: "RMA – Final Medical Report",
+      link: "https://www.randmutual.co.za/media/Final-Medical-Report.pdf",
+      description:
+        "Completed when the employee has recovered or reached maximum medical improvement.",
+    },
+    {
+      title: "RMA Online Claims Portal",
+      link: "https://www.randmutual.co.za/claims",
+      description:
+        "Official RMA portal for submitting claims, uploading documents, and tracking injury-on-duty cases.",
+    },
+  ];
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 dark:bg-[#0f172a]">
-      <div className="max-w-3xl mx-auto bg-white/40 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/30">
-        <h1 className="text-3xl font-bold mb-4 text-black dark:text-white">
-          Relevant Documentation
-        </h1>
-        <p className="text-black/70 dark:text-white/70 mb-6">
-          For now, this page stores metadata for Excel/PDF documents. Later we can wire real file uploads.
+    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
+      <div className="max-w-5xl mx-auto space-y-10">
+        <h1 className="text-4xl font-bold text-black">Relevant Documentation</h1>
+        <p className="text-black/70">
+          Official COIDA and RMA forms required for workplace injuries and occupational diseases.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-medium text-black dark:text-white mb-1">
-                Link ID
-              </label>
-              <input
-                value={form.linkId}
-                onChange={(e) => update("linkId", e.target.value)}
-                className="w-full p-3 rounded-lg bg-white/70 border border-white/30 shadow text-black"
-                placeholder="Shared ID with incident/cost analysis"
-              />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {docs.map((doc, index) => (
+            <div
+              key={index}
+              className="p-6 rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40"
+            >
+              <h2 className="text-xl font-bold text-black mb-2">{doc.title}</h2>
+              <p className="text-black/70 text-sm mb-4">{doc.description}</p>
+
+              <a
+                href={doc.link}
+                target="_blank"
+                className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+              >
+                Open Document
+              </a>
             </div>
-
-            <div>
-              <label className="block font-medium text-black dark:text-white mb-1">
-                Incident Record ID (optional)
-              </label>
-              <input
-                value={form.incidentId}
-                onChange={(e) => update("incidentId", e.target.value)}
-                className="w-full p-3 rounded-lg bg-white/70 border border-white/30 shadow text-black"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-medium text-black dark:text-white mb-1">
-              Document Title
-            </label>
-            <input
-              value={form.title}
-              onChange={(e) => update("title", e.target.value)}
-              className="w-full p-3 rounded-lg bg-white/70 border border-white/30 shadow text-black"
-              placeholder="e.g. Incident Investigation Form"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block font-medium text-black dark:text-white mb-1">
-                File Name
-              </label>
-              <input
-                value={form.fileName}
-                onChange={(e) => update("fileName", e.target.value)}
-                className="w-full p-3 rounded-lg bg-white/70 border border-white/30 shadow text-black"
-                placeholder="incident_form_2025.pdf"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-black dark:text-white mb-1">
-                File Type
-              </label>
-              <input
-                value={form.fileType}
-                onChange={(e) => update("fileType", e.target.value)}
-                className="w-full p-3 rounded-lg bg-white/70 border border-white/30 shadow text-black"
-                placeholder="application/pdf, application/vnd.ms-excel"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-black dark:text-white mb-1">
-                File Path
-              </label>
-              <input
-                value={form.filePath}
-                onChange={(e) => update("filePath", e.target.value)}
-                className="w-full p-3 rounded-lg bg-white/70 border border-white/30 shadow text-black"
-                placeholder="/uploads/incident_form_2025.pdf"
-              />
-            </div>
-          </div>
-
-          {message && (
-            <p className="text-sm mt-2 text-black dark:text-white">{message}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="mt-4 px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save Document Metadata"}
-          </button>
-        </form>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
-

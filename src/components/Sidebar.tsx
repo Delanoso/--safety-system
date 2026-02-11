@@ -60,15 +60,55 @@ export default function Sidebar() {
       </Link>
 
       <SidebarDropdown
+        title="Health & Safety"
+        icon={<Shield size={20} />}
+        collapsed={collapsed}
+        items={[
+          {
+            name: "Section 1",
+            children: [
+              { name: "Policies", href: "/docs/policies" },
+              { name: "Working Procedures", href: "/docs/working-procedures" },
+              { name: "Fire Equipment", href: "/docs/fire-equipment" },
+              { name: "First Aid", href: "/docs/first-aid" },
+              { name: "Hygiene Facilities", href: "/docs/hygiene-facilities" },
+              { name: "Waste Management", href: "/docs/waste-management" },
+              { name: "Ventilation", href: "/docs/ventilation" },
+              { name: "Lighting", href: "/docs/lighting" },
+            ],
+          },
+          {
+            name: "Section 2",
+            children: [
+              { name: "Hand Tools", href: "/docs/hand-tools" },
+              { name: "Notices and Signs", href: "/docs/notices-signs" },
+              { name: "Portable and Fixed Ladders", href: "/docs/portable-fixed-ladders" },
+              { name: "Pollution Prevention", href: "/docs/pollution-prevention" },
+              { name: "Electrical Installations", href: "/docs/electrical-installations" },
+              { name: "Racking, Stacking and Storing", href: "/docs/racking-stacking-storing" },
+              { name: "Scaffolding", href: "/docs/scaffolding" },
+              { name: "Vessels Under Pressure", href: "/docs/vessels-under-pressure" },
+            ],
+          },
+          { name: "Training", href: "/training" },
+          { name: "Medicals", href: "/medicals" },
+          { name: "PPE Management", href: "/ppe-management" },
+          { name: "Emergency Response", href: "/emergency-response" },
+          { name: "SHE Committee", href: "/she-committee" },
+          { name: "Risk Assessments", href: "/risk-assessments" },
+          { name: "Hazardous Chemicals", href: "/hazardous-chemicals" },
+        ]}
+      />
+
+      <SidebarDropdown
         title="Compliance"
         icon={<ClipboardList size={20} />}
         collapsed={collapsed}
         items={[
-          { name: "Appointments", href: "/appointments" },
-          { name: "Policies", href: "/policies" },
-          { name: "Working Procedures", href: "/working-procedures" },
           { name: "Legal Registers", href: "/legal-registers" },
-          { name: "Audit Logs", href: "/audit-logs" },
+          { name: "Appointments", href: "/appointments" },
+          { name: "Inspections", href: "/inspections" },
+          { name: "Incidents", href: "/incidents" }, // ⭐ Added
         ]}
       />
 
@@ -91,51 +131,12 @@ export default function Sidebar() {
           { name: "Users", href: "/users" },
           {
             name: "Roles and Personnel and Certification",
-            href: "/roles-personnel-certification",
-          },
-          { name: "Medicals", href: "/medicals" },
-          { name: "Incidents", href: "/incidents" }, // ⭐ Added
+            href: "/roles-personnel-certification",},
+            { name: "Contractors Portal", href: "/contractors" },
         ]}
       />
 
-      <SidebarDropdown
-        title="Health & Safety"
-        icon={<Shield size={20} />}
-        collapsed={collapsed}
-        items={[
-          {
-            name: "Section 1",
-            children: [
-              { name: "Fire Equipment", href: "/fire-equipment" },
-              { name: "First Aid", href: "/first-aid" },
-              { name: "Hygiene Facilities", href: "/hygiene-facilities" },
-              { name: "Risk Assessments", href: "/risk-assessments" },
-              { name: "Hazardous Chemicals", href: "/hazardous-chemicals" },
-              { name: "Waste Management", href: "/Waste-management" },
-              { name: "Ventilation", href: "/ventilation" },
-              { name: "Lighting", href: "/lighting" },
-            ],
-          },
-          {
-            name: "Section 2",
-            children: [
-              { name: "Hand Tools", href: "/hand-tools" },
-              { name: "Notices and Signs", href: "/notices-signs" },
-              { name: "Portable and Fixed Ladders", href: "/ladders" },
-              { name: "Pollution Prevention", href: "/pollution-prevention" },
-              { name: "Electrical Installations", href: "/electrical-installations" },
-              { name: "Racking, Stacking and Storing", href: "/racking-stacking-storing" },
-              { name: "Scaffolding", href: "/scaffolding" },
-              { name: "Vessels Under Pressure", href: "/vessels-under-pressure" },
-            ],
-          },
-          { name: "Inspections", href: "/inspections" },
-          { name: "Training", href: "/training" },
-          { name: "PPE Management", href: "/ppe-management" },
-          { name: "Emergency Response", href: "/emergency-response" },
-          { name: "SHE Committee", href: "/she-committee" },
-        ]}
-      />
+
     </aside>
   );
 }
