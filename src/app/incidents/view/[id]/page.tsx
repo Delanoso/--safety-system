@@ -81,6 +81,13 @@ export default function IncidentViewerPage() {
           <button
             type="button"
             className="button button-pdf flex items-center gap-2"
+            onClick={() => {
+              if (!incident) return;
+              const url = `/api/pdf?type=incident&id=${encodeURIComponent(
+                incident.id
+              )}`;
+              window.open(url, "_blank");
+            }}
           >
             <FileDown size={20} />
             Download PDF

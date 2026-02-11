@@ -120,6 +120,12 @@ export default function PastIncidentsPage() {
                     <button
                       type="button"
                       className="button button-pdf flex items-center gap-2"
+                      onClick={() => {
+                        const url = `/api/pdf?type=incident&id=${encodeURIComponent(
+                          incident.id
+                        )}`;
+                        window.open(url, "_blank");
+                      }}
                     >
                       <FileDown size={18} />
                       Download PDF

@@ -1,0 +1,225 @@
+Multi-tenant setup notes
+========================
+
+This file documents, step by step, how multi-tenant support and the PDF system were implemented in the Safety System v2 project.
+
+Phase 1 – Central PDF generation
+--------------------------------
+
+1. Introduced a unified PDF rendering flow using the existing /api/pdf route and the pdf-renderer page:
+   - /api/pdf (server route) uses Puppeteer to render an internal HTML page and return an A4 PDF.
+   - src/app/pdf-renderer/page.tsx renders HTML for different PDF "types" based on query params (type, id).
+
+2. Implemented per-module PDF templates in src/app/pdf-renderer/page.tsx:
+   - DailyInspectionTemplate: renders daily inspection data in a tabular report.
+   - AppointmentTemplate: renders an appointment letter with signatures area.
+   - IncidentTemplate: renders a structured incident report, including company, team, details, and photos.
+   - NcrTemplate: renders a non-conformance report with items and images.
+   - CertificateTemplate: renders a training certificate summary.
+
+3. Styling constraints for all PDFs:
+   - White background (#ffffff).
+   - Black text and borders only (#000000).
+   - No colors are used in the content, so in future a tenant/company header can introduce brand colors safely.
+
+4. Wired existing PDF buttons and legacy routes into the unified system:
+   - /api/appointments/[id]/pdf and /api/inspections/daily/[id]/pdf now redirect to /api/pdf with the appropriate type + id.
+   - Appointments:
+     - AppointmentLetterViewer "Download / Print PDF" button opens: /api/pdf?type=appointment&id={appointment.id}
+     - Appointment viewer page "Download Appointment PDF" also opens the same URL in a new tab.
+   - Incidents:
+     - Incident view and incident list "Download PDF" buttons open: /api/pdf?type=incident&id={incident.id}
+   - Non-conformance (NCR):
+     - "Save as PDF" first posts the current NCR items to /api/ncr, then opens: /api/pdf?type=ncr&id={savedReport.id}
+   - Training certificates:
+     - The "PDF" button in the certificates list now opens: /api/pdf?type=training-certificate&id={certificate.id}, replacing the old client-side jsPDF logic.
+
+Phase 2 – Multi-tenant data model and auth
+------------------------------------------
+
+1. Updated Prisma schema (prisma/schema.prisma):
+   - Company:
+     - Added userLimit Int @default(5) to restrict how many users each company can have.
+     - Created relations:
+       - incidents   Incident[]
+       - ncrReports  NcrReport[]
+       - users       User[]
+   - User:
+     - role String @default("user") – used as "user" | "admin" | "super".
+     - companyId String? + company relation (each user can belong to a company; super users can have companyId null or be assigned).
+   - Incident:
+     - companyId String? + company relation.
+     - createdByUserId String? + createdBy (User) relation to know who created it.
+   - NcrReport:
+     - companyId String? + company relation.
+     - createdByUserId String? + createdBy (User) relation.
+
+2. Auth helpers (src/lib/auth.ts):
+   - getCurrentUser():
+     - Reads the "session" cookie.
+     - Loads the user + company from Prisma.
+     - Returns:
+       - id, email, role ("user" | "admin" | "super"), companyId, companyName.
+   - requireUser():
+     - Throws if there is no logged-in user.
+   - requireAdminOrSuper():
+     - Throws unless the current user role is "admin" or "super".
+
+3. Login route changes (src/app/api/auth/login/route.ts):
+   - Still validates credentials and sets:
+     - "session" cookie = user.id (httpOnly, secure, same-site strict).
+     - "role" cookie = user.role.
+   - Added a one-time bootstrap for the initial super user:
+     - If prisma.user.count() === 0, create:
+       - email: "erichvandenheuvel5@gmail.com"
+       - password: "vandenHeuvel97!" (hashed)
+       - role: "super"
+     - NOTE: This is for development/bootstrap and should be removed or locked down before production deployment.
+
+4. Current user API (src/app/api/auth/me/route.ts):
+   - GET /api/auth/me:
+     - Returns { user: { id, email, role, companyId, companyName } } or { user: null }.
+     - This is used by the frontend (e.g., /users page, sidebar) to render role-aware UI.
+
+5. Company registration API (src/app/api/auth/register-company/route.ts):
+   - POST /api/auth/register-company
+     - Body: { companyName, email, password, userLimit? }.
+     - Creates:
+       - A new Company with given name and optional userLimit (default 5).
+       - A first User for that company with:
+         - email, hashed password, role: "admin".
+     - Does NOT log the user in automatically; the admin uses /login afterwards.
+
+6. User management API (src/app/api/users/route.ts):
+   - GET /api/users:
+     - Requires at least admin (normal "user" is forbidden).
+     - Admin:
+       - Sees only users in their own company.
+     - Super:
+       - Can see all users, or filter:
+         - ?companyId=... to restrict to one company.
+         - ?all=true to get all users unfiltered.
+   - POST /api/users:
+     - Requires admin or super.
+     - Validates that email and password are present and email is unique.
+     - Determines target company:
+       - Admin: always their own company.
+       - Super: companyId from the request body, or falls back to their own (if any).
+     - Enforces user limits:
+       - Loads the company and counts existing users.
+       - If userCount >= userLimit, returns an error and does not create a new user.
+     - Creates user with:
+       - email, hashed password, role (default "user"), companyId.
+     - Admins cannot create super users (only "user" or "admin").
+
+7. Company management API (src/app/api/companies/route.ts):
+   - GET /api/companies:
+     - Admin: sees only their own company and its userCount/userLimit.
+     - Super: sees all companies, each with { id, name, userLimit, userCount }.
+   - PATCH /api/companies:
+     - Only super users can call this.
+     - Body: { companyId, userLimit }
+     - Updates the company's userLimit; used to align with billing plans.
+
+8. Incident API multi-tenant scoping (src/app/api/incidents/route.ts):
+   - POST /api/incidents:
+     - Requires a logged-in user.
+     - Determines companyId:
+       - Normal/admin user: companyId from their user record.
+       - Super: can optionally override with companyId in the body for cross-company creation.
+     - Saves:
+       - companyId and createdByUserId (current user's id).
+   - GET /api/incidents:
+     - Super: sees all incidents across companies.
+     - Admin: sees only incidents where incident.companyId = their company.
+     - User: sees only incidents where:
+       - incident.companyId = their company, AND
+       - incident.createdByUserId = their own id.
+
+9. Middleware protection (middleware.ts):
+   - Public routes:
+     - "/", "/login", "/signup", "/api/auth/login", "/api/auth/register-company".
+   - Protected paths via matcher:
+     - "/dashboard/:path*"
+     - "/appointments/:path*"
+     - "/incidents/:path*"
+     - "/inspections/:path*"
+     - "/docs/:path*"
+     - "/training/:path*"
+     - "/users/:path*"
+     - "/api/:path*"
+     - "/admin/:path*"
+   - Behavior:
+     - If no "session" cookie, redirects to "/" (login) for any protected route.
+     - For "/admin/*", only allows roles "admin" and "super".
+
+Next phases
+-----------
+
+Phase 3 – Signup page, super user UI, and company logo upload
+-------------------------------------------------------------
+
+1. Login and signup flows:
+   - src/app/page.tsx ("/"):
+     - Replaced the temporary client-only login redirect with a real login form that calls POST /api/auth/login.
+     - Shows errors from the API and redirects to /dashboard on success.
+     - Includes a link/button to the company registration page (/signup).
+   - src/app/signup/page.tsx ("/signup"):
+     - New company registration page that calls POST /api/auth/register-company with:
+       - companyName, admin email, admin password, and optional userLimit.
+     - On success, shows a message and redirects back to "/" (login) so the company admin can sign in.
+
+2. Super user bootstrap email:
+   - Updated the login bootstrap logic to create the initial super user only when there are no users:
+     - email: "erichvandenheuvel5@gmail.com"
+     - password: "vandenHeuvel97!" (hashed)
+     - role: "super"
+
+3. Company and user management UI (src/app/users/page.tsx):
+   - Normal user:
+     - Sees a "Your profile" view with their own email, role, and company.
+     - No access to user or company management controls.
+   - Admin:
+     - Sees their own company summary (name, userCount/userLimit).
+     - Can create new users for their company via a form (email, password, role user/admin).
+     - Sees a table of all users in their company.
+     - Can upload a company logo (see below).
+   - Super user:
+     - Sees all companies with user counts and limits.
+     - Sees all users across all companies.
+     - Can create users for any company via a form that includes a company select.
+     - Can adjust each company’s userLimit via a "Super user settings – company user limits" panel.
+
+4. Company logo upload for PDF headers:
+   - Backend:
+     - New route src/app/api/company/logo/route.ts:
+       - GET:
+         - Returns the current user’s company (id, name, logoUrl); requires at least admin.
+       - PATCH:
+         - Requires admin or super.
+         - Accepts { logoUrl, companyId? } and updates Company.logoUrl.
+         - Admins can only update their own company; super can specify any company.
+     - Extended GET /api/companies (src/app/api/companies/route.ts) to include logoUrl in the JSON payload for each company.
+   - Frontend:
+     - src/app/users/page.tsx:
+       - In the admin "Your company" card, added an upload control for the company logo:
+         - Uploads the image directly to Cloudinary using existing NEXT_PUBLIC_CLOUDINARY_* env variables.
+         - On success, calls PATCH /api/company/logo with the resulting secure_url.
+         - Refreshes the companies list so the new logo is shown immediately.
+       - Shows a small preview of the current logo once set.
+
+5. Using the company logo in PDFs:
+   - src/app/pdf-renderer/page.tsx – IncidentTemplate:
+     - The incident header now includes the company logo (if present) on the right-hand side:
+       - Uses incident.company.logoUrl in an <img> with a max height and width.
+     - The rest of the PDF remains black text on a white background; only the logo can introduce color, as desired.
+
+6. Summary of "happy path" for a new company and PDFs:
+   - A new company registers via /signup, which creates a Company and its first admin user.
+   - The admin logs in via "/", then goes to "Users" in the sidebar.
+   - On the Users page:
+     - They see their company usage and a prompt to upload a company logo.
+     - After uploading, the logoUrl is saved to the Company record.
+   - When incidents are created under that company, the Incident PDF now renders with that logo in the header.
+
+

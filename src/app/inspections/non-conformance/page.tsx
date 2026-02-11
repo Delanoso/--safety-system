@@ -183,8 +183,27 @@ export default function NonConformancePage() {
     alert("Report saved to database.");
   };
 
-  const handleSavePdf = () => {
-    alert("Save as PDF (stub).");
+  const handleSavePdf = async () => {
+    const res = await fetch("/api/ncr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+
+    if (!res.ok) {
+      alert("Failed to save report for PDF.");
+      return;
+    }
+
+    const report = await res.json();
+
+    if (!report?.id) {
+      alert("Report saved, but could not determine report ID for PDF.");
+      return;
+    }
+
+    const url = `/api/pdf?type=ncr&id=${encodeURIComponent(report.id)}`;
+    window.open(url, "_blank");
   };
 
   const handleSendEmail = () => {

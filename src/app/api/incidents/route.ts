@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser, requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function POST(req: Request) {
   try {
+    const current = await requireUser();
     const body = await req.json();
 
     const {
@@ -20,8 +22,22 @@ export async function POST(req: Request) {
       severity,
       status,
       details,
-      companyId, // ⭐ must be included from frontend
+      companyId: explicitCompanyId,
     } = body;
+
+    let companyId: string | null = current.companyId;
+
+    // Allow super user to explicitly choose a company
+    if (current.role === "super" && explicitCompanyId) {
+      companyId = explicitCompanyId;
+    }
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: "No company associated with current user" },
+        { status: 400 }
+      );
+    }
 
     const incident = await prisma.incident.create({
       data: {
@@ -36,11 +52,9 @@ export async function POST(req: Request) {
         severity,
         status,
         details:
-          typeof details === "string"
-            ? details
-            : JSON.stringify(details),
-
-        companyId, // ⭐ this is the missing field
+          typeof details === "string" ? details : JSON.stringify(details),
+        companyId,
+        createdByUserId: current.id,
       },
     });
 
@@ -56,7 +70,29 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
+    const current = await getCurrentUser();
+
+    if (!current) {
+      return NextResponse.json(
+        { error: "Unauthorized", incidents: [] },
+        { status: 401 }
+      );
+    }
+
+    let where: any = {};
+
+    if (current.role === "super") {
+      // see all incidents
+    } else if (current.role === "admin") {
+      where.companyId = current.companyId ?? undefined;
+    } else {
+      // normal user: only own incidents inside their company
+      where.companyId = current.companyId ?? undefined;
+      where.createdByUserId = current.id;
+    }
+
     const incidents = await prisma.incident.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       include: { images: true, team: true },
     });

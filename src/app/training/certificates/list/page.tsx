@@ -1,7 +1,6 @@
-"use client";
+\"use client\";
 
-import { useEffect, useState } from "react";
-import jsPDF from "jspdf";
+import { useEffect, useState } from \"react\";
 
 export default function CertificatesListPage() {
   const [certificates, setCertificates] = useState([]);
@@ -45,21 +44,11 @@ export default function CertificatesListPage() {
     setCertificates((prev) => prev.filter((c) => c.id !== id));
   }
 
-  function generatePDF(c) {
-    const doc = new jsPDF();
-
-    doc.setFontSize(16);
-    doc.text("Certificate Summary", 10, 20);
-
-    doc.setFontSize(12);
-    doc.text(`Employee: ${c.employee}`, 10, 40);
-    doc.text(`Certificate: ${c.certificateName}`, 10, 50);
-    doc.text(`Type: ${c.certificateType || "N/A"}`, 10, 60);
-    doc.text(`Issue Date: ${formatDate(c.issueDate)}`, 10, 70);
-    doc.text(`Expiry Date: ${formatDate(c.expiryDate)}`, 10, 80);
-    doc.text(`Notes: ${c.notes || "None"}`, 10, 90);
-
-    doc.save(`${c.employee}-${c.certificateName}.pdf`);
+  function handleDownloadPdf(c) {
+    const url = \`/api/pdf?type=training-certificate&id=\${encodeURIComponent(
+      c.id
+    )}\`;
+    window.open(url, \"_blank\");
   }
 
   const filtered = certificates.filter((c) => {
@@ -136,7 +125,7 @@ export default function CertificatesListPage() {
 
                     <td className="p-4 flex gap-2">
                       <button
-                        onClick={() => generatePDF(c)}
+                        onClick={() => handleDownloadPdf(c)}
                         className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700"
                       >
                         PDF

@@ -90,7 +90,16 @@ export default function AppointmentViewer() {
         </div>
 
         {/* PDF BUTTON */}
-        <button className="button button-pdf flex items-center gap-2 w-full justify-center">
+        <button
+          className="button button-pdf flex items-center gap-2 w-full justify-center"
+          onClick={() => {
+            if (!appointment) return;
+            const url = `/api/pdf?type=appointment&id=${encodeURIComponent(
+              appointment.id
+            )}`;
+            window.open(url, "_blank");
+          }}
+        >
           <FileDown size={18} />
           Download Appointment PDF
         </button>

@@ -63,11 +63,18 @@ model MonthlyInspection {
 }
 
 model NcrReport {
-  id         String     @id @default(cuid())
-  createdAt  DateTime   @default(now())
-  department String?
-  status     String     @default("open")
-  items      NcrItem[]
+  id              String     @id @default(cuid())
+  createdAt       DateTime   @default(now())
+  department      String?
+  status          String     @default("open")
+  items           NcrItem[]
+
+  // Multi-tenant ownership
+  company         Company?   @relation(fields: [companyId], references: [id])
+  companyId       String?
+
+  createdBy       User?      @relation(fields: [createdByUserId], references: [id])
+  createdByUserId String?
 }
 
 model NcrItem {
@@ -89,30 +96,34 @@ model NcrImage {
 }
 
 model Incident {
-  id          String                    @id @default(cuid())
-  type        String
-  title       String
-  description String?
-  department  String?
-  employee    String?
-  employeeId  String?
-  location    String?
-  date        DateTime
-  severity    String
-  status      String                    @default("draft")
-  linkId      String?
+  id              String                    @id @default(cuid())
+  type            String
+  title           String
+  description     String?
+  department      String?
+  employee        String?
+  employeeId      String?
+  location        String?
+  date            DateTime
+  severity        String
+  status          String                    @default("draft")
+  linkId          String?
 
   // JSON stored as TEXT
-  details     String?
+  details         String?
 
-  images      IncidentImage[]
-  team        InvestigationTeamMember[]   // relation to team members
+  images          IncidentImage[]
+  team            InvestigationTeamMember[]   // relation to team members
 
-  company     Company?                    @relation(fields: [companyId], references: [id])
-  companyId   String?
+  company         Company?                    @relation(fields: [companyId], references: [id])
+  companyId       String?
 
-  createdAt   DateTime                    @default(now())
-  updatedAt   DateTime                    @updatedAt
+  // Which user created this incident
+  createdBy       User?                       @relation(fields: [createdByUserId], references: [id])
+  createdByUserId String?
+
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
 }
 
 model IncidentImage {
@@ -128,7 +139,14 @@ model Company {
   name        String
   logoUrl     String?
   brandColor  String?
+
+  // Maximum number of users allowed for this company
+  userLimit   Int         @default(5)
+
+  // Relations
   incidents   Incident[]
+  ncrReports  NcrReport[]
+  users       User[]
 }
 
 model InvestigationTeamMember {
@@ -156,8 +174,15 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
+
+  /// Role within the system: "user" | "admin" | "super"
   role      String   @default("user")
+
   createdAt DateTime @default(now())
+
+  // Tenant membership
+  company   Company? @relation(fields: [companyId], references: [id])
+  companyId String?
 }
 
 model Folder {

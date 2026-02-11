@@ -36,12 +36,14 @@ export default function AppointmentLetterViewer({
 
   const Template =
     templates[appointment.type] as React.ComponentType<AppointmentTemplateProps>;
-    console.log("VIEWER APPOINTMENT:", appointment);
 
   const handleDownloadPdf = () => {
-    if (typeof window !== "undefined") {
-      window.print();
-    }
+    if (typeof window === "undefined") return;
+
+    const url = `/api/pdf?type=appointment&id=${encodeURIComponent(
+      appointment.id
+    )}`;
+    window.open(url, "_blank");
   };
 
   return (

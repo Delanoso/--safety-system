@@ -1,41 +1,15 @@
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer";
 
-export async function GET(req: Request, context: any) {
-  // ❌ WRONG: const { id } = await context.params;
-  // ✅ FIX:
+// Compatibility wrapper that now delegates to the unified /api/pdf endpoint.
+// This keeps existing links working while centralising PDF generation logic.
+export async function GET(_req: Request, context: any) {
   const { id } = context.params;
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const htmlUrl = `${baseUrl}/inspections/pdf-html/daily/${id}`;
+  const targetUrl = `${baseUrl}/api/pdf?type=daily-inspection&id=${encodeURIComponent(
+    id
+  )}`;
 
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-
-  const page = await browser.newPage();
-  await page.goto(htmlUrl, { waitUntil: "networkidle0" });
-
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: {
-      top: "20mm",
-      bottom: "20mm",
-      left: "15mm",
-      right: "15mm",
-    },
-  });
-
-  await browser.close();
-
-  return new NextResponse(pdfBuffer, {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="daily-inspection-${id}.pdf"`,
-    },
-  });
+  return NextResponse.redirect(targetUrl);
 }
 
