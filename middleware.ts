@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+const HEALTH_PATH = "/api/health";
+const SEED_PATH = "/api/seed";
+
 export function middleware(req: NextRequest) {
+  // Allow health/seed immediately - no auth, no cookies check
+  const rawPath = req.nextUrl.pathname.replace(/\/+$/, "") || "/";
+  if (rawPath === HEALTH_PATH || rawPath === SEED_PATH) {
+    return NextResponse.next();
+  }
+
   const session = req.cookies.get("session")?.value;
   const role = req.cookies.get("role")?.value;
+  const pathname = rawPath;
 
   const publicRoutes = [
     "/",
@@ -19,11 +29,11 @@ export function middleware(req: NextRequest) {
   ];
 
   const isPublic =
-    publicRoutes.includes(req.nextUrl.pathname) ||
-    req.nextUrl.pathname.startsWith("/api/contractors/by-token/") ||
-    req.nextUrl.pathname.startsWith("/appointments/sign/") ||
-    req.nextUrl.pathname.startsWith("/vote/") ||
-    req.nextUrl.pathname.startsWith("/ppe-management/sign/");
+    publicRoutes.includes(pathname) ||
+    pathname.startsWith("/api/contractors/by-token/") ||
+    pathname.startsWith("/appointments/sign/") ||
+    pathname.startsWith("/vote/") ||
+    pathname.startsWith("/ppe-management/sign/");
 
   if (isPublic) {
     return NextResponse.next();
@@ -36,7 +46,7 @@ export function middleware(req: NextRequest) {
 
   // Example: admin-only routes (allow both admin and super)
   if (
-    req.nextUrl.pathname.startsWith("/admin") &&
+    pathname.startsWith("/admin") &&
     role !== "admin" &&
     role !== "super"
   ) {

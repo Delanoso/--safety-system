@@ -8,6 +8,8 @@
 
 ## Environment Variables (Vercel)
 
+Add these in **Project → Settings → Environment Variables**. For each variable, enable **Production**, **Preview** (all branches), and **Development**.
+
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DATABASE_URL` | ✅ | Postgres connection string. For **Neon**: use the *pooled* URL (host contains `-pooler`), e.g. `postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require` |
@@ -40,10 +42,23 @@ For **SQLite** (local only), change `prisma/schema.prisma` to `provider = "sqlit
 ## Deploy to Vercel
 
 1. Connect your repo to Vercel.
-2. Add all required environment variables.
-3. **Important:** In Vercel → Project → Settings → Environment Variables, ensure `DATABASE_URL` is enabled for **Production** and **Preview** (if you use branch deployments).
+2. Add all required environment variables in **Project → Settings → Environment Variables**.
+3. **Environment scope:** For each variable, enable:
+   - **Production**
+   - **Preview** (covers all branch deployments)
+   - **Development** (for `vercel dev` locally)
 4. Build command: `npm run build` (runs `prisma generate`, `prisma db push`, `prisma db seed`, then `next build`).
 5. Deploy.
+
+### "Unable to open the database file" (500 on login)
+
+This error means Prisma is using SQLite instead of PostgreSQL. Fix it:
+
+1. **Set `DATABASE_URL` on Vercel** – Project → Settings → Environment Variables → add:
+   - `DATABASE_URL` = your PostgreSQL connection string (e.g. from [Neon](https://neon.tech) or [Supabase](https://supabase.com))
+   - Format: `postgresql://user:password@host:5432/dbname?sslmode=require`
+2. **Enable for Production, Preview, and Development** – Check all three so every deployment can connect.
+3. **Redeploy** – In Deployments → ⋮ → Redeploy, optionally with "Clear build cache".
 
 ### If login fails on Vercel
 
