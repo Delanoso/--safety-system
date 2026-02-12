@@ -48,8 +48,8 @@ export async function POST(
     try {
       if (useResend) {
         const { Resend } = await import("resend");
-        const resend = new Resend(process.env.RESEND_API_KEY!);
-        await resend.emails.send({
+        const resendClient = new Resend(process.env.RESEND_API_KEY!);
+        await resendClient.emails.send({
           from: process.env.RESEND_FROM || "onboarding@resend.dev",
           to: voter.email,
           subject,

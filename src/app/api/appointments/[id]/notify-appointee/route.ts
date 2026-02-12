@@ -35,8 +35,8 @@ export async function POST(
       { status: 503 }
     );
   }
-  const resend = new Resend(apiKey);
-  await resend.emails.send({
+  const resendClient = new Resend(apiKey);
+  await resendClient.emails.send({
     from: "no-reply@yourdomain.com",
     to: appointment.appointeeEmail,
     subject: "Appointment Letter – Please Sign",

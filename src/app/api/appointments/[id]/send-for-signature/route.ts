@@ -71,7 +71,7 @@ export async function POST(
         { status: 503 }
       );
     }
-    const resend = new Resend(apiKey);
+    const resendClient = new Resend(apiKey);
 
     await prisma.appointment.update({
       where: { id },
@@ -81,7 +81,7 @@ export async function POST(
       },
     });
 
-    await resend.emails.send({
+    await resendClient.emails.send({
       from: "onboarding@resend.dev", // works without domain verification
       to: email,
       subject:

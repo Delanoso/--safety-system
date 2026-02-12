@@ -49,8 +49,8 @@ export async function POST(
   if (email && process.env.RESEND_API_KEY) {
     try {
       const { Resend } = await import("resend");
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      await resend.emails.send({
+      const resendClient = new Resend(process.env.RESEND_API_KEY);
+      await resendClient.emails.send({
         from: process.env.RESEND_FROM || "onboarding@resend.dev",
         to: email,
         subject: `PPE Issue – Please sign (${issue.itemType.name} for ${issue.person.name})`,
