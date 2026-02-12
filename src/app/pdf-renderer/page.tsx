@@ -6,15 +6,16 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 export const runtime = "nodejs";
 
-type SearchParams = { [key: string]: string | string[] | undefined };
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 export default async function PdfRendererPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
-  const type = typeof searchParams.type === "string" ? searchParams.type : "";
-  const id = typeof searchParams.id === "string" ? searchParams.id : "";
+  const params = await searchParams;
+  const type = typeof params.type === "string" ? params.type : "";
+  const id = typeof params.id === "string" ? params.id : "";
 
   if (!type || !id) {
     return (
@@ -36,6 +37,10 @@ export default async function PdfRendererPage({
       return <NcrTemplate id={id} />;
     case "training-certificate":
       return <CertificateTemplate id={id} />;
+    case "medical-certificate":
+      return <MedicalTemplate id={id} />;
+    case "risk-assessment":
+      return <RiskAssessmentTemplate id={id} />;
 
     default:
       return (
@@ -750,6 +755,202 @@ async function CertificateTemplate({ id }: { id: string }) {
         }}
       >
         Safety System — Training Certificate Summary
+      </div>
+    </div>
+  );
+}
+
+async function MedicalTemplate({ id }: { id: string }) {
+  const numericId = Number(id);
+
+  if (!Number.isInteger(numericId)) {
+    return (
+      <div style={{ padding: 40, fontFamily: "Arial", background: "#fff" }}>
+        <h1>Invalid medical ID</h1>
+        <p>Expected a numeric ID, received: {id}</p>
+      </div>
+    );
+  }
+
+  const medical = await prisma.medical.findUnique({
+    where: { id: numericId },
+  });
+
+  if (!medical) {
+    return (
+      <div style={{ padding: 40, fontFamily: "Arial", background: "#fff" }}>
+        <h1>Medical record not found</h1>
+        <p>No medical exists for ID: {id}</p>
+      </div>
+    );
+  }
+
+  const formatDate = (value: Date | string) => {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "N/A";
+    return d.toISOString().split("T")[0];
+  };
+
+  return (
+    <div
+      style={{
+        margin: 0,
+        padding: 40,
+        fontFamily: "Arial, sans-serif",
+        background: "#ffffff",
+        color: "#000000",
+      }}
+    >
+      <div style={{ borderBottom: "2px solid #000", marginBottom: 30 }}>
+        <h1 style={{ margin: 0 }}>Medical Certificate Summary</h1>
+        <div style={{ fontSize: 12 }}>Medical ID: {medical.id}</div>
+      </div>
+
+      <div style={{ marginBottom: 25, fontSize: 14, lineHeight: 1.6 }}>
+        <p>
+          <strong>Employee:</strong> {medical.employee}
+        </p>
+        <p>
+          <strong>Medical Type:</strong> {medical.medicalType}
+        </p>
+        <p>
+          <strong>Issue Date:</strong> {formatDate(medical.issueDate)}
+        </p>
+        <p>
+          <strong>Expiry Date:</strong> {formatDate(medical.expiryDate)}
+        </p>
+        {medical.notes && (
+          <p>
+            <strong>Notes:</strong> {medical.notes}
+          </p>
+        )}
+        {medical.fileUrl && (
+          <p>
+            <strong>Original File URL:</strong> {medical.fileUrl}
+          </p>
+        )}
+      </div>
+
+      <div
+        style={{
+          marginTop: 40,
+          paddingTop: 10,
+          borderTop: "1px solid #000",
+          textAlign: "center",
+          fontSize: 10,
+        }}
+      >
+        Safety System — Medical Certificate Summary
+      </div>
+    </div>
+  );
+}
+
+async function RiskAssessmentTemplate({ id }: { id: string }) {
+  const assessment = await prisma.riskAssessment.findUnique({
+    where: { id },
+  });
+
+  if (!assessment) {
+    return (
+      <div style={{ padding: 40, fontFamily: "Arial", background: "#fff" }}>
+        <h1>Risk assessment not found</h1>
+        <p>No risk assessment exists for ID: {id}</p>
+      </div>
+    );
+  }
+
+  const formatDate = (value: Date | string | null) => {
+    if (!value) return "N/A";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "N/A";
+    return d.toISOString().split("T")[0];
+  };
+
+  return (
+    <div
+      style={{
+        margin: 0,
+        padding: 40,
+        fontFamily: "Arial, sans-serif",
+        background: "#ffffff",
+        color: "#000000",
+      }}
+    >
+      <div style={{ borderBottom: "2px solid #000", marginBottom: 30 }}>
+        <h1 style={{ margin: 0 }}>Risk Assessment</h1>
+        <div style={{ fontSize: 12 }}>Assessment ID: {assessment.id}</div>
+      </div>
+
+      <div style={{ marginBottom: 25, fontSize: 14, lineHeight: 1.6 }}>
+        <p>
+          <strong>Title:</strong> {assessment.title}
+        </p>
+        <p>
+          <strong>Risk Level:</strong> {assessment.riskLevel}
+        </p>
+        {assessment.department && (
+          <p>
+            <strong>Department:</strong> {assessment.department}
+          </p>
+        )}
+        {assessment.location && (
+          <p>
+            <strong>Location:</strong> {assessment.location}
+          </p>
+        )}
+        {assessment.assessor && (
+          <p>
+            <strong>Assessor:</strong> {assessment.assessor}
+          </p>
+        )}
+        {assessment.reviewDate && (
+          <p>
+            <strong>Review Date:</strong> {formatDate(assessment.reviewDate)}
+          </p>
+        )}
+        {assessment.industrySector && (
+          <p>
+            <strong>Industry Sector:</strong> {assessment.industrySector}
+          </p>
+        )}
+        {assessment.assessmentType && (
+          <p>
+            <strong>Assessment Type:</strong> {assessment.assessmentType}
+          </p>
+        )}
+      </div>
+
+      {assessment.controls && (
+        <div style={{ marginBottom: 25, fontSize: 14, lineHeight: 1.6 }}>
+          <h2 style={{ fontSize: 16, marginBottom: 10 }}>Controls / Mitigations</h2>
+          <p style={{ whiteSpace: "pre-wrap" }}>{assessment.controls}</p>
+        </div>
+      )}
+
+      {assessment.signature && (
+        <div style={{ marginTop: 30, paddingTop: 20, borderTop: "1px solid #000" }}>
+          <p style={{ marginBottom: 8, fontSize: 12 }}>
+            <strong>Signed:</strong> {assessment.signedAt ? formatDate(assessment.signedAt) : "N/A"}
+          </p>
+          <img
+            src={assessment.signature}
+            alt="Signature"
+            style={{ maxWidth: 200, maxHeight: 80 }}
+          />
+        </div>
+      )}
+
+      <div
+        style={{
+          marginTop: 40,
+          paddingTop: 10,
+          borderTop: "1px solid #000",
+          textAlign: "center",
+          fontSize: 10,
+        }}
+      >
+        Safety System — Risk Assessment
       </div>
     </div>
   );

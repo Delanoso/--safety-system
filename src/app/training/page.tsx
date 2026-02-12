@@ -16,11 +16,6 @@ export default function TrainingPage() {
       description: "View training gaps, compliance status and required training.",
       route: "/training/analysis",
     },
-    {
-      title: "Safety Team",
-      description: "Manage safety representatives, appointments and training records.",
-      route: "/training/safety-team",
-    },
   ];
 
   return (

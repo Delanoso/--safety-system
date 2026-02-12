@@ -13,26 +13,36 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  let data;
+  let data: Record<string, unknown>;
 
   try {
-    // ⭐ Next.js 16: req.json() works ONLY if the request is not streamed
     data = await req.json();
   } catch {
-    // ⭐ Fallback for streamed bodies
     const text = await req.text();
-    data = JSON.parse(text || "{}");
+    data = typeof text === "string" && text ? JSON.parse(text) : {};
   }
+
+  if (!data || typeof data !== "object") {
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
+  }
+
+  const fileUrl =
+    typeof data.fileUrl === "string" && data.fileUrl.trim()
+      ? data.fileUrl.trim()
+      : null;
 
   const certificate = await prisma.certificate.create({
     data: {
-      employee: data.employee,
-      certificateName: data.certificateName,
-      certificateType: data.certificateType,
-      issueDate: new Date(data.issueDate),
-      expiryDate: new Date(data.expiryDate),
-      notes: data.notes,
-      fileUrl: data.fileUrl, // ⭐ finally received correctly
+      employee: String(data.employee ?? ""),
+      certificateName: String(data.certificateName ?? ""),
+      certificateType: data.certificateType != null ? String(data.certificateType) : null,
+      issueDate: new Date(data.issueDate as string | number),
+      expiryDate: new Date(data.expiryDate as string | number),
+      notes: data.notes != null ? String(data.notes) : null,
+      fileUrl,
     },
   });
 

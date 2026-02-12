@@ -20,40 +20,51 @@ export default function AddCertificatePage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleFile(e) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
 
-    const data = new FormData();
-    data.append("file", file);
-    data.append(
-      "upload_preset",
-      process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-    );
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    // ⭐ FIXED: use /auto/upload so PDFs AND images work
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
-      {
+      const res = await fetch("/api/certificates/upload", {
         method: "POST",
-        body: data,
+        body: formData,
+      });
+
+      const text = await res.text();
+      let json: { url?: string; error?: string } = {};
+      try {
+        json = JSON.parse(text);
+      } catch {
+        // response was not JSON (e.g. HTML error page)
       }
-    );
 
-    const json = await res.json();
+      if (!res.ok) {
+        alert(typeof json.error === "string" ? json.error : text || "Upload failed.");
+        setUploading(false);
+        return;
+      }
 
-    setForm((prev) => ({
-      ...prev,
-      fileUrl: json.secure_url, // ⭐ ALWAYS defined now
-    }));
-
+      if (json.url) {
+        setForm((prev) => ({ ...prev, fileUrl: json.url }));
+      }
+    } catch {
+      alert("Upload failed. Check your connection and try again.");
+    }
     setUploading(false);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    const fileUrl =
+      typeof form.fileUrl === "string" && form.fileUrl.trim()
+        ? form.fileUrl.trim()
+        : null;
 
     const payload = {
       employee: form.employee,
@@ -62,17 +73,22 @@ export default function AddCertificatePage() {
       issueDate: form.issueDate,
       expiryDate: form.expiryDate,
       notes: form.notes,
-      fileUrl: form.fileUrl || null,
+      fileUrl,
     };
 
-    await fetch("/api/certificates", {
+    const res = await fetch("/api/certificates", {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // ⭐ REQUIRED FIX
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    alert("Certificate saved successfully!");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Failed to save certificate.");
+      return;
+    }
 
+    alert("Certificate saved successfully!");
     window.location.href = "/training/certificates/list";
   }
 
@@ -176,9 +192,13 @@ export default function AddCertificatePage() {
               <p className="text-sm text-blue-700 mt-1">Uploading...</p>
             )}
 
-            {form.fileUrl && (
+            {form.fileUrl ? (
               <p className="text-sm text-green-700 mt-1">
-                Uploaded successfully
+                Uploaded successfully — document will be saved with this certificate.
+              </p>
+            ) : (
+              <p className="text-sm text-black/50 mt-1">
+                Choose a PDF or image; you must see &quot;Uploaded successfully&quot; before saving.
               </p>
             )}
           </div>

@@ -66,15 +66,13 @@ Phase 2 – Multi-tenant data model and auth
      - Throws unless the current user role is "admin" or "super".
 
 3. Login route changes (src/app/api/auth/login/route.ts):
-   - Still validates credentials and sets:
-     - "session" cookie = user.id (httpOnly, secure, same-site strict).
-     - "role" cookie = user.role.
-   - Added a one-time bootstrap for the initial super user:
-     - If prisma.user.count() === 0, create:
-       - email: "erichvandenheuvel5@gmail.com"
-       - password: "vandenHeuvel97!" (hashed)
-       - role: "super"
-     - NOTE: This is for development/bootstrap and should be removed or locked down before production deployment.
+   - Validates credentials and sets "session" and "role" cookies (httpOnly, sameSite strict).
+   - secure: true only in production so login works on http://localhost.
+   - Super user bootstrap: when you log in with email "erichvandenheuvel5@gmail.com", if that
+     user does not exist, they are created with password "vandenHeuvel97!" and role "super".
+     You do NOT need to register the super user separately – just go to the login page and
+     sign in with that email and password; the account is created on first use if missing.
+   - NOTE: For production, remove or restrict this bootstrap.
 
 4. Current user API (src/app/api/auth/me/route.ts):
    - GET /api/auth/me:

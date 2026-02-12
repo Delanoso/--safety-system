@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const type = searchParams.get("type");
-  const id = searchParams.get("id");
+  const type = req.nextUrl.searchParams.get("type");
+  const id = req.nextUrl.searchParams.get("id");
 
   if (!type || !id) {
     return NextResponse.json(

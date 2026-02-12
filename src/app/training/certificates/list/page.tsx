@@ -1,6 +1,6 @@
-\"use client\";
+"use client";
 
-import { useEffect, useState } from \"react\";
+import { useEffect, useState } from "react";
 
 export default function CertificatesListPage() {
   const [certificates, setCertificates] = useState([]);
@@ -45,10 +45,10 @@ export default function CertificatesListPage() {
   }
 
   function handleDownloadPdf(c) {
-    const url = \`/api/pdf?type=training-certificate&id=\${encodeURIComponent(
-      c.id
-    )}\`;
-    window.open(url, \"_blank\");
+    const id = c.id != null ? String(c.id) : "";
+    if (!id) return;
+    const url = `/api/pdf?type=training-certificate&id=${encodeURIComponent(id)}`;
+    window.open(url, "_blank");
   }
 
   const filtered = certificates.filter((c) => {
@@ -152,20 +152,37 @@ export default function CertificatesListPage() {
                     <tr className="bg-white/30 backdrop-blur-xl border-t border-white/40">
                       <td colSpan={7} className="p-6">
                         <div className="rounded-xl overflow-hidden shadow-lg bg-white/70 p-4">
-
-                          {isPDF ? (
-                            <iframe
-                              src={c.fileUrl}
-                              className="w-full h-[600px] rounded-xl border border-white/40"
-                            />
+                          {!c.fileUrl ? (
+                            <p className="text-black/70 py-8 text-center">
+                              No document uploaded for this certificate.
+                            </p>
                           ) : (
-                            <img
-                              src={c.fileUrl}
-                              alt="Certificate Preview"
-                              className="w-full max-h-[600px] object-contain rounded-xl border border-white/40"
-                            />
+                            <>
+                              <p className="text-sm text-black/60 mb-2">
+                                <a
+                                  href={c.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  Open document in new tab
+                                </a>
+                              </p>
+                              {isPDF ? (
+                                <iframe
+                                  src={c.fileUrl}
+                                  className="w-full h-[600px] rounded-xl border border-white/40"
+                                  title="Certificate document"
+                                />
+                              ) : (
+                                <img
+                                  src={c.fileUrl}
+                                  alt="Certificate Preview"
+                                  className="w-full max-h-[600px] object-contain rounded-xl border border-white/40"
+                                />
+                              )}
+                            </>
                           )}
-
                         </div>
                       </td>
                     </tr>

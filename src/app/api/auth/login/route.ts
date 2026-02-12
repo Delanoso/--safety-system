@@ -2,25 +2,24 @@ import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 
+const BOOTSTRAP_SUPER_EMAIL = "erichvandenheuvel5@gmail.com";
+const BOOTSTRAP_SUPER_PASSWORD = "vandenHeuvel97!";
+
 export async function POST(req: Request) {
   const { email, password } = await req.json();
 
-  // One-time bootstrap: if there are no users yet, create the initial super user.
-  // NOTE: This is for development/bootstrap only and should be removed or secured for production.
-  const userCount = await prisma.user.count();
-  if (userCount === 0) {
-    const bootstrapEmail = "erichvandenheuvel5@gmail.com";
-    const bootstrapPassword = "vandenHeuvel97!";
-
-    const existingBootstrap = await prisma.user.findUnique({
-      where: { email: bootstrapEmail },
+  // Bootstrap: ensure the super user exists when logging in with the bootstrap email.
+  // If you try to log in with that email and the user doesn't exist, we create them.
+  // NOTE: For production, remove or restrict this (e.g. only when no users exist).
+  if (email === BOOTSTRAP_SUPER_EMAIL) {
+    let superUser = await prisma.user.findUnique({
+      where: { email: BOOTSTRAP_SUPER_EMAIL },
     });
-
-    if (!existingBootstrap) {
-      const hashed = await bcrypt.hash(bootstrapPassword, 10);
-      await prisma.user.create({
+    if (!superUser) {
+      const hashed = await bcrypt.hash(BOOTSTRAP_SUPER_PASSWORD, 10);
+      superUser = await prisma.user.create({
         data: {
-          email: bootstrapEmail,
+          email: BOOTSTRAP_SUPER_EMAIL,
           password: hashed,
           role: "super",
         },
@@ -38,18 +37,20 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  // ⭐ SESSION COOKIE
-  cookies().set("session", user.id, {
+  // Use secure cookies only in production so login works on http://localhost
+  const isSecure = process.env.NODE_ENV === "production";
+
+  const cookieStore = await cookies();
+  cookieStore.set("session", user.id, {
     httpOnly: true,
-    secure: true,
+    secure: isSecure,
     sameSite: "strict",
     path: "/",
   });
 
-  // ⭐ ROLE COOKIE
-  cookies().set("role", user.role, {
+  cookieStore.set("role", user.role, {
     httpOnly: true,
-    secure: true,
+    secure: isSecure,
     sameSite: "strict",
     path: "/",
   });

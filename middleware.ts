@@ -5,7 +5,14 @@ export function middleware(req: NextRequest) {
   const session = req.cookies.get("session")?.value;
   const role = req.cookies.get("role")?.value;
 
-  const publicRoutes = ["/", "/login", "/signup", "/api/auth/login", "/api/auth/register-company"];
+  const publicRoutes = [
+    "/",
+    "/login",
+    "/signup",
+    "/api/auth/login",
+    "/api/auth/register-company",
+    "/api/she-elections/vote",
+  ];
 
   // Allow public routes
   if (publicRoutes.includes(req.nextUrl.pathname)) {
@@ -40,5 +47,8 @@ export const config = {
     "/users/:path*",
     "/api/:path*",
     "/admin/:path*",
+    "/she-committee/:path*",
+    "/risk-assessments/:path*",
+    "/hazardous-chemicals/:path*",
   ],
 };

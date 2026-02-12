@@ -1,0 +1,45 @@
+-- CreateTable
+CREATE TABLE "PPEPerson" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL,
+    "email" TEXT,
+    "phone" TEXT,
+    "sizes" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "PPEItemType" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "PPEStock" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "itemTypeId" INTEGER NOT NULL,
+    "quantity" INTEGER NOT NULL DEFAULT 0,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "PPEStock_itemTypeId_fkey" FOREIGN KEY ("itemTypeId") REFERENCES "PPEItemType" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "PPEIssue" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "personId" INTEGER NOT NULL,
+    "itemTypeId" INTEGER NOT NULL,
+    "quantity" INTEGER NOT NULL DEFAULT 1,
+    "issueDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "signature" TEXT,
+    "signedAt" DATETIME,
+    "signToken" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'pending_signature',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "PPEIssue_personId_fkey" FOREIGN KEY ("personId") REFERENCES "PPEPerson" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "PPEIssue_itemTypeId_fkey" FOREIGN KEY ("itemTypeId") REFERENCES "PPEItemType" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PPEStock_itemTypeId_key" ON "PPEStock"("itemTypeId");

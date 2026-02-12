@@ -27,12 +27,10 @@ export async function POST(req: Request) {
 
     let companyId: string | null = current.companyId;
 
-    // Allow super user to explicitly choose a company
-    if (current.role === "super" && explicitCompanyId) {
-      companyId = explicitCompanyId;
-    }
-
-    if (!companyId) {
+    // Allow super user to explicitly choose a company, or work without one
+    if (current.role === "super") {
+      companyId = explicitCompanyId ?? current.companyId ?? null;
+    } else if (!companyId) {
       return NextResponse.json(
         { error: "No company associated with current user" },
         { status: 400 }

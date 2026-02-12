@@ -147,6 +147,12 @@ model Company {
   incidents   Incident[]
   ncrReports  NcrReport[]
   users       User[]
+
+  // Health & Safety modules
+  sheCommitteeMeetings  SHECommitteeMeeting[]
+  sheElections          SHEElection[]
+  riskAssessments       RiskAssessment[]
+  hazardousChemicals    HazardousChemical[]
 }
 
 model InvestigationTeamMember {
@@ -183,6 +189,9 @@ model User {
   // Tenant membership
   company   Company? @relation(fields: [companyId], references: [id])
   companyId String?
+
+  ncrReports NcrReport[]
+  incidents  Incident[]
 }
 
 model Folder {
@@ -213,5 +222,149 @@ model Certificate {
   notes          String?
   fileUrl        String?   // Cloudinary or local storage
   createdAt      DateTime  @default(now())
+}
+
+model Medical {
+  id          Int       @id @default(autoincrement())
+  employee    String
+  medicalType String    // e.g. Baseline Medical, Audiometry, Fitness for Duty
+  issueDate   DateTime
+  expiryDate  DateTime
+  notes       String?
+  fileUrl     String?
+  createdAt   DateTime  @default(now())
+}
+
+// PPE Management
+model PPEPerson {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String?
+  phone     String?
+  department     String?
+  subDepartment  String?
+  sizes     String?   // JSON e.g. {"Shoes":"42","Gloves":"M"}
+  issues    PPEIssue[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model PPEItemType {
+  id        Int        @id @default(autoincrement())
+  name      String     // Shoes, Gloves, Helmet, etc.
+  stock     PPEStock?
+  issues    PPEIssue[]
+  createdAt DateTime   @default(now())
+}
+
+model PPEStock {
+  id          Int         @id @default(autoincrement())
+  itemTypeId  Int         @unique
+  itemType    PPEItemType @relation(fields: [itemTypeId], references: [id], onDelete: Cascade)
+  quantity    Int         @default(0)
+  updatedAt   DateTime    @updatedAt
+}
+
+model PPEIssue {
+  id         Int         @id @default(autoincrement())
+  personId   Int
+  person     PPEPerson   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  itemTypeId Int
+  itemType   PPEItemType @relation(fields: [itemTypeId], references: [id], onDelete: Cascade)
+  quantity   Int         @default(1)
+  issueDate  DateTime    @default(now())
+  signature  String?     // data URL
+  signedAt   DateTime?
+  signToken  String?     // for email/SMS link
+  status     String      @default("pending_signature") // pending_signature | signed
+  createdAt  DateTime    @default(now())
+}
+
+// SHE Committee
+model SHECommitteeMeeting {
+  id          String   @id @default(cuid())
+  date        DateTime
+  agenda      String?
+  minutes     String?
+  attendees   String?  // JSON array of names
+  actionItems String?  // JSON array of {description, assignee, dueDate}
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+// SHE Rep Election
+model SHEElection {
+  id          String   @id @default(cuid())
+  title       String
+  status      String   @default("draft") // draft | voting_open | voting_closed
+  startDate   DateTime?
+  endDate     DateTime?
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  candidates  SHEElectionCandidate[]
+  voters      SHEElectionVoter[]
+  createdAt   DateTime @default(now())
+}
+
+model SHEElectionCandidate {
+  id        String      @id @default(cuid())
+  election  SHEElection @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  electionId String
+  name      String
+  department String?
+  votes     SHEElectionVoter[]
+  createdAt DateTime    @default(now())
+}
+
+model SHEElectionVoter {
+  id          String              @id @default(cuid())
+  election    SHEElection         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  electionId  String
+  email       String?
+  phone       String?
+  voteToken   String   @unique     // unique link token
+  candidateId String?
+  candidate   SHEElectionCandidate? @relation(fields: [candidateId], references: [id])
+  votedAt     DateTime?
+  createdAt   DateTime @default(now())
+}
+
+// Risk Assessments
+model RiskAssessment {
+  id              String    @id @default(cuid())
+  title           String
+  department      String?
+  location        String?
+  assessor        String?
+  riskLevel       String    // low, medium, high, critical
+  reviewDate      DateTime?
+  controls        String?   // risk controls / mitigations
+  fileUrl         String?
+  companyId       String?
+  company         Company?  @relation(fields: [companyId], references: [id])
+  industrySector  String?   // e.g. Manufacturing, Construction
+  assessmentType  String?   // e.g. General, Task-based, COSHH
+  description     String?   // user input for AI generation
+  signature       String?   // data URL
+  signedAt        DateTime?
+  status          String    @default("draft") // draft | signed
+  createdAt       DateTime  @default(now())
+}
+
+// Hazardous Chemicals
+model HazardousChemical {
+  id          String   @id @default(cuid())
+  name        String
+  casNumber   String?  // Chemical Abstract Service number
+  location    String?
+  quantity    String?
+  unit        String?
+  sdsUrl      String?  // Safety Data Sheet link
+  hazardClass String?
+  notes       String?
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
 }
 
