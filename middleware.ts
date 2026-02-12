@@ -10,6 +10,7 @@ export function middleware(req: NextRequest) {
     "/login",
     "/signup",
     "/api/health",
+    "/api/seed",
     "/api/auth/login",
     "/api/auth/register-company",
     "/api/she-elections/vote",

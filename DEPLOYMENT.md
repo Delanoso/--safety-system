@@ -41,8 +41,15 @@ For **SQLite** (local only), change `prisma/schema.prisma` to `provider = "sqlit
 
 1. Connect your repo to Vercel.
 2. Add all required environment variables.
-3. Build command: `npm run build` (runs `prisma generate`, `prisma db push`, then `next build`).
-4. Deploy.
+3. **Important:** In Vercel → Project → Settings → Environment Variables, ensure `DATABASE_URL` is enabled for **Production** and **Preview** (if you use branch deployments).
+4. Build command: `npm run build` (runs `prisma generate`, `prisma db push`, `prisma db seed`, then `next build`).
+5. Deploy.
+
+### If login fails on Vercel
+
+1. **Check database:** Open `https://your-app.vercel.app/api/health` – it should show `userCount`. If `userCount: 0`, no users exist.
+2. **Create demo users:** Open `https://your-app.vercel.app/api/seed` in your browser – this creates the demo users if none exist.
+3. **Try login again** with `demouser1@gmail.com` / `DemoUser1`.
 
 ## Super Users (Bootstrap)
 
