@@ -65,8 +65,7 @@ export const config = {
     "/docs/:path*",
     "/training/:path*",
     "/users/:path*",
-    // Match /api/* except /api/health and /api/seed (they bypass middleware entirely)
-    /^\/api\/(?!(health|seed)(\/|$))/,
+    "/api/:path*",
     "/admin/:path*",
     "/she-committee/:path*",
     "/risk-assessments/:path*",
