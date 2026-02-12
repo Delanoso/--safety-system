@@ -9,13 +9,22 @@ export function middleware(req: NextRequest) {
     "/",
     "/login",
     "/signup",
+    "/api/health",
     "/api/auth/login",
     "/api/auth/register-company",
     "/api/she-elections/vote",
+    "/contractors/upload",
+    "/api/contractors/upload-by-token",
   ];
 
-  // Allow public routes
-  if (publicRoutes.includes(req.nextUrl.pathname)) {
+  const isPublic =
+    publicRoutes.includes(req.nextUrl.pathname) ||
+    req.nextUrl.pathname.startsWith("/api/contractors/by-token/") ||
+    req.nextUrl.pathname.startsWith("/appointments/sign/") ||
+    req.nextUrl.pathname.startsWith("/vote/") ||
+    req.nextUrl.pathname.startsWith("/ppe-management/sign/");
+
+  if (isPublic) {
     return NextResponse.next();
   }
 
@@ -50,5 +59,12 @@ export const config = {
     "/she-committee/:path*",
     "/risk-assessments/:path*",
     "/hazardous-chemicals/:path*",
+    "/contractors/:path*",
+    "/maintenance-schedule/:path*",
+    "/medicals/:path*",
+    "/ppe-management/:path*",
+    "/legal-registers/:path*",
+    "/signup",
+    "/settings/:path*",
   ],
 };

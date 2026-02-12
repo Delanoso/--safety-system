@@ -1,9 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function CreateAppointmentForm() {
+function CreateAppointmentFormContent() {
   const params = useSearchParams();
   const router = useRouter();
 
@@ -163,6 +164,14 @@ export default function CreateAppointmentForm() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function CreateAppointmentForm() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading...</div>}>
+      <CreateAppointmentFormContent />
+    </Suspense>
   );
 }
 

@@ -118,8 +118,6 @@ export default function Sidebar() {
         collapsed={collapsed}
         items={[
           { name: "Maintenance Schedule", href: "/maintenance-schedule" },
-          { name: "Asset Tracking", href: "/asset-tracking" },
-          { name: "Equipment Lists", href: "/equipment-lists" },
         ]}
       />
 
@@ -129,10 +127,7 @@ export default function Sidebar() {
         collapsed={collapsed}
         items={[
           { name: "Users", href: "/users" },
-          {
-            name: "Roles and Personnel and Certification",
-            href: "/roles-personnel-certification",},
-            { name: "Contractors Portal", href: "/contractors" },
+          { name: "Contractors Portal", href: "/contractors" },
         ]}
       />
 

@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 function generateToken() {
   return crypto.randomUUID();
 }
@@ -63,7 +61,17 @@ export async function POST(
       statusValue = "pending_appointee";
     }
 
-    const signUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/appointments/sign/${appointment.id}?role=${role}&token=${token}`;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const signUrl = `${baseUrl}/appointments/sign/${appointment.id}?role=${role}&token=${token}`;
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Email (Resend) is not configured" },
+        { status: 503 }
+      );
+    }
+    const resend = new Resend(apiKey);
 
     await prisma.appointment.update({
       where: { id },
