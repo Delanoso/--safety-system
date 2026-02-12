@@ -1,26 +1,27 @@
 "use client";
 
 export default function LegalRegistersPage() {
+  // Links verified against gov.za, SAFLII consolidated acts/regs, and lawlibrary.org.za (Jan 2025)
   const docs = [
     // GENERAL HEALTH & SAFETY
     {
       title: "Occupational Health and Safety Act 85 of 1993 (OHSA)",
-      pdf: "https://www.saflii.org/za/legis/num_act/ohasa1993328.pdf",
-      html: "https://www.gov.za/documents/occupational-health-and-safety-act-85-1993",
+      pdf: "https://www.gov.za/sites/default/files/gcis_document/201409/act85of1993.pdf",
+      html: "https://www.gov.za/documents/occupational-health-and-safety-act",
       description:
         "Primary legislation governing workplace health and safety in South Africa. Applies to all industries except mining.",
     },
     {
       title: "General Safety Regulations (GSR)",
-      pdf: "https://www.saflii.org/za/legis/regulations/ohasa1993328/gsr2014508.pdf",
-      html: "https://www.gov.za/documents/occupational-health-and-safety-act-general-safety-regulations",
+      pdf: "https://www.saflii.org/za/legis/consol_reg/gsr255.pdf",
+      html: "https://www.saflii.org/za/legis/consol_reg/gsr255/",
       description:
         "Regulations covering first aid, PPE, emergency procedures, confined spaces, and general workplace safety.",
     },
     {
       title: "General Machinery Regulations (GMR)",
-      pdf: "https://www.saflii.org/za/legis/regulations/ohasa1993328/gmr2014508.pdf",
-      html: "https://www.gov.za/documents/occupational-health-and-safety-act-general-machinery-regulations",
+      pdf: "https://www.saflii.org/za/legis/consol_reg/gmr272.pdf",
+      html: "https://www.saflii.org/za/legis/consol_reg/gmr272/",
       description:
         "Regulates machinery operation, inspections, and competency requirements for operators.",
     },
@@ -28,15 +29,15 @@ export default function LegalRegistersPage() {
     // CONSTRUCTION
     {
       title: "Construction Regulations, 2014",
-      pdf: "https://www.saflii.org/za/legis/regulations/ohasa1993328/cr2014508.pdf",
+      pdf: "https://www.gov.za/documents/occupational-health-and-safety-act-construction-regulations-7-feb-2014-0000",
       html: "https://www.gov.za/documents/occupational-health-and-safety-act-construction-regulations-7-feb-2014-0000",
       description:
         "Regulates construction work, safety files, fall protection, scaffolding, excavations, and contractor duties.",
     },
     {
       title: "Facilities Regulations",
-      pdf: "https://www.saflii.org/za/legis/regulations/ohasa1993328/fr2014508.pdf",
-      html: "https://www.gov.za/documents/occupational-health-and-safety-act-facilities-regulations",
+      pdf: "https://www.gov.za/documents/occupational-health-and-safety-act-regulations-facilities",
+      html: "https://www.gov.za/documents/occupational-health-and-safety-act-regulations-facilities",
       description:
         "Covers sanitation, change rooms, eating facilities, and hygiene requirements for workplaces and construction sites.",
     },
@@ -44,15 +45,15 @@ export default function LegalRegistersPage() {
     // MINING
     {
       title: "Mine Health and Safety Act 29 of 1996 (MHSA)",
-      pdf: "https://www.saflii.org/za/legis/num_act/mhsa1996328.pdf",
+      pdf: "https://www.saflii.org/za/legis/consol_act/mhasa1996192.pdf",
       html: "https://www.gov.za/documents/mine-health-and-safety-act",
       description:
         "Primary legislation governing health and safety in the mining industry.",
     },
     {
       title: "Mine Health and Safety Regulations",
-      pdf: "https://www.saflii.org/za/legis/regulations/mhsa1996328/mhsr2014508.pdf",
-      html: "https://www.gov.za/documents/mine-health-and-safety-act-regulations",
+      pdf: "https://www.saflii.org/za/legis/consol_reg/mhasr301.pdf",
+      html: "https://www.saflii.org/za/legis/consol_reg/mhasr301/",
       description:
         "Detailed regulations covering ventilation, explosives, machinery, TMMs, and underground safety.",
     },
@@ -60,15 +61,15 @@ export default function LegalRegistersPage() {
     // ELECTRICAL
     {
       title: "Electrical Installation Regulations",
-      pdf: "https://www.saflii.org/za/legis/regulations/ohasa1993328/eir2009508.pdf",
-      html: "https://www.gov.za/documents/occupational-health-and-safety-act-electrical-installation-regulations",
+      pdf: "https://www.saflii.org/za/legis/consol_reg/eir342.pdf",
+      html: "https://www.saflii.org/za/legis/consol_reg/eir342/",
       description:
         "Regulates electrical installations, certificates of compliance, and contractor responsibilities.",
     },
     {
       title: "Electrical Machinery Regulations",
-      pdf: "https://www.saflii.org/za/legis/regulations/ohasa1993328/emr2014508.pdf",
-      html: "https://www.gov.za/documents/occupational-health-and-safety-act-electrical-machinery-regulations",
+      pdf: "https://www.saflii.org/za/legis/consol_reg/emr2011295.pdf",
+      html: "https://www.saflii.org/za/legis/consol_reg/emr2011295/",
       description:
         "Covers electrical machinery safety, lockout procedures, and operator competency.",
     },
@@ -76,22 +77,22 @@ export default function LegalRegistersPage() {
     // FIRE & HAZARDOUS SUBSTANCES
     {
       title: "Fire Brigade Services Act 99 of 1987",
-      pdf: "https://www.saflii.org/za/legis/num_act/fbsa1987328.pdf",
+      pdf: "https://www.gov.za/documents/fire-brigade-services-act-99-1987",
       html: "https://www.gov.za/documents/fire-brigade-services-act-99-1987",
       description:
         "Provides the legal framework for fire services, fire prevention, and emergency response.",
     },
     {
       title: "Hazardous Chemical Agents Regulations (HCA), 2021",
-      pdf: "https://www.saflii.org/za/legis/regulations/ohasa1993328/hcar2021508.pdf",
+      pdf: "https://www.gov.za/documents/occupational-health-and-safety-act-hazardous-chemical-agents-regulations-2021-0",
       html: "https://www.gov.za/documents/occupational-health-and-safety-act-hazardous-chemical-agents-regulations-2021-0",
       description:
         "Regulates chemical exposure, SDS requirements, PPE, monitoring, and workplace chemical safety.",
     },
     {
       title: "Major Hazard Installation Regulations (MHI)",
-      pdf: "https://www.saflii.org/za/legis/regulations/ohasa1993328/mhir2014508.pdf",
-      html: "https://www.gov.za/documents/occupational-health-and-safety-act-major-hazard-installation-regulations",
+      pdf: "https://www.saflii.org/za/legis/consol_reg/mhir368.pdf",
+      html: "https://www.saflii.org/za/legis/consol_reg/mhir368/",
       description:
         "Applies to sites storing or handling large quantities of hazardous substances. Covers risk assessments and emergency planning.",
     },
@@ -99,14 +100,14 @@ export default function LegalRegistersPage() {
     // ENVIRONMENTAL
     {
       title: "National Environmental Management Act (NEMA)",
-      pdf: "https://www.saflii.org/za/legis/num_act/nema1998328.pdf",
+      pdf: "https://www.gov.za/documents/national-environmental-management-act",
       html: "https://www.gov.za/documents/national-environmental-management-act",
       description:
         "Framework legislation for environmental protection, pollution control, and environmental impact assessments.",
     },
     {
       title: "National Water Act 36 of 1998",
-      pdf: "https://www.saflii.org/za/legis/num_act/nwa1998328.pdf",
+      pdf: "https://www.gov.za/documents/national-water-act",
       html: "https://www.gov.za/documents/national-water-act",
       description:
         "Regulates water use, pollution prevention, and protection of water resources.",
@@ -135,6 +136,7 @@ export default function LegalRegistersPage() {
                 <a
                   href={doc.pdf}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
                 >
                   Open PDF
@@ -143,9 +145,10 @@ export default function LegalRegistersPage() {
                 <a
                   href={doc.html}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="px-4 py-2 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-800 transition"
                 >
-                  View gov.za Page
+                  View Page
                 </a>
               </div>
             </div>

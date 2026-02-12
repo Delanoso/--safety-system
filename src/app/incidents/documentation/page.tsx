@@ -1,78 +1,69 @@
 "use client";
 
+const COID_FORMS =
+  "https://www.labour.gov.za/DocumentCenter/Pages/Forms.aspx?RootFolder=%2FDocumentCenter%2FForms%2FCompensation%20for%20Occupational%20Injuries%20and%20Deseases";
+
 export default function RelevantDocumentsPage() {
   const docs = [
     {
-      title: "WCL 1 – Employer’s Report of Accident",
-      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL1.pdf",
+      title: "W.CL.1 – Employer’s Report of Accident",
+      link: COID_FORMS,
       description:
-        "Completed by employers to report an accident at work. Must be submitted within 7 days of the incident. Includes employer details, employee details, and accident description.",
+        "Completed by employers to report an accident at work. Must be submitted within 7 days. Browse the COID forms folder to download.",
     },
     {
-      title: "WCL 2 – Notice of Accident and Claim for Compensation",
-      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL2.pdf",
+      title: "W.CL.2 – Notice of Accident and Claim for Compensation",
+      link: COID_FORMS,
       description:
         "Completed by the injured employee to notify the Compensation Commissioner of an accident and to claim compensation.",
     },
     {
-      title: "WCL 3 – Employer’s Report of Occupational Disease",
-      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL3.pdf",
+      title: "W.CL.3 – Employer’s Report of Occupational Disease",
+      link: COID_FORMS,
       description:
         "Used by employers to report an occupational disease caused by workplace exposure. Must be submitted within 14 days of diagnosis.",
     },
     {
-      title: "WCL 4 – First Medical Report",
-      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL4.pdf",
+      title: "W.CL.4 – First Medical Report (Accident)",
+      link: COID_FORMS,
       description:
         "Completed by the treating doctor after the first consultation. Includes diagnosis, injury details, and estimated time off work.",
     },
     {
-      title: "WCL 5 – Progress Medical Report",
-      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL5.pdf",
+      title: "W.CL.5 – Progress Medical Report",
+      link: COID_FORMS,
       description:
         "Completed by a medical practitioner to provide updates on the employee’s recovery and treatment progress.",
     },
     {
-      title: "WCL 6 – Final Medical Report",
-      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL6.pdf",
+      title: "W.CL.6 – Final Medical Report",
+      link: COID_FORMS,
       description:
         "Completed by a medical practitioner once the employee has recovered or reached maximum medical improvement.",
     },
     {
-      title: "WCL 14 – Exposure Incident Report",
-      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL14.pdf",
+      title: "W.CL.14 – Exposure Incident Report",
+      link: COID_FORMS,
       description:
         "Used to report exposure to hazardous biological or chemical agents, even if no injury has occurred yet.",
     },
     {
-      title: "WCL 22 – Final Progress Report",
-      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL22.pdf",
+      title: "W.CL.22 – First Medical Report (Occupational Disease)",
+      link: "https://www.labour.gov.za/form-w-cl-22-first-medical-report-in-respect-of-an-occupational-disease",
       description:
-        "Completed by a medical practitioner to provide final progress details before the final medical report.",
+        "Completed by a medical practitioner for occupational disease claims.",
     },
     {
-      title: "WCL 26 – Resumption Report",
-      link: "https://www.labour.gov.za/DocumentCenter/Forms/Compensation%20for%20Occupational%20Injuries%20and%20Diseases/WCL26.pdf",
+      title: "W.CL.26 – Resumption Report",
+      link: COID_FORMS,
       description:
         "Completed by employers when an injured employee returns to work. Includes return date and work capacity.",
     },
     {
-      title: "RMA – First Medical Report",
-      link: "https://www.randmutual.co.za/media/First-Medical-Report.pdf",
+      title: "RMA – Medical Reports (Mining & Metals)",
+      link: "https://www.randmutual.co.za/claims",
       description:
-        "Completed by a medical practitioner for injuries covered under Rand Mutual Assurance (mining & metals sectors).",
-    },
-    {
-      title: "RMA – Progress Medical Report",
-      link: "https://www.randmutual.co.za/media/Progress-Medical-Report.pdf",
-      description:
-        "Used to provide updates on treatment and recovery for RMA-covered employees.",
-    },
-    {
-      title: "RMA – Final Medical Report",
-      link: "https://www.randmutual.co.za/media/Final-Medical-Report.pdf",
-      description:
-        "Completed when the employee has recovered or reached maximum medical improvement.",
+        "Rand Mutual Assurance covers mining and metals. First, Progress, and Final Medical reports available via the RMA claims portal.",
     },
     {
       title: "RMA Online Claims Portal",
@@ -102,6 +93,7 @@ export default function RelevantDocumentsPage() {
               <a
                 href={doc.link}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
               >
                 Open Document
