@@ -20,10 +20,10 @@ export default function CertificatesListPage() {
     return new Date(dateString).toISOString().split("T")[0];
   }
 
-  function daysUntil(date) {
+  function daysUntil(date: string | Date): number {
     const now = new Date();
     const target = new Date(date);
-    const diff = target - now;
+    const diff = target.getTime() - now.getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   }
 
@@ -95,7 +95,7 @@ export default function CertificatesListPage() {
             {filtered.length === 0 && (
               <tbody>
                 <tr>
-                  <td colSpan="7" className="p-4 text-center text-black/60">
+                  <td colSpan={7} className="p-4 text-center text-black/60">
                     No certificates found.
                   </td>
                 </tr>

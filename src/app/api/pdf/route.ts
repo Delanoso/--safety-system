@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   )}&id=${encodeURIComponent(id)}`;
 
   const browser = await puppeteer.launch({
-    headless: "new",
+    headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   await browser.close();
 
-  return new NextResponse(pdfBuffer, {
+  return new NextResponse(pdfBuffer as BodyInit, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",

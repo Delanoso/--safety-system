@@ -114,6 +114,8 @@ model Incident {
 
   images          IncidentImage[]
   team            InvestigationTeamMember[]   // relation to team members
+  costAnalyses    CostAnalysis[]
+  documents       IncidentDocument[]
 
   company         Company?                    @relation(fields: [companyId], references: [id])
   companyId       String?
@@ -132,6 +134,31 @@ model IncidentImage {
   incident   Incident @relation(fields: [incidentId], references: [id])
   incidentId String
   createdAt  DateTime @default(now())
+}
+
+model CostAnalysis {
+  id          String    @id @default(cuid())
+  linkId      String?
+  incident    Incident? @relation(fields: [incidentId], references: [id])
+  incidentId  String?
+  directCost  Float?
+  indirectCost Float?
+  otherCost   Float?
+  totalCost   Float?
+  notes       String?
+  createdAt   DateTime  @default(now())
+}
+
+model IncidentDocument {
+  id         String    @id @default(cuid())
+  title      String
+  fileName   String
+  fileType   String
+  filePath   String
+  linkId     String?
+  incident   Incident? @relation(fields: [incidentId], references: [id])
+  incidentId String?
+  uploadedAt DateTime  @default(now())
 }
 
 model Company {
@@ -153,6 +180,8 @@ model Company {
   sheElections          SHEElection[]
   riskAssessments       RiskAssessment[]
   hazardousChemicals    HazardousChemical[]
+  contractors           Contractor[]
+  maintenanceSchedules  MaintenanceSchedule[]
 }
 
 model InvestigationTeamMember {
@@ -366,5 +395,66 @@ model HazardousChemical {
   companyId   String?
   company     Company? @relation(fields: [companyId], references: [id])
   createdAt   DateTime @default(now())
+}
+
+// Contractors Portal – safety file for on-site work
+model Contractor {
+  id              String   @id @default(cuid())
+  name            String   // Company/business name
+  contactEmail    String?
+  contactPhone    String?
+  scope           String   @default("ongoing") // specific_job | ongoing
+  jobDescription  String?  // For specific job: description of work
+  uploadToken     String   @unique // Token for contractor upload link
+  companyId       String?
+  company         Company? @relation(fields: [companyId], references: [id])
+  documents       ContractorDocument[]
+  createdAt       DateTime @default(now())
+}
+
+model ContractorDocument {
+  id                   String    @id @default(cuid())
+  contractor           Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  contractorId         String
+  section              String    // e.g. insurance, risk_assessments
+  fileName             String
+  fileUrl              String
+  uploadedByContractor Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+}
+
+// Maintenance Schedule – trucks, machinery, lifting equipment, other
+model MaintenanceSchedule {
+  id        String   @id @default(cuid())
+  title     String   // e.g. "Fleet Trucks", "Factory Machinery"
+  type      String   // trucks | machinery | lifting_equipment | other
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  items     MaintenanceItem[]
+  createdAt DateTime @default(now())
+}
+
+model MaintenanceItem {
+  id         String   @id @default(cuid())
+  schedule   MaintenanceSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  scheduleId String
+  equipmentId String  // User ID e.g. reg number, asset tag
+  data       String   // JSON – type-specific fields
+  services   MaintenanceService[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model MaintenanceService {
+  id              String   @id @default(cuid())
+  item            MaintenanceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId          String
+  serviceDate     DateTime
+  description     String?  // What was done
+  meterReading    Float?   // Odometer or hours at time of service
+  nextDueDate     DateTime?
+  performedBy     String?
+  notes           String?
+  createdAt       DateTime @default(now())
 }
 
