@@ -15,26 +15,23 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const count = await prisma.user.count();
-    if (count > 0) {
-      return NextResponse.json({
-        ok: true,
-        message: "Users already exist",
-        userCount: count,
-      });
-    }
-
+    const created: string[] = [];
     for (const u of SEED_USERS) {
-      const hashed = await bcrypt.hash(u.password, 10);
-      await prisma.user.create({
-        data: { email: u.email, password: hashed, role: u.role },
-      });
+      const existing = await prisma.user.findUnique({ where: { email: u.email } });
+      if (!existing) {
+        const hashed = await bcrypt.hash(u.password, 10);
+        await prisma.user.create({
+          data: { email: u.email, password: hashed, role: u.role },
+        });
+        created.push(u.email);
+      }
     }
 
     return NextResponse.json({
       ok: true,
-      message: "Demo users created",
-      users: SEED_USERS.map((u) => u.email),
+      message: created.length > 0 ? "Demo users created" : "Users already exist",
+      created,
+      userCount: await prisma.user.count(),
     });
   } catch (err) {
     console.error("Seed failed:", err);
