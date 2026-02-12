@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { v2 as cloudinary } from "cloudinary";
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-  api_key: process.env.CLOUDINARY_API_KEY!,
-  api_secret: process.env.CLOUDINARY_API_SECRET!,
-});
+import { getCloudinary } from "@/lib/cloudinary";
 
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: incidentId } = await context.params;   // ⭐ FIXED
+    const cloud = getCloudinary();
+    if (!cloud) {
+      return NextResponse.json(
+        {
+          error:
+            "Cloudinary is not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to .env.local (see .env.example).",
+        },
+        { status: 503 }
+      );
+    }
+
+    const { id: incidentId } = await context.params;
 
     if (!incidentId) {
       return NextResponse.json(
@@ -39,7 +44,7 @@ export async function POST(
       const buffer = Buffer.from(bytes);
 
       const result: any = await new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
+        cloud.uploader.upload_stream(
           { folder: "incidents" },
           (error, result) => {
             if (error) reject(error);
@@ -63,6 +68,39 @@ export async function POST(
     console.error("IMAGE UPLOAD ERROR:", err);
     return NextResponse.json(
       { error: err.message || "Image upload failed" },
+      { status: 500 }
+    );
+  }
+}
+
+/** PATCH — Save image URLs to DB (used by incident form after upload-images) */
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: incidentId } = await context.params;
+    if (!incidentId) {
+      return NextResponse.json({ error: "Missing incident ID" }, { status: 400 });
+    }
+
+    const body = await req.json();
+    const urls = body.images as string[] | undefined;
+    if (!Array.isArray(urls) || urls.length === 0) {
+      return NextResponse.json(
+        { error: "Missing or invalid images array" },
+        { status: 400 }
+      );
+    }
+
+    await prisma.incidentImage.createMany({
+      data: urls.map((url) => ({ incidentId, url })),
+    });
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("IMAGE PATCH ERROR:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to save images" },
       { status: 500 }
     );
   }

@@ -1,35 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { v2 as cloudinary } from "cloudinary";
+import { getCloudinary } from "@/lib/cloudinary";
 
 export const dynamic = "force-dynamic";
-
-function getCloudinary() {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  const placeholders = ["your_cloud_name", "your_api_key", "your_api_secret"];
-  const isPlaceholder = (v: string) =>
-    placeholders.some((p) => v === p || v?.trim() === p);
-  if (
-    !cloudName ||
-    !apiKey ||
-    !apiSecret ||
-    isPlaceholder(cloudName) ||
-    isPlaceholder(apiKey) ||
-    isPlaceholder(apiSecret)
-  ) {
-    return null;
-  }
-  cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
-  return cloudinary;
-}
 
 export async function POST(req: Request) {
   const cloud = getCloudinary();
   if (!cloud) {
     return NextResponse.json(
-      { error: "Cloudinary is not configured for uploads" },
+      {
+        error:
+          "Cloudinary is not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to .env.local (see .env.example).",
+      },
       { status: 503 }
     );
   }

@@ -184,7 +184,8 @@ export default function RequestSignaturePage() {
       );
 
       if (!res.ok) {
-        console.error("Failed to send signature request");
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Failed to send signature request. Check that RESEND_API_KEY is set in .env.local.");
         return;
       }
 

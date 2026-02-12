@@ -144,7 +144,7 @@ export default function WeeklyInspectionPage({
   // ----------------------
   // Save inspection
   // ----------------------
-  const handleSave = () => {
+  const handleSave = async () => {
     const all = loadAllInspections();
     const now = Date.now();
     const id = existingId || generateId();
@@ -175,7 +175,26 @@ export default function WeeklyInspectionPage({
       setDepartments(Array.from(new Set(next)));
     }
 
-    alert("Weekly inspection saved.");
+    try {
+      await fetch("/api/inspections/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          type: inspectionType,
+          department: department.trim(),
+          inspectorName: inspectorName.trim(),
+          rows,
+          columns: weeklyColumns,
+          legendItems: [],
+          frequency: "weekly",
+        }),
+      });
+    } catch (err) {
+      console.error("Save error:", err);
+    }
+
+    window.location.href = `/inspections/new/weekly/${encodeURIComponent(inspectionType)}?id=${id}`;
   };
 
   // ----------------------

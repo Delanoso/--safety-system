@@ -307,17 +307,24 @@ export default function NewIncidentFormPage() {
         );
 
         if (!uploadRes.ok) {
-          console.error("UPLOAD ERROR:", await uploadRes.text());
-          alert("Incident saved, but image upload failed.");
+          const errData = await uploadRes.json().catch(() => ({}));
+          alert(
+            errData.error ||
+              "Incident saved, but image upload failed. Check that CLOUDINARY_* vars are set in .env.local."
+          );
         } else {
           const uploadJson = await uploadRes.json();
 
           // 3. Save URLs into Prisma via dedicated /images route
-          await fetch(`/api/incidents/${incident.id}/images`, {
+          const saveRes = await fetch(`/api/incidents/${incident.id}/images`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ images: uploadJson.urls }),
           });
+          if (!saveRes.ok) {
+            const errData = await saveRes.json().catch(() => ({}));
+            console.error("Save images error:", errData.error);
+          }
         }
       }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, useEffect, use } from "react";
+import { useSearchParams } from "next/navigation";
 
 // -------------------------------------------------------------
 // MONTHLY COLUMNS
@@ -32,8 +33,49 @@ export default function MonthlyInspectionPage({
     Array.from({ length: 10 }, (_, i) => createRow(i + 1))
   );
 
+  const [department, setDepartment] = useState("");
   const [inspectorName, setInspectorName] = useState("");
   const [completed, setCompleted] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const searchParams = useSearchParams();
+  const existingId = searchParams.get("id");
+
+  const generateId = () => Math.random().toString(36).substring(2, 12);
+
+  function loadAllInspections() {
+    try {
+      const raw = localStorage.getItem("inspections");
+      if (!raw) return { daily: [], weekly: [], monthly: [] };
+      const parsed = JSON.parse(raw);
+      return {
+        daily: parsed.daily ?? [],
+        weekly: parsed.weekly ?? [],
+        monthly: parsed.monthly ?? [],
+      };
+    } catch {
+      return { daily: [], weekly: [], monthly: [] };
+    }
+  }
+
+  function saveAllInspections(data: { daily: unknown[]; weekly: unknown[]; monthly: unknown[] }) {
+    localStorage.setItem("inspections", JSON.stringify(data));
+  }
+
+  useEffect(() => {
+    if (!existingId) return;
+    const all = loadAllInspections();
+    const found = all.monthly.find((i: { id: string }) => i.id === existingId) as {
+      department?: string;
+      inspectorName?: string;
+      rows?: typeof rows;
+    } | undefined;
+    if (found) {
+      setDepartment(found.department || "");
+      setInspectorName(found.inspectorName || "");
+      if (found.rows && Array.isArray(found.rows)) setRows(found.rows);
+    }
+  }, [existingId]);
 
   const addRow = () => setRows([...rows, createRow(rows.length + 1)]);
   const deleteRow = (index: number) =>
@@ -56,12 +98,56 @@ export default function MonthlyInspectionPage({
     );
   };
 
-  const handleSave = () => {
-    console.log("Inspection Type:", inspectionType);
-    console.log("Inspector:", inspectorName);
-    console.log("Rows:", rows);
-    console.log("Completed:", completed);
-    alert("Monthly inspection document saved.");
+  const handleSave = async () => {
+    if (!inspectorName.trim() || !department.trim()) {
+      alert("Please fill in Inspector Name and Department.");
+      return;
+    }
+    setSaving(true);
+    const all = loadAllInspections();
+    const now = Date.now();
+    const id = existingId || generateId();
+
+    const updated = {
+      id,
+      type: inspectionType,
+      department: department.trim(),
+      inspectorName: inspectorName.trim(),
+      timestamp: existingId
+        ? (all.monthly.find((i: { id: string }) => i.id === id) as { timestamp?: number })?.timestamp ?? now
+        : now,
+      rows,
+    };
+
+    const idx = all.monthly.findIndex((i: { id: string }) => i.id === id);
+    if (idx !== -1) {
+      all.monthly[idx] = updated;
+    } else {
+      all.monthly.push(updated);
+    }
+    saveAllInspections(all);
+
+    try {
+      await fetch("/api/inspections/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          type: inspectionType,
+          department: department.trim(),
+          inspectorName: inspectorName.trim(),
+          rows,
+          columns: monthlyColumns,
+          legendItems: [],
+          frequency: "monthly",
+        }),
+      });
+    } catch (err) {
+      console.error("Save error:", err);
+    }
+
+    setSaving(false);
+    window.location.href = `/inspections/new/monthly/${encodeURIComponent(inspectionType)}?id=${id}`;
   };
 
   return (
@@ -81,7 +167,18 @@ export default function MonthlyInspectionPage({
             {inspectionType} — Monthly Inspection
           </h1>
 
-          <div className="mt-3 flex justify-center">
+          <div className="mt-3 flex flex-col md:flex-row justify-center gap-3">
+            <input
+              type="text"
+              placeholder="Department"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              className="
+                p-3 rounded-lg w-full max-w-md
+                bg-white/70 text-black
+                border border-white/30 shadow
+              "
+            />
             <input
               type="text"
               placeholder="Inspector Name"
@@ -220,12 +317,13 @@ export default function MonthlyInspectionPage({
           {/* SAVE BUTTON */}
           <button
             onClick={handleSave}
+            disabled={saving}
             className="
               px-6 py-3 bg-green-600 text-white rounded-lg shadow 
-              hover:bg-green-700 transition
+              hover:bg-green-700 transition disabled:opacity-60
             "
           >
-            Save Document
+            {saving ? "Saving…" : "Save Document"}
           </button>
 
         </div>

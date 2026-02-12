@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
+import { getCloudinary } from "@/lib/cloudinary";
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-  api_key: process.env.CLOUDINARY_API_KEY!,
-  api_secret: process.env.CLOUDINARY_API_SECRET!,
-});
-
-export async function POST(request, context) {
-  console.log("🔥 HIT UPLOAD ROUTE");  //
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const cloud = getCloudinary();
+    if (!cloud) {
+      return NextResponse.json(
+        {
+          error:
+            "Cloudinary is not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to .env.local (see .env.example).",
+        },
+        { status: 503 }
+      );
+    }
     const { id } = await context.params; // ✅ Correct Next.js 16 params
 
     const form = await request.formData();
@@ -25,13 +28,11 @@ export async function POST(request, context) {
     const urls: string[] = [];
 
     for (const file of files) {
-      console.log("Uploading file:", file.name); // ✅ Now file exists
-
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
       const result: any = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
+        const uploadStream = cloud.uploader.upload_stream(
           {
             folder: `incidents/${id}`, // ⭐ Correct folder
           },
@@ -44,18 +45,15 @@ export async function POST(request, context) {
         uploadStream.end(buffer);
       });
 
-      console.log("Cloudinary result:", result.secure_url);
-
       urls.push(result.secure_url);
     }
 
-    console.log("Final URLs:", urls);
-
     return NextResponse.json({ urls });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("UPLOAD ERROR:", error);
+    const message = error instanceof Error ? error.message : "Failed to upload images";
     return NextResponse.json(
-      { error: "Failed to upload images" },
+      { error: message },
       { status: 500 }
     );
   }

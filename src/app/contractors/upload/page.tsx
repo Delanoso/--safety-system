@@ -26,6 +26,7 @@ function ContractorUploadContent() {
   const token = searchParams.get("token");
   const [info, setInfo] = useState<ContractorInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -47,6 +48,7 @@ function ContractorUploadContent() {
 
   async function handleUpload(section: string, files: FileList | null) {
     if (!files?.length || !token || !info) return;
+    setUploadError(null);
     setUploading((prev) => ({ ...prev, [section]: true }));
 
     for (let i = 0; i < files.length; i++) {
@@ -66,6 +68,12 @@ function ContractorUploadContent() {
         setInfo((prev) =>
           prev ? { ...prev, documents: [...prev.documents, doc] } : null
         );
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setUploadError(
+          data.error || `Upload failed for ${file.name} (${res.status})`
+        );
+        break;
       }
     }
 
@@ -122,6 +130,12 @@ function ContractorUploadContent() {
         <p className="text-slate-300 text-center">
           Upload your documents in each section below. You can upload multiple files per section.
         </p>
+
+        {uploadError && (
+          <div className="rounded-lg bg-red-500/20 border border-red-500/50 px-4 py-3 text-red-200 text-sm">
+            {uploadError}
+          </div>
+        )}
 
         <div className="space-y-6">
           {CONTRACTOR_SECTIONS.map(({ id: sectionId, label }) => {

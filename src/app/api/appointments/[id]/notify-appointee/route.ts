@@ -31,13 +31,17 @@ export async function POST(
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Email (Resend) is not configured" },
+      {
+        error:
+          "Email is not configured. Add RESEND_API_KEY to .env.local and optionally RESEND_FROM (e.g. onboarding@resend.dev). See .env.example.",
+      },
       { status: 503 }
     );
   }
+  const from = process.env.RESEND_FROM || "onboarding@resend.dev";
   const resendClient = new Resend(apiKey);
   await resendClient.emails.send({
-    from: "no-reply@yourdomain.com",
+    from,
     to: appointment.appointeeEmail,
     subject: "Appointment Letter – Please Sign",
     html: `

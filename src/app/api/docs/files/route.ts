@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { v2 as cloudinary } from "cloudinary";
-
-// Make sure your Cloudinary env vars are set:
-// CLOUDINARY_CLOUD_NAME
-// CLOUDINARY_API_KEY
-// CLOUDINARY_API_SECRET
+import { getCloudinary } from "@/lib/cloudinary";
 
 export async function GET(req: Request) {
   try {
@@ -31,6 +26,17 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const cloud = getCloudinary();
+    if (!cloud) {
+      return NextResponse.json(
+        {
+          error:
+            "Cloudinary is not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to .env.local.",
+        },
+        { status: 503 }
+      );
+    }
+
     const formData = await req.formData();
 
     const file = formData.get("file") as File;
@@ -43,13 +49,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Upload to Cloudinary
     const uploaded = await new Promise((resolve, reject) => {
-      const upload = cloudinary.uploader.upload_stream(
+      const upload = cloud.uploader.upload_stream(
         { folder: "safety_system_docs" },
         (err, result) => {
           if (err) reject(err);
