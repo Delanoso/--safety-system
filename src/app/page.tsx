@@ -24,7 +24,7 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        setError(data?.error || "Login failed. Please check your credentials.");
+        setError(data?.error ?? "Login failed. Please check your credentials.");
         setLoading(false);
         return;
       }

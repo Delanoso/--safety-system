@@ -4,15 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && prisma db push && prisma db seed && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
+    "db:seed": "npx tsx prisma/seed.ts",
     "db:generate": "prisma generate"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^5.15.0",
+    "@sparticuz/chromium": "^143.0.4",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
     "jspdf": "^4.0.0",
@@ -21,7 +26,7 @@
     "nodemailer": "^7.0.13",
     "openai": "^6.21.0",
     "prisma": "^5.15.0",
-    "puppeteer": "^24.36.0",
+    "puppeteer-core": "^24.37.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-signature-canvas": "^1.1.0-alpha.2",
@@ -35,6 +40,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.21.0",
+    "typescript": "5.9.3"
   }
 }
