@@ -73,15 +73,6 @@ export async function POST(
     }
     const resend = new Resend(apiKey);
 
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Email (Resend) is not configured" },
-        { status: 503 }
-      );
-    }
-    const resend = new Resend(apiKey);
-
     await prisma.appointment.update({
       where: { id },
       data: {
