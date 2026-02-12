@@ -42,17 +42,17 @@ export function LegalNoticeModal() {
       style={{ background: "rgba(0,0,0,0.6)" }}
     >
       <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-8 shadow-2xl"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-8 shadow-2xl bg-white"
         style={{
-          background: "var(--card-bg)",
-          border: "1px solid var(--card-border)",
+          background: "#ffffff",
+          border: "1px solid #e5e7eb",
         }}
       >
-        <h2 className="mb-6 text-2xl font-bold text-[var(--foreground)]">
+        <h2 className="mb-6 text-2xl font-bold text-gray-900">
           Intellectual Property Notice
         </h2>
 
-        <div className="space-y-4 text-sm text-[var(--foreground)] leading-relaxed">
+        <div className="space-y-4 text-sm text-gray-800 leading-relaxed">
           <p>
             <strong>This web application is the intellectual property of Delano Solutions.</strong>{" "}
             All rights reserved.
@@ -78,7 +78,7 @@ export function LegalNoticeModal() {
             without explicit authorization from Delano Solutions.
           </p>
 
-          <p className="pt-2 text-xs opacity-80">
+          <p className="pt-2 text-xs text-gray-600">
             © {new Date().getFullYear()} Delano Solutions. All rights reserved.
           </p>
         </div>

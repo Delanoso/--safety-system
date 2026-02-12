@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import templates from "@/app/appointments/templates";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 /* -----------------------------
    SERVER ACTION: DELETE RECORD
 ------------------------------ */

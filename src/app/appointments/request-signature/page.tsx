@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function RequestSignatureListPage() {
   // Only show appointments that still need signatures
   const appointments = await prisma.appointment.findMany({
