@@ -14,9 +14,10 @@ Add these in **Project → Settings → Environment Variables**. For each variab
 |----------|----------|-------------|
 | `DATABASE_URL` | ✅ | Postgres connection string. For **Neon**: use the *pooled* URL (host contains `-pooler`), e.g. `postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require` |
 | `NEXT_PUBLIC_BASE_URL` | ✅ | Your app URL, e.g. `https://your-app.vercel.app` |
-| `CLOUDINARY_CLOUD_NAME` | ✅ | From Cloudinary dashboard |
-| `CLOUDINARY_API_KEY` | ✅ | From Cloudinary dashboard |
-| `CLOUDINARY_API_SECRET` | ✅ | From Cloudinary dashboard |
+| `CLOUDINARY_CLOUD_NAME` | ✅* | From Cloudinary dashboard (or use CLOUDINARY_URL) |
+| `CLOUDINARY_API_KEY` | ✅* | From Cloudinary dashboard |
+| `CLOUDINARY_API_SECRET` | ✅* | From Cloudinary dashboard |
+| `CLOUDINARY_URL` | ✅* | Alternative: `cloudinary://api_key:api_secret@cloud_name` |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | ✅ | Same as CLOUDINARY_CLOUD_NAME |
 | `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` | | Upload preset for client uploads |
 | `RESEND_API_KEY` | | For emails (appointments, PPE, votes) |
@@ -65,6 +66,15 @@ This error means Prisma is using SQLite instead of PostgreSQL. Fix it:
 1. **Check database:** Open `https://your-app.vercel.app/api/health` – it should show `userCount`. If `userCount: 0`, no users exist.
 2. **Create demo users:** Open `https://your-app.vercel.app/api/seed` in your browser – this creates the demo users if none exist.
 3. **Try login again** with `demouser1@gmail.com` / `DemoUser1`.
+
+### Contractor uploads not working on Vercel
+
+1. **Add Cloudinary env vars** – Vercel → Project → Settings → Environment Variables. Add either:
+   - `CLOUDINARY_URL` = `cloudinary://api_key:api_secret@cloud_name` (single URL), or
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (separate vars)
+2. **Enable for Production, Preview, and Development.**
+3. **Redeploy** – Deployments → ⋮ → Redeploy.
+4. **File size limit** – Vercel has a 4.5 MB request body limit. Files larger than 4 MB will fail; compress or split large files.
 
 ## Super Users (Bootstrap)
 

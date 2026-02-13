@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getCloudinary } from "@/lib/cloudinary";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+const MAX_FILE_SIZE_MB = 4.5;
 
 export async function POST(req: Request) {
   const cloud = getCloudinary();
@@ -10,7 +14,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          "Cloudinary is not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to .env.local (see .env.example).",
+          "Cloudinary is not configured. Add CLOUDINARY_URL (or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) to your Vercel project Environment Variables, then redeploy.",
       },
       { status: 503 }
     );
@@ -26,6 +30,14 @@ export async function POST(req: Request) {
   }
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "No file received" }, { status: 400 });
+  }
+  if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+    return NextResponse.json(
+      {
+        error: `File too large. Maximum size is ${MAX_FILE_SIZE_MB} MB. Try compressing or splitting the file.`,
+      },
+      { status: 413 }
+    );
   }
   if (!section || typeof section !== "string" || !section.trim()) {
     return NextResponse.json({ error: "Section is required" }, { status: 400 });
@@ -66,8 +78,10 @@ export async function POST(req: Request) {
     return NextResponse.json(doc, { status: 201 });
   } catch (err) {
     console.error("Contractor upload-by-token:", err);
+    const message =
+      err instanceof Error ? err.message : "Upload failed";
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Upload failed" },
+      { error: message },
       { status: 500 }
     );
   }
