@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Home,
   Shield,
+  Bell,
   ClipboardList,
   Users,
   Briefcase,
@@ -57,6 +58,17 @@ export default function Sidebar() {
       >
         <Home size={20} />
         {!collapsed && "Dashboard"}
+      </Link>
+
+      <Link
+        href="/dashboard/notifications"
+        className="
+          flex items-center gap-3 px-3 py-2 rounded transition
+          hover:text-[var(--gold)]
+        "
+      >
+        <Bell size={20} />
+        {!collapsed && "Notifications"}
       </Link>
 
       <SidebarDropdown

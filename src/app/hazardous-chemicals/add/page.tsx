@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 
 export default function AddHazardousChemicalPage() {
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [form, setForm] = useState({
     name: "",
     casNumber: "",
@@ -20,6 +24,46 @@ export default function AddHazardousChemicalPage() {
   ) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    if (name === "sdsUrl") setUploadedFileName(null);
+  }
+
+  async function handleSdsUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!validTypes.includes(file.type)) {
+      alert("Please upload a PDF or image (JPEG, PNG, GIF, WebP).");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File must be under 10 MB.");
+      return;
+    }
+    setUploading(true);
+    setUploadedFileName(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/hazardous-chemicals/upload-sds", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Upload failed");
+      setForm((prev) => ({ ...prev, sdsUrl: data.url }));
+      setUploadedFileName(file.name);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -151,18 +195,39 @@ export default function AddHazardousChemicalPage() {
             </div>
           </div>
 
-          <div>
+          <div className="space-y-3">
             <label className="block text-sm font-semibold text-black mb-1">
-              SDS / Safety Data Sheet URL
+              SDS / Safety Data Sheet
             </label>
+            <p className="text-sm text-black/70">
+              Paste a URL or upload a PDF / image document.
+            </p>
             <input
               type="url"
               name="sdsUrl"
               value={form.sdsUrl}
               onChange={handleChange}
-              placeholder="https://..."
+              placeholder="https://... (or upload below)"
               className="w-full p-3 rounded-lg border border-white/40 bg-white/70"
             />
+            <div className="flex flex-col sm:flex-row gap-3 items-start">
+              <label className="cursor-pointer px-4 py-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 font-medium border border-blue-200 transition">
+                {uploading ? "Uploading…" : "Upload PDF or image"}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleSdsUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+              {uploadedFileName && (
+                <span className="text-sm text-green-700 font-medium">
+                  ✓ {uploadedFileName}
+                </span>
+              )}
+            </div>
           </div>
 
           <div>

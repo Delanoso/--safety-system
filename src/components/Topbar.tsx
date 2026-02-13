@@ -1,14 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Search, User, Moon, Sun } from "lucide-react";
+import { Bell, Search, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export default function Topbar() {
   const pathname = usePathname();
-  const [darkMode, setDarkMode] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/notifications")
+      .then((r) => r.json())
+      .then((d) => setNotificationCount(d?.total ?? 0))
+      .catch(() => setNotificationCount(0));
+  }, [pathname]);
 
   const breadcrumbs = pathname
     .split("/")
@@ -17,11 +23,6 @@ export default function Topbar() {
       name: segment.replace(/-/g, " "),
       href: "/" + arr.slice(0, index + 1).join("/"),
     }));
-
-  useEffect(() => {
-    if (darkMode) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-  }, [darkMode]);
 
   return (
     <header
@@ -71,56 +72,33 @@ export default function Topbar() {
       {/* RIGHT: Icons */}
       <div className="flex items-center gap-6">
 
-        {/* Dark Mode */}
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="p-2 rounded-full hover:opacity-70 transition"
-        >
-          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
-
         {/* Notifications */}
-        <button className="relative p-2 rounded-full hover:opacity-70 transition">
-          <Bell size={20} />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
+        <div className="relative">
+          <Link
+            href="/dashboard/notifications"
+            className="relative inline-flex p-2 rounded-full hover:opacity-70 transition"
+          >
+            <Bell size={20} />
+            {notificationCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1
+                           flex items-center justify-center text-[10px] font-bold
+                           bg-red-500 text-white rounded-full"
+              >
+                {notificationCount > 99 ? "99+" : notificationCount}
+              </span>
+            )}
+          </Link>
+        </div>
 
         {/* Profile */}
-        <div className="relative">
-          <button
-            onClick={() => setProfileOpen(!profileOpen)}
-            className="flex items-center gap-2 px-3 py-2 rounded-full hover:opacity-70 transition"
-          >
-            <User size={20} />
-            <span className="font-medium hidden md:block">Profile</span>
-          </button>
-
-          {profileOpen && (
-            <div
-              className="absolute right-0 mt-2 w-40 rounded-lg shadow-lg py-2
-                         bg-[var(--background)] text-[var(--foreground)]
-                         border border-[var(--foreground)]/20"
-            >
-              <Link
-                href="/profile"
-                className="block px-4 py-2 text-sm hover:opacity-70 transition"
-              >
-                My Profile
-              </Link>
-              <Link
-                href="/settings"
-                className="block px-4 py-2 text-sm hover:opacity-70 transition"
-              >
-                Settings
-              </Link>
-              <button
-                className="w-full text-left px-4 py-2 text-sm hover:opacity-70 transition"
-              >
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
+        <Link
+          href="/dashboard/profile"
+          className="flex items-center gap-2 px-3 py-2 rounded-full hover:opacity-70 transition"
+        >
+          <User size={20} />
+          <span className="font-medium hidden md:block">My Profile</span>
+        </Link>
       </div>
     </header>
   );

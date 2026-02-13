@@ -213,6 +213,9 @@ model User {
   /// Role within the system: "user" | "admin" | "super"
   role      String   @default("user")
 
+  /// User prefers not to receive in-app/email notifications
+  notificationsEnabled Boolean @default(true)
+
   createdAt DateTime @default(now())
 
   // Tenant membership

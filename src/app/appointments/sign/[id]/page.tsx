@@ -13,6 +13,7 @@ export default function SignAppointmentPage() {
 
   const [signer, setSigner] = useState("appointee");
   const [email, setEmail] = useState("");
+  const [instructions, setInstructions] = useState("");
 
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -80,9 +81,30 @@ export default function SignAppointmentPage() {
   };
 
   const sendEmail = async () => {
-    alert(
-      `Email would be sent to ${email} requesting ${signer} signature.\n(Backend email service not implemented yet.)`
-    );
+    if (!email?.trim()) {
+      alert("Please enter a recipient email address.");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/appointments/${id}/send-for-signature`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          role: signer,
+          instructions: instructions.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to send email");
+        return;
+      }
+      alert(`Signature request sent to ${email.trim()} successfully.`);
+    } catch (err) {
+      alert("Failed to send email. Please try again.");
+      console.error(err);
+    }
   };
 
   return (
@@ -179,6 +201,17 @@ export default function SignAppointmentPage() {
                 <option value="appointee">Appointee</option>
                 <option value="appointer">Appointer</option>
               </select>
+            </div>
+
+            <div className="space-y-4">
+              <label className="font-semibold">Instructions (optional)</label>
+              <textarea
+                className="w-full p-3 rounded-lg border bg-white shadow min-h-[80px]"
+                placeholder="e.g. Please sign before Friday, or add any special instructions for the recipient..."
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                rows={3}
+              />
             </div>
 
             <button

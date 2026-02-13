@@ -22,7 +22,7 @@ export async function POST(
     );
   }
 
-  const { email, role } = await req.json();
+  const { email, role, instructions } = await req.json();
 
   if (!email) {
     return NextResponse.json(
@@ -85,6 +85,16 @@ export async function POST(
       },
     });
 
+    const instructionBlock =
+      instructions && String(instructions).trim()
+        ? `<p style="margin:1em 0;padding:0.75em;background:#f5f5f5;border-left:4px solid #2563eb;"><strong>Instructions from sender:</strong><br/>${String(instructions)
+            .trim()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\n/g, "<br/>")}</p>`
+        : "";
+
     await resendClient.emails.send({
       from,
       to: email,
@@ -97,6 +107,7 @@ export async function POST(
           role === "appointer" ? appointment.appointer : appointment.appointee
         },</p>
         <p>You have an appointment letter to sign.</p>
+        ${instructionBlock}
         <p><a href="${signUrl}">Click here to review and sign</a></p>
       `,
     });
