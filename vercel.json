@@ -1,6 +1,0 @@
-{
-  "functions": {
-    "src/app/api/pdf/route.ts": {"maxDuration": 60, "memory": 1024},
-    "src/app/api/contractors/upload-by-token/route.ts": {"maxDuration": 60}
-  }
-}

@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && prisma db seed && next build",
+    "build": "prisma generate && next build",
+    "build:full": "prisma generate && prisma db push && prisma db seed && next build",
     "start": "next start",
+    "postbuild": "node scripts/copy-standalone-assets.js",
     "lint": "eslint",
     "postinstall": "prisma generate",
+    "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:generate": "prisma generate"
   },

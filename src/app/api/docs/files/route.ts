@@ -63,13 +63,13 @@ export async function POST(req: Request) {
       upload.end(buffer);
     });
 
-    const cloud = uploaded as any;
+    const uploadedResult = uploaded as { secure_url: string };
 
     // Save metadata in Prisma
     const saved = await prisma.file.create({
       data: {
         name: file.name,
-        url: cloud.secure_url,
+        url: uploadedResult.secure_url,
         size: file.size,
         folderId,
       },

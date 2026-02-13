@@ -1,23 +1,9 @@
 import { NextResponse } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
+import { getCloudinary } from "@/lib/cloudinary";
 
 export async function POST(request: Request) {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-  const placeholders = ["your_cloud_name", "your_api_key", "your_api_secret"];
-  const isPlaceholder = (v: string) =>
-    placeholders.some((p) => v === p || v?.trim() === p);
-
-  if (
-    !cloudName ||
-    !apiKey ||
-    !apiSecret ||
-    isPlaceholder(cloudName) ||
-    isPlaceholder(apiKey) ||
-    isPlaceholder(apiSecret)
-  ) {
+  const cloudinary = getCloudinary();
+  if (!cloudinary) {
     return NextResponse.json(
       {
         error:
@@ -26,12 +12,6 @@ export async function POST(request: Request) {
       { status: 503 }
     );
   }
-
-  cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret,
-  });
 
   try {
     const formData = await request.formData();

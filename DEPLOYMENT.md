@@ -1,86 +1,168 @@
-# Deployment Guide – Vercel
+# Deployment Guide – Afrihost / Self-Hosted
+
+This app is configured for hosting on **Afrihost** (cPanel, VPS, or shared hosting with Node.js) and other self-hosted environments.
 
 ## Prerequisites
 
-1. **PostgreSQL database** – Required for Vercel.
+1. **PostgreSQL database** – Use Neon, Supabase, Railway, or a DB server.
 2. **Cloudinary account** – For uploads (certificates, logos, incident images).
-3. **Resend account** – For emails (optional but recommended for appointments, votes).
+3. **Resend account** (optional) – For emails.
 
-## Environment Variables (Vercel)
+## Environment Variables
 
-Add these in **Project → Settings → Environment Variables**. For each variable, enable **Production**, **Preview** (all branches), and **Development**.
+Create a `.env` or `.env.local` in the app root (or set in cPanel Node.js App / server):
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | ✅ | Postgres connection string. For **Neon**: use the *pooled* URL (host contains `-pooler`), e.g. `postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require` |
-| `NEXT_PUBLIC_BASE_URL` | ✅ | Your app URL, e.g. `https://your-app.vercel.app` |
-| `CLOUDINARY_CLOUD_NAME` | ✅* | From Cloudinary dashboard (or use CLOUDINARY_URL) |
+| `DATABASE_URL` | ✅ | Postgres connection string, e.g. `postgresql://user:pass@host:5432/dbname?sslmode=require` |
+| `NEXT_PUBLIC_BASE_URL` | ✅ | App URL, e.g. `https://yoursite.co.za` |
+| `CLOUDINARY_CLOUD_NAME` | ✅* | From Cloudinary dashboard |
 | `CLOUDINARY_API_KEY` | ✅* | From Cloudinary dashboard |
 | `CLOUDINARY_API_SECRET` | ✅* | From Cloudinary dashboard |
 | `CLOUDINARY_URL` | ✅* | Alternative: `cloudinary://api_key:api_secret@cloud_name` |
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | ✅ | Same as CLOUDINARY_CLOUD_NAME |
-| `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` | | Upload preset for client uploads |
-| `RESEND_API_KEY` | | For emails (appointments, PPE, votes) |
-| `RESEND_FROM` | | Sender email, e.g. `noreply@yourdomain.com` |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | ✅ | Same as `CLOUDINARY_CLOUD_NAME` |
+| `RESEND_API_KEY` | | For emails |
+| `RESEND_FROM` | | Sender email |
 | `OPENAI_API_KEY` | | Optional – AI risk assessments |
+| `PORT` | | Port to listen on (default 3000) |
 
-## Local Development
+*Use either `CLOUDINARY_URL` or the three separate Cloudinary vars.
 
-You need a PostgreSQL database. Options:
+---
 
-1. **Neon** (free) – [neon.tech](https://neon.tech), create a project, copy the connection string.
-2. **Supabase** (free) – [supabase.com](https://supabase.com), create a project, use the Postgres URL.
-3. **Docker** – `docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres`
+## Deploy on Afrihost (cPanel Node.js)
 
-```bash
-cp .env.example .env.local
-# Set DATABASE_URL and other vars in .env.local
-npm run dev
-```
+1. **Upload or clone** the project to your hosting (e.g. via SSH, Git, or File Manager).
 
-For **SQLite** (local only), change `prisma/schema.prisma` to `provider = "sqlite"` and `url = "file:./dev.db"`, then use `npm run dev` (skip `prisma db push` in build for local).
+2. **Create a Node.js app** in cPanel:
+   - Go to **Setup Node.js App** → **CREATE APPLICATION**
+   - Node.js version: **18** or **20**
+   - Application root: `/home/username/safety_system_v2` (or your path)
+   - Application URL: your domain or subdomain
+   - Application startup file: leave default or use `server.js` (see below)
 
-## Deploy to Vercel
+3. **Set environment variables** in the Node.js App dashboard.
 
-1. Connect your repo to Vercel.
-2. Add all required environment variables in **Project → Settings → Environment Variables**.
-3. **Environment scope:** For each variable, enable:
-   - **Production**
-   - **Preview** (covers all branch deployments)
-   - **Development** (for `vercel dev` locally)
-4. Build command: `npm run build` (runs `prisma generate`, `prisma db push`, `prisma db seed`, then `next build`).
-5. Deploy.
+4. **Build and run** via SSH:
 
-### "Unable to open the database file" (500 on login)
+   ```bash
+   cd /home/username/safety_system_v2
+   npm install
+   npx prisma generate
+   npx prisma db push    # or prisma migrate deploy
+   npx prisma db seed    # optional – demo data
+   npm run build
+   npm start
+   ```
 
-This error means Prisma is using SQLite instead of PostgreSQL. Fix it:
+   Or use **standalone** for a minimal deployment (copy only `.next/standalone` to server):
 
-1. **Set `DATABASE_URL` on Vercel** – Project → Settings → Environment Variables → add:
-   - `DATABASE_URL` = your PostgreSQL connection string (e.g. from [Neon](https://neon.tech) or [Supabase](https://supabase.com))
-   - Format: `postgresql://user:password@host:5432/dbname?sslmode=require`
-2. **Enable for Production, Preview, and Development** – Check all three so every deployment can connect.
-3. **Redeploy** – In Deployments → ⋮ → Redeploy, optionally with "Clear build cache".
+   ```bash
+   npm run build
+   cd .next/standalone
+   PORT=3000 node server.js
+   ```
 
-### If login fails on Vercel
+5. **cPanel startup**  
+   For cPanel Node.js app, set Application startup file to `server.js` and Application root to `.next/standalone` after running the build. Or set root to the project folder and run `npm start`.
 
-1. **Check database:** Open `https://your-app.vercel.app/api/health` – it should show `userCount`. If `userCount: 0`, no users exist.
-2. **Create demo users:** Open `https://your-app.vercel.app/api/seed` in your browser – this creates the demo users if none exist.
-3. **Try login again** with `demouser1@gmail.com` / `DemoUser1`.
+---
 
-### Contractor uploads not working on Vercel
+## Deploy on VPS (Ubuntu) with PM2
 
-1. **Add Cloudinary env vars** – Vercel → Project → Settings → Environment Variables. Add either:
-   - `CLOUDINARY_URL` = `cloudinary://api_key:api_secret@cloud_name` (single URL), or
-   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (separate vars)
-2. **Enable for Production, Preview, and Development.**
-3. **Redeploy** – Deployments → ⋮ → Redeploy.
-4. **File size limit** – Vercel has a 4.5 MB request body limit. Files larger than 4 MB will fail; compress or split large files.
+1. SSH into your server and clone the repo.
 
-## Super Users (Bootstrap)
+2. Install Node.js 20 and PM2:
 
-On first login with these emails, accounts are created if they don't exist:
+   ```bash
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt install -y nodejs
+   sudo npm install -g pm2
+   ```
 
-- `erichvandenheuvel5@gmail.com` / `vandenHeuvel97!`
-- `demouser1@gmail.com` / `DemoUser1`
+3. Configure and build:
 
-For production, restrict or remove this in `src/app/api/auth/login/route.ts`.
+   ```bash
+   cd safety_system_v2
+   cp .env.example .env
+   # Edit .env with your values
+   npm install
+   npx prisma generate
+   npx prisma db push
+   npm run db:seed   # optional
+   npm run build
+   ```
+
+4. Start with PM2:
+
+   ```bash
+   pm2 start npm --name "safety-system" -- start
+   pm2 save
+   pm2 startup
+   ```
+
+   Or with standalone (smaller footprint):
+
+   ```bash
+   pm2 start .next/standalone/server.js --name "safety-system" -i 1
+   pm2 save
+   pm2 startup
+   ```
+
+5. Put **Nginx** in front (optional):
+
+   ```nginx
+   server {
+     listen 80;
+     server_name yourdomain.co.za;
+     location / {
+       proxy_pass http://127.0.0.1:3000;
+       proxy_http_version 1.1;
+       proxy_set_header Upgrade $http_upgrade;
+       proxy_set_header Connection 'upgrade';
+       proxy_set_header Host $host;
+       proxy_cache_bypass $http_upgrade;
+       proxy_set_header X-Real-IP $remote_addr;
+       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+       proxy_set_header X-Forwarded-Proto $scheme;
+     }
+   }
+   ```
+
+   Add SSL with Certbot: `sudo certbot --nginx -d yourdomain.co.za`
+
+---
+
+## Build Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run build` | Prisma generate + Next.js build (no DB access needed) |
+| `npm run build:full` | Build + `prisma db push` + `prisma db seed` |
+| `npm run start` | Start production server |
+| `npm run db:push` | Apply schema to database |
+| `npm run db:seed` | Run seed script |
+| `npm run db:generate` | Regenerate Prisma client |
+
+---
+
+## First-time Setup
+
+1. Set `DATABASE_URL` and run `npm run db:push` to create tables.
+2. Run `npm run db:seed` to create demo users (optional).
+3. Default demo login: `demouser1@gmail.com` / `DemoUser1`.
+4. For production, remove or restrict bootstrap users in `src/app/api/auth/login/route.ts`.
+
+---
+
+## Cloudinary / Uploads
+
+- Use `CLOUDINARY_URL` = `cloudinary://api_key:api_secret@cloud_name` or the three separate vars.
+- Ensure `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` matches for client uploads.
+- File size: keep uploads under ~4 MB to avoid timeouts.
+
+---
+
+## PDF Generation
+
+The app uses `@sparticuz/chromium` for PDFs. On Linux (VPS), it usually works out of the box. If PDFs fail, check server memory (Chromium needs ~200MB+).
