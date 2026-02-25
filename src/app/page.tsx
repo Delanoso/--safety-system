@@ -93,9 +93,6 @@ export default function LoginPage() {
         </form>
 
         <div className="text-sm text-[var(--muted-foreground)] space-y-2">
-          <p className="text-xs text-center">
-            Demo: <code className="bg-black/5 px-1 rounded">demouser1@gmail.com</code> / <code className="bg-black/5 px-1 rounded">DemoUser1</code>
-          </p>
           <p className="text-center">
             New company?{" "}
             <button

@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
+import { requireUser } from "@/lib/auth";
 
 function generateToken() {
   return crypto.randomUUID();
@@ -11,9 +12,8 @@ export async function POST(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const current = await requireUser();
   const { id } = await context.params;
-
-  console.log("📨 SEND-FOR-SIGNATURE PARAM ID:", id);
 
   if (!id) {
     return NextResponse.json(
@@ -41,9 +41,20 @@ export async function POST(
   try {
     const appointment = await prisma.appointment.findUnique({
       where: { id },
+      select: { companyId: true },
     });
 
     if (!appointment) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (current.role !== "super" && appointment.companyId !== current.companyId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const appointmentFull = await prisma.appointment.findUnique({
+      where: { id },
+    });
+    if (!appointmentFull) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
@@ -62,7 +73,7 @@ export async function POST(
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const signUrl = `${baseUrl}/appointments/sign/${appointment.id}?role=${role}&token=${token}`;
+    const signUrl = `${baseUrl}/appointments/sign/${id}?role=${role}&token=${token}`;
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
@@ -104,7 +115,7 @@ export async function POST(
           : "Appointment Letter – Appointee Signature Required",
       html: `
         <p>Dear ${
-          role === "appointer" ? appointment.appointer : appointment.appointee
+          role === "appointer" ? appointmentFull.appointer : appointmentFull.appointee
         },</p>
         <p>You have an appointment letter to sign.</p>
         ${instructionBlock}

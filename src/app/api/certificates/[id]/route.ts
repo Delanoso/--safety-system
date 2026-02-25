@@ -1,16 +1,37 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 export async function DELETE(
-  req: Request,
+  _req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params; // ⭐ REQUIRED in Next.js 16
+  try {
+    const current = await requireUser();
+    const { id } = await context.params;
 
-  await prisma.certificate.delete({
-    where: { id: Number(id) },
-  });
+    const cert = await prisma.certificate.findUnique({
+      where: { id: Number(id) },
+      select: { companyId: true },
+    });
+    if (!cert) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (
+      current.role !== "super" &&
+      current.companyId != null &&
+      cert.companyId !== current.companyId
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  return NextResponse.json({ success: true });
+    await prisma.certificate.delete({
+      where: { id: Number(id) },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 }
 

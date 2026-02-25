@@ -31,13 +31,13 @@ CREATE TABLE "Incident" (
     "employee" TEXT,
     "employeeId" TEXT,
     "location" TEXT,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "severity" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "linkId" TEXT,
     "details" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateTable
@@ -45,6 +45,6 @@ CREATE TABLE "IncidentImage" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "incidentId" TEXT NOT NULL,
     "url" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "IncidentImage_incidentId_fkey" FOREIGN KEY ("incidentId") REFERENCES "Incident" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );

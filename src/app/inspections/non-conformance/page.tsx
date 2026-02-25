@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 // Safe ID generator (no SSR mismatch)
 const generateId = () =>
@@ -34,6 +35,7 @@ const createEmptyItem = (): NcrItem => ({
 export default function NonConformancePage() {
   const [items, setItems] = useState<NcrItem[]>([]);
   const [email, setEmail] = useState("");
+  const [lastSavedReportId, setLastSavedReportId] = useState<string | null>(null);
 
   // Department memory
   const [departments, setDepartments] = useState<string[]>([]);
@@ -202,7 +204,8 @@ export default function NonConformancePage() {
       return;
     }
 
-    const url = `/api/pdf?type=ncr&id=${encodeURIComponent(report.id)}`;
+    setLastSavedReportId(report.id);
+    const url = `/pdf-renderer?type=ncr&id=${encodeURIComponent(report.id)}`;
     window.open(url, "_blank");
   };
 
@@ -471,6 +474,14 @@ export default function NonConformancePage() {
               >
                 Save as PDF
               </button>
+              {lastSavedReportId && (
+                <Link
+                  href={`/inspections/non-conformance/view/${lastSavedReportId}`}
+                  className="px-5 py-3 bg-slate-600 text-white rounded-lg shadow hover:bg-slate-700 transition text-sm inline-block"
+                >
+                  View document
+                </Link>
+              )}
             </div>
           </div>
 

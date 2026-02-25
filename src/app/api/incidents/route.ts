@@ -81,12 +81,9 @@ export async function GET() {
 
     if (current.role === "super") {
       // see all incidents
-    } else if (current.role === "admin") {
-      where.companyId = current.companyId ?? undefined;
     } else {
-      // normal user: only own incidents inside their company
+      // admin and user: see all company incidents (transparency)
       where.companyId = current.companyId ?? undefined;
-      where.createdByUserId = current.id;
     }
 
     const incidents = await prisma.incident.findMany({

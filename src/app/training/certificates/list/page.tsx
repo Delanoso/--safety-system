@@ -47,7 +47,7 @@ export default function CertificatesListPage() {
   function handleDownloadPdf(c) {
     const id = c.id != null ? String(c.id) : "";
     if (!id) return;
-    const url = `/api/pdf?type=training-certificate&id=${encodeURIComponent(id)}`;
+    const url = `/pdf-renderer?type=training-certificate&id=${encodeURIComponent(id)}`;
     window.open(url, "_blank");
   }
 

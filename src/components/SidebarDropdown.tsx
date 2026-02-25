@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { getModuleFromPath, canAccessModule } from "@/lib/module-access";
 
 interface DropdownItem {
   name: string;
@@ -15,6 +16,42 @@ interface DropdownProps {
   icon: React.ReactNode;
   items?: DropdownItem[];
   collapsed: boolean;
+  allowedModules?: string[] | null;
+  onRestrictedClick?: () => void;
+}
+
+function ItemOrRestricted({
+  item,
+  allowedModules,
+  onRestrictedClick,
+}: {
+  item: DropdownItem;
+  allowedModules?: string[] | null;
+  onRestrictedClick?: () => void;
+}) {
+  const href = item.href ?? "#";
+  const moduleSlug = href !== "#" ? getModuleFromPath(href) : null;
+  const restricted =
+    moduleSlug !== null &&
+    onRestrictedClick &&
+    !canAccessModule(allowedModules, moduleSlug);
+
+  if (restricted) {
+    return (
+      <button
+        type="button"
+        onClick={onRestrictedClick}
+        className="text-sm hover:opacity-70 transition text-left w-full"
+      >
+        {item.name}
+      </button>
+    );
+  }
+  return (
+    <Link href={href} className="text-sm hover:opacity-70 transition">
+      {item.name}
+    </Link>
+  );
 }
 
 export default function SidebarDropdown({
@@ -22,6 +59,8 @@ export default function SidebarDropdown({
   icon,
   items = [],
   collapsed,
+  allowedModules,
+  onRestrictedClick,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
 
@@ -45,15 +84,19 @@ export default function SidebarDropdown({
         <div className="ml-6 mt-2 flex flex-col gap-2">
           {items.map((item) =>
             item.children ? (
-              <NestedDropdown key={item.name} item={item} />
-            ) : (
-              <Link
+              <NestedDropdown
                 key={item.name}
-                href={item.href ?? "#"}
-                className="text-sm hover:opacity-70 transition"
-              >
-                {item.name}
-              </Link>
+                item={item}
+                allowedModules={allowedModules}
+                onRestrictedClick={onRestrictedClick}
+              />
+            ) : (
+              <ItemOrRestricted
+                key={item.name}
+                item={item}
+                allowedModules={allowedModules}
+                onRestrictedClick={onRestrictedClick}
+              />
             )
           )}
         </div>
@@ -62,7 +105,15 @@ export default function SidebarDropdown({
   );
 }
 
-function NestedDropdown({ item }: { item: DropdownItem }) {
+function NestedDropdown({
+  item,
+  allowedModules,
+  onRestrictedClick,
+}: {
+  item: DropdownItem;
+  allowedModules?: string[] | null;
+  onRestrictedClick?: () => void;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -79,13 +130,12 @@ function NestedDropdown({ item }: { item: DropdownItem }) {
       {open && (
         <div className="ml-4 mt-1 flex flex-col gap-1">
           {item.children?.map((child) => (
-            <Link
+            <ItemOrRestricted
               key={child.name}
-              href={child.href ?? "#"}
-              className="text-sm hover:opacity-70 transition"
-            >
-              {child.name}
-            </Link>
+              item={child}
+              allowedModules={allowedModules}
+              onRestrictedClick={onRestrictedClick}
+            />
           ))}
         </div>
       )}

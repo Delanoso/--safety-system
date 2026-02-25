@@ -53,7 +53,7 @@ export default function MedicalsListPage() {
   function handleDownloadPdf(m: Medical) {
     const id = m.id != null ? String(m.id) : "";
     if (!id) return;
-    window.open(`/api/pdf?type=medical-certificate&id=${encodeURIComponent(id)}`, "_blank");
+    window.open(`/pdf-renderer?type=medical-certificate&id=${encodeURIComponent(id)}`, "_blank");
   }
 
   const filtered = medicals.filter((m) => {

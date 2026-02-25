@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const HEALTH_PATH = "/api/health";
-const SEED_PATH = "/api/seed";
 
 export function middleware(req: NextRequest) {
-  // Allow health/seed immediately - no auth, no cookies check
+  // Allow health check immediately - no auth, no cookies check
   const rawPath = req.nextUrl.pathname.replace(/\/+$/, "") || "/";
-  if (rawPath === HEALTH_PATH || rawPath === SEED_PATH) {
+  if (rawPath === HEALTH_PATH) {
     return NextResponse.next();
   }
 
@@ -20,7 +19,6 @@ export function middleware(req: NextRequest) {
     "/login",
     "/signup",
     "/api/health",
-    "/api/seed",
     "/api/auth/login",
     "/api/auth/register-company",
     "/api/she-elections/vote",

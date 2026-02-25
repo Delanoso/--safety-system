@@ -1,12 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCloudinary } from "@/lib/cloudinary";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const current = await getCurrentUser();
+    if (!current) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { id: incidentId } = await context.params;
+    if (!incidentId) {
+      return NextResponse.json(
+        { error: "Missing incidentId in route params" },
+        { status: 400 }
+      );
+    }
+    const incident = await prisma.incident.findUnique({
+      where: { id: incidentId },
+      select: { companyId: true },
+    });
+    if (!incident) {
+      return NextResponse.json({ error: "Incident not found" }, { status: 404 });
+    }
+    if (current.role !== "super" && incident.companyId !== current.companyId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const cloud = getCloudinary();
     if (!cloud) {
       return NextResponse.json(
@@ -15,15 +38,6 @@ export async function POST(
             "Cloudinary is not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to .env.local (see .env.example).",
         },
         { status: 503 }
-      );
-    }
-
-    const { id: incidentId } = await context.params;
-
-    if (!incidentId) {
-      return NextResponse.json(
-        { error: "Missing incidentId in route params" },
-        { status: 400 }
       );
     }
 
@@ -79,9 +93,23 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const current = await getCurrentUser();
+    if (!current) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id: incidentId } = await context.params;
     if (!incidentId) {
       return NextResponse.json({ error: "Missing incident ID" }, { status: 400 });
+    }
+    const incident = await prisma.incident.findUnique({
+      where: { id: incidentId },
+      select: { companyId: true },
+    });
+    if (!incident) {
+      return NextResponse.json({ error: "Incident not found" }, { status: 404 });
+    }
+    if (current.role !== "super" && incident.companyId !== current.companyId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json();

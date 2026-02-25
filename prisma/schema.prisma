@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/prisma-client-generated"
 }
 
 datasource db {
@@ -8,13 +9,13 @@ datasource db {
 }
 
 model Appointment {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   type               String
   appointee          String
   appointer          String
   department         String
   date               DateTime
-  status             String   @default("draft")
+  status             String    @default("draft")
 
   appointeeEmail     String?
   appointerEmail     String?
@@ -27,6 +28,9 @@ model Appointment {
 
   appointeeToken     String?
   appointerToken     String?
+
+  companyId          String?
+  company            Company?  @relation(fields: [companyId], references: [id])
 }
 
 model Inspection {
@@ -39,27 +43,36 @@ model Inspection {
 }
 
 model DailyInspection {
-  id          String   @id        // frontend-controlled ID
-  department  String
-  inspector   String
-  createdAt   DateTime @default(now())
-  data        String   // JSON: { columns, legendItems, rows }
+  id               String    @id        // frontend-controlled ID
+  department       String
+  inspector        String
+  inspectionType   String?   // e.g. "Housekeeping & Walkways" for edit URL
+  createdAt        DateTime  @default(now())
+  data             String    // JSON: { columns, legendItems, rows }
+  companyId        String?
+  company          Company?  @relation(fields: [companyId], references: [id])
 }
 
 model WeeklyInspection {
-  id          String   @id        // frontend-controlled ID
-  department  String
-  inspector   String
-  createdAt   DateTime @default(now())
-  data        String   // JSON: { columns, legendItems, rows }
+  id               String    @id        // frontend-controlled ID
+  department       String
+  inspector        String
+  inspectionType   String?
+  createdAt        DateTime  @default(now())
+  data             String    // JSON: { columns, legendItems, rows }
+  companyId        String?
+  company          Company?  @relation(fields: [companyId], references: [id])
 }
 
 model MonthlyInspection {
-  id          String   @id        // frontend-controlled ID
-  department  String
-  inspector   String
-  createdAt   DateTime @default(now())
-  data        String   // JSON: { columns, legendItems, rows }
+  id               String    @id        // frontend-controlled ID
+  department       String
+  inspector        String
+  inspectionType   String?
+  createdAt        DateTime  @default(now())
+  data             String    // JSON: { columns, legendItems, rows }
+  companyId        String?
+  company          Company?  @relation(fields: [companyId], references: [id])
 }
 
 model NcrReport {
@@ -174,6 +187,12 @@ model Company {
   incidents   Incident[]
   ncrReports  NcrReport[]
   users       User[]
+  appointments Appointment[]
+
+  // Inspections (daily/weekly/monthly)
+  dailyInspections   DailyInspection[]
+  weeklyInspections  WeeklyInspection[]
+  monthlyInspections MonthlyInspection[]
 
   // Health & Safety modules
   sheCommitteeMeetings  SHECommitteeMeeting[]
@@ -182,6 +201,13 @@ model Company {
   hazardousChemicals    HazardousChemical[]
   contractors           Contractor[]
   maintenanceSchedules  MaintenanceSchedule[]
+
+  // PPE
+  ppeDepartments  PPEDepartment[]
+  ppeItemTypes    PPEItemType[]
+
+  certificates    Certificate[]
+  medicals        Medical[]
 }
 
 model InvestigationTeamMember {
@@ -189,6 +215,7 @@ model InvestigationTeamMember {
   name        String
   designation String
   signature   String?
+  signedAt    DateTime? // when signature was saved
 
   incident    Incident  @relation(fields: [incidentId], references: [id])
   incidentId  String
@@ -222,6 +249,12 @@ model User {
   company   Company? @relation(fields: [companyId], references: [id])
   companyId String?
 
+  /// JSON array of module slugs the user can access. Null or empty = full access. Used by admins to restrict users.
+  allowedModules String?
+
+  /// JSON array of department names for inspections. Users in the same department can view/edit that department's inspections.
+  inspectionDepartments String?
+
   ncrReports NcrReport[]
   incidents  Incident[]
 }
@@ -253,6 +286,8 @@ model Certificate {
   expiryDate     DateTime
   notes          String?
   fileUrl        String?   // Cloudinary or local storage
+  companyId      String?
+  company        Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdAt      DateTime  @default(now())
 }
 
@@ -264,29 +299,79 @@ model Medical {
   expiryDate  DateTime
   notes       String?
   fileUrl     String?
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
 }
 
-// PPE Management
-model PPEPerson {
+// PPE Management — Department → Sub-department → Persons
+model PPEDepartment {
+  id             Int               @id @default(autoincrement())
+  name           String
+  companyId      String?
+  company        Company?          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subDepartments PPESubDepartment[]
+  createdAt      DateTime          @default(now())
+}
+
+model PPESubDepartment {
+  id              Int                     @id @default(autoincrement())
+  departmentId   Int
+  department     PPEDepartment           @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  name           String
+  persons        PPEPerson[]
+  ppeItemTypes   PPESubDepartmentItem[]  // which PPE items apply to this sub-department
+  createdAt      DateTime                @default(now())
+}
+
+model PPESubDepartmentItem {
+  id              Int             @id @default(autoincrement())
+  subDepartmentId Int
+  itemTypeId      Int
+  subDepartment   PPESubDepartment @relation(fields: [subDepartmentId], references: [id], onDelete: Cascade)
+  itemType        PPEItemType     @relation(fields: [itemTypeId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+  @@unique([subDepartmentId, itemTypeId])
+}
+
+model PPESizeReminderToken {
   id        Int       @id @default(autoincrement())
-  name      String
-  email     String?
-  phone     String?
-  department     String?
-  subDepartment  String?
-  sizes     String?   // JSON e.g. {"Shoes":"42","Gloves":"M"}
-  issues    PPEIssue[]
+  personId  Int
+  person    PPEPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+}
+
+model PPEPerson {
+  id                   Int                     @id @default(autoincrement())
+  name                 String
+  email                String?
+  phone                String?
+  department           String?
+  subDepartment        String?
+  subDepartmentId      Int?
+  subDepartmentRelation PPESubDepartment?      @relation(fields: [subDepartmentId], references: [id], onDelete: SetNull)
+  sizes                String?
+  issues               PPEIssue[]
+  sizeReminderTokens   PPESizeReminderToken[]
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
 }
 
 model PPEItemType {
-  id        Int        @id @default(autoincrement())
-  name      String     // Shoes, Gloves, Helmet, etc.
-  stock     PPEStock?
-  issues    PPEIssue[]
-  createdAt DateTime   @default(now())
+  id                 Int        @id @default(autoincrement())
+  name               String     // Shoes, Gloves, Helmet, etc.
+  minStockThreshold  Int?       // alert when quantity <= this
+  reorderLevel       Int?       // suggest reorder when quantity <= this
+  companyId          String?
+  company            Company?   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stock              PPEStock?
+  issues             PPEIssue[]
+  stockMovements     PPEStockMovement[]
+  subDepartmentItems PPESubDepartmentItem[]
+  createdAt          DateTime   @default(now())
 }
 
 model PPEStock {
@@ -295,6 +380,18 @@ model PPEStock {
   itemType    PPEItemType @relation(fields: [itemTypeId], references: [id], onDelete: Cascade)
   quantity    Int         @default(0)
   updatedAt   DateTime    @updatedAt
+}
+
+model PPEStockMovement {
+  id         Int          @id @default(autoincrement())
+  itemTypeId Int
+  itemType   PPEItemType  @relation(fields: [itemTypeId], references: [id], onDelete: Cascade)
+  movementType String    // RECEIVE | ADJUST | ISSUE | TRANSFER
+  quantityDelta Int      // positive = in, negative = out
+  quantityAfter Int      // stock after this movement
+  reason     String?     // e.g. "Goods Received", "Cycle Count Correction"
+  notes      String?
+  createdAt  DateTime   @default(now())
 }
 
 model PPEIssue {

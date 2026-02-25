@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LayoutDashboard } from "lucide-react";
 
 export default function MedicalsPage() {
   const router = useRouter();
@@ -26,6 +28,12 @@ export default function MedicalsPage() {
   return (
     <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
       <div className="max-w-5xl mx-auto space-y-10">
+        <div className="flex justify-start">
+          <Link href="/dashboard" className="button button-neutral flex items-center gap-2">
+            <LayoutDashboard size={18} />
+            Dashboard
+          </Link>
+        </div>
         <h1 className="text-4xl font-bold text-black">Medicals</h1>
         <p className="text-black/70">
           Manage medical examinations, expiries and compliance.

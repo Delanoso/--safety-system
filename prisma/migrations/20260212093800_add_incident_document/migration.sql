@@ -7,6 +7,6 @@ CREATE TABLE "IncidentDocument" (
     "filePath" TEXT NOT NULL,
     "linkId" TEXT,
     "incidentId" TEXT,
-    "uploadedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "IncidentDocument_incidentId_fkey" FOREIGN KEY ("incidentId") REFERENCES "Incident" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );

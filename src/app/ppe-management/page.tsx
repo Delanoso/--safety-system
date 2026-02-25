@@ -1,15 +1,32 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LayoutDashboard } from "lucide-react";
 
 export default function PPEManagementPage() {
   const router = useRouter();
 
   const items = [
     {
+      title: "Dashboard",
+      description: "Stock summary, low-stock alerts, pending signatures, and issues today.",
+      route: "/ppe-management/dashboard",
+    },
+    {
       title: "PPE Size List",
-      description: "Manage people and their PPE sizes. Add, edit and remove people.",
+      description: "Manage people and their PPE sizes. Import/export Excel, add and edit people.",
       route: "/ppe-management/size-list",
+    },
+    {
+      title: "Reminders",
+      description: "Send a WhatsApp link so people can open it and choose their PPE sizes (by sub-department).",
+      route: "/ppe-management/reminders",
+    },
+    {
+      title: "Stock List",
+      description: "Track PPE in stock. Receive stock, adjust quantities, view movement history.",
+      route: "/ppe-management/stock-list",
     },
     {
       title: "PPE Issue Register",
@@ -17,21 +34,27 @@ export default function PPEManagementPage() {
       route: "/ppe-management/issue-register",
     },
     {
-      title: "Stock List",
-      description: "Manage stock levels for each PPE item. Stock deducts when someone signs for an issue.",
-      route: "/ppe-management/stock-list",
+      title: "Reports",
+      description: "View and export issues and stock movements to Excel.",
+      route: "/ppe-management/reports",
     },
   ];
 
   return (
     <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
       <div className="max-w-5xl mx-auto space-y-10">
+        <div className="flex justify-start">
+          <Link href="/dashboard" className="button button-neutral flex items-center gap-2">
+            <LayoutDashboard size={18} />
+            Dashboard
+          </Link>
+        </div>
         <h1 className="text-4xl font-bold text-black">PPE Management</h1>
         <p className="text-black/70">
-          Manage sizes, issue register and stock. People from the size list appear in the issue register.
+          Dashboard, size list, stock tracking, issuing and signatures, and reports. People from the size list appear in the issue register.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {items.map((item, index) => (
             <button
               key={index}

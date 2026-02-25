@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ExternalLink, FileDown, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ViewSignatureBlock } from "@/components/ViewSignatureBlock";
 
 type Assessment = {
   id: string;
@@ -80,7 +81,7 @@ export default function RiskAssessmentViewPage() {
               </Link>
             )}
             <a
-              href={`/api/pdf?type=risk-assessment&id=${id}`}
+              href={`/pdf-renderer?type=risk-assessment&id=${encodeURIComponent(id)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="button button-pdf flex items-center gap-2"
@@ -155,21 +156,16 @@ export default function RiskAssessmentViewPage() {
             </div>
           )}
 
-          {assessment.signature && (
-            <div className="pt-4 border-t border-black/10">
-              <h2 className="text-lg font-semibold text-black mb-2">Signature</h2>
-              <img
-                src={assessment.signature}
-                alt="Signature"
-                className="max-w-[200px] max-h-[80px] border border-black/20 rounded"
+          <div className="pt-4 border-t border-black/10">
+            <h2 className="text-lg font-semibold text-black mb-3">Signatures</h2>
+            <div className="flex flex-wrap gap-6">
+              <ViewSignatureBlock
+                label="Assessor"
+                signature={assessment.signature}
+                signedAt={assessment.signedAt}
               />
-              {assessment.signedAt && (
-                <p className="text-sm text-black/60 mt-1">
-                  Signed on {new Date(assessment.signedAt).toLocaleString()}
-                </p>
-              )}
             </div>
-          )}
+          </div>
 
           {assessment.fileUrl && (
             <div>

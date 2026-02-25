@@ -13,7 +13,7 @@ CREATE TABLE "InvestigationTeamMember" (
     "designation" TEXT NOT NULL,
     "signature" TEXT,
     "incidentId" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "InvestigationTeamMember_incidentId_fkey" FOREIGN KEY ("incidentId") REFERENCES "Incident" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -23,8 +23,8 @@ CREATE TABLE "SignatureToken" (
     "token" TEXT NOT NULL,
     "teamId" TEXT NOT NULL,
     "incidentId" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expiresAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3) NOT NULL
 );
 
 -- RedefineTables
@@ -39,14 +39,14 @@ CREATE TABLE "new_Incident" (
     "employee" TEXT,
     "employeeId" TEXT,
     "location" TEXT,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "severity" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "linkId" TEXT,
     "details" TEXT,
     "companyId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "Incident_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 INSERT INTO "new_Incident" ("createdAt", "date", "department", "description", "details", "employee", "employeeId", "id", "linkId", "location", "severity", "status", "title", "type", "updatedAt") SELECT "createdAt", "date", "department", "description", "details", "employee", "employeeId", "id", "linkId", "location", "severity", "status", "title", "type", "updatedAt" FROM "Incident";

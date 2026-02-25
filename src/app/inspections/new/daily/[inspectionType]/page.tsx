@@ -1,7 +1,9 @@
 "use client";
 import { useState, useEffect, useMemo, use } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { inspectionLegends } from "@/app/data/inspectionLegends";
+import { getInspectionDepartment } from "@/lib/inspection-department";
 
 const dailyColumns = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -70,6 +72,8 @@ export default function DailyInspectionPage({
 
   useEffect(() => {
     setDepartments(loadDepartments());
+    const selectedDept = getInspectionDepartment();
+    if (selectedDept) setDepartment(selectedDept);
   }, []);
 
   useEffect(() => {
@@ -108,6 +112,11 @@ export default function DailyInspectionPage({
   };
 
   const handleSave = async () => {
+    if (!department.trim() || !inspectorName.trim()) {
+      alert("Please fill in Department and Inspector Name.");
+      return;
+    }
+
     const all = loadAllInspections();
     const now = Date.now();
     const id = existingId || generateId();
@@ -139,7 +148,7 @@ export default function DailyInspectionPage({
     }
 
     // ⭐ Save to Prisma
-    await fetch("/api/inspections/save", {
+    const res = await fetch("/api/inspections/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -153,6 +162,12 @@ export default function DailyInspectionPage({
         frequency: "daily",
       }),
     });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Save failed" }));
+      alert(err.error || "Failed to save inspection. It will not appear on Ongoing Inspections.");
+      return;
+    }
 
     window.location.href = `/inspections/new/daily/${inspectionType}?id=${id}`;
   };
@@ -301,13 +316,22 @@ export default function DailyInspectionPage({
         </button>
 
         {existingId && (
-          <a
-            href={`/api/inspections/daily/${existingId}/pdf`}
-            target="_blank"
-            className="px-6 py-3 bg-purple-600/70 text-white rounded-lg shadow hover:bg-purple-700/70 transition"
-          >
-            Download PDF
-          </a>
+          <>
+            <Link
+              href={`/inspections/view/daily/${existingId}`}
+              className="px-6 py-3 bg-slate-600/70 text-white rounded-lg shadow hover:bg-slate-700/70 transition"
+            >
+              View document
+            </Link>
+            <a
+              href={`/pdf-renderer?type=daily-inspection&id=${encodeURIComponent(existingId)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-purple-600/70 text-white rounded-lg shadow hover:bg-purple-700/70 transition"
+            >
+              Download PDF
+            </a>
+          </>
         )}
       </div>
     </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getInspectionDepartment } from "@/lib/inspection-department";
 
 // -------------------------------------------------------------
 // MONTHLY COLUMNS
@@ -61,6 +63,11 @@ export default function MonthlyInspectionPage({
   function saveAllInspections(data: { daily: unknown[]; weekly: unknown[]; monthly: unknown[] }) {
     localStorage.setItem("inspections", JSON.stringify(data));
   }
+
+  useEffect(() => {
+    const selectedDept = getInspectionDepartment();
+    if (selectedDept) setDepartment(selectedDept);
+  }, []);
 
   useEffect(() => {
     if (!existingId) return;
@@ -128,7 +135,7 @@ export default function MonthlyInspectionPage({
     saveAllInspections(all);
 
     try {
-      await fetch("/api/inspections/save", {
+      const res = await fetch("/api/inspections/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -142,8 +149,17 @@ export default function MonthlyInspectionPage({
           frequency: "monthly",
         }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Save failed" }));
+        alert(err.error || "Failed to save inspection. It will not appear on Ongoing Inspections.");
+        setSaving(false);
+        return;
+      }
     } catch (err) {
       console.error("Save error:", err);
+      alert("Failed to save inspection. Please try again.");
+      setSaving(false);
+      return;
     }
 
     setSaving(false);
@@ -326,6 +342,24 @@ export default function MonthlyInspectionPage({
             {saving ? "Saving…" : "Save Document"}
           </button>
 
+          {existingId && (
+            <>
+              <Link
+                href={`/inspections/view/monthly/${existingId}`}
+                className="px-6 py-3 bg-slate-600/70 text-white rounded-lg shadow hover:bg-slate-700/70 transition"
+              >
+                View document
+              </Link>
+              <a
+                href={`/pdf-renderer?type=monthly-inspection&id=${encodeURIComponent(existingId)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3 bg-purple-600/70 text-white rounded-lg shadow hover:bg-purple-700/70 transition"
+              >
+                Download PDF
+              </a>
+            </>
+          )}
         </div>
 
       </div>

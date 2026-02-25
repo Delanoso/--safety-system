@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "NcrReport" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "department" TEXT,
     "status" TEXT NOT NULL DEFAULT 'open'
 );
@@ -10,7 +10,7 @@ CREATE TABLE "NcrReport" (
 CREATE TABLE "NcrItem" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "description" TEXT NOT NULL,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "comment" TEXT,
     "department" TEXT,
     "reportId" TEXT NOT NULL,

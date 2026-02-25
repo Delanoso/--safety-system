@@ -2,7 +2,9 @@
 
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+type Company = { id: string; name: string };
 
 function CreateAppointmentFormContent() {
   const params = useSearchParams();
@@ -14,46 +16,81 @@ function CreateAppointmentFormContent() {
   const [appointer, setAppointer] = useState("");
   const [date, setDate] = useState("");
   const [department, setDepartment] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isSuper, setIsSuper] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { user: { companyId: string | null; companyName: string | null; role: string } | null }) => {
+        const u = data?.user;
+        if (u?.companyId) setCompanyId(u.companyId);
+        if (u?.companyName) setCompanyName(u.companyName);
+        if (u?.role === "super") setIsSuper(true);
+        setUserLoaded(true);
+      })
+      .catch(() => setUserLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    if (!isSuper) return;
+    fetch("/api/companies", { credentials: "include" })
+      .then((r) => r.json())
+      .then((list: Company[]) => {
+        if (Array.isArray(list)) setCompanies(list);
+      })
+      .catch(() => {});
+  }, [isSuper]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
+      const body: Record<string, unknown> = {
+        type,
+        appointee,
+        appointer,
+        department,
+        date,
+        status: "draft",
+      };
+      if (isSuper && companyId) body.companyId = companyId;
+
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type,
-          appointee,
-          appointer,
-          department,
-          date,
-          status: "draft",
-        }),
+        credentials: "include",
+        body: JSON.stringify(body),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        console.error("Failed to create appointment");
+        const message = typeof data?.error === "string" ? data.error : "Failed to create appointment";
+        setError(message);
         setLoading(false);
         return;
       }
 
-      const data = await res.json();
-      const id = data.id;
+      const id = data?.id;
 
       if (!id) {
-        console.error("API did not return an ID");
+        setError("API did not return an ID");
         setLoading(false);
         return;
       }
 
-      // Corrected redirect
       router.push(`/appointments/request-signature/${id}`);
       router.refresh();
-    } catch (error) {
-      console.error("Error creating appointment:", error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error creating appointment");
     } finally {
       setLoading(false);
     }
@@ -70,7 +107,66 @@ function CreateAppointmentFormContent() {
         appointment.
       </p>
 
+      {error && (
+        <div
+          className="p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-700 dark:text-red-300"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl">
+        <div>
+          <label className="block mb-1 text-[var(--foreground)] font-medium">
+            Company
+          </label>
+          {!userLoaded ? (
+            <p className="text-[var(--foreground)] opacity-70">Loading...</p>
+          ) : isSuper ? (
+            <select
+              value={companyId}
+              onChange={(e) => setCompanyId(e.target.value)}
+              required
+              className="
+                w-full p-3 rounded-xl
+                bg-[rgba(255,255,255,0.55)]
+                backdrop-blur-md
+                border border-[rgba(0,0,0,0.15)]
+                text-[var(--foreground)]
+              "
+            >
+              <option value="">Select company</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <input
+                type="text"
+                value={companyName ?? "—"}
+                readOnly
+                className="
+                  w-full p-3 rounded-xl
+                  bg-[rgba(255,255,255,0.35)]
+                  backdrop-blur-md
+                  border border-[rgba(0,0,0,0.15)]
+                  text-[var(--foreground)] opacity-90
+                "
+                aria-label="Company (your account)"
+              />
+              {!companyName && (
+                <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
+                  No company linked to your account. Contact an administrator.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
         <div>
           <label className="block mb-1 text-[var(--foreground)] font-medium">
             Appointee
@@ -152,7 +248,7 @@ function CreateAppointmentFormContent() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !userLoaded || (!isSuper && !companyName) || (isSuper && !companyId)}
           className="
             px-6 py-3 rounded-xl font-semibold
             bg-[var(--gold)] text-black

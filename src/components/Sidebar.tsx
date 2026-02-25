@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Home,
@@ -13,9 +13,24 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import SidebarDropdown from "./SidebarDropdown";
+import RestrictedAccessModal from "./RestrictedAccessModal";
+
+type UserMe = { allowedModules: string[] | null };
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState<UserMe | null>(null);
+  const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data: { user: UserMe | null }) => setUser(data?.user ?? null))
+      .catch(() => setUser(null));
+  }, []);
+
+  const allowedModules = user?.allowedModules ?? null;
+  const onRestrictedClick = () => setRestrictedModalOpen(true);
 
   return (
     <aside
@@ -75,6 +90,8 @@ export default function Sidebar() {
         title="Health & Safety"
         icon={<Shield size={20} />}
         collapsed={collapsed}
+        allowedModules={allowedModules}
+        onRestrictedClick={onRestrictedClick}
         items={[
           {
             name: "Section 1",
@@ -116,10 +133,12 @@ export default function Sidebar() {
         title="Compliance"
         icon={<ClipboardList size={20} />}
         collapsed={collapsed}
+        allowedModules={allowedModules}
+        onRestrictedClick={onRestrictedClick}
         items={[
           { name: "Legal Registers", href: "/legal-registers" },
           { name: "Appointments", href: "/appointments" },
-          { name: "Inspections", href: "/inspections" },
+          { name: "Inspections", href: "/inspections/select-department" },
           { name: "Incidents", href: "/incidents" }, // ⭐ Added
         ]}
       />
@@ -128,6 +147,8 @@ export default function Sidebar() {
         title="Operations"
         icon={<Briefcase size={20} />}
         collapsed={collapsed}
+        allowedModules={allowedModules}
+        onRestrictedClick={onRestrictedClick}
         items={[
           { name: "Maintenance Schedule", href: "/maintenance-schedule" },
         ]}
@@ -137,13 +158,19 @@ export default function Sidebar() {
         title="People"
         icon={<Users size={20} />}
         collapsed={collapsed}
+        allowedModules={allowedModules}
+        onRestrictedClick={onRestrictedClick}
         items={[
           { name: "Users", href: "/users" },
           { name: "Contractors Portal", href: "/contractors" },
         ]}
       />
 
-
+      <RestrictedAccessModal
+        open={restrictedModalOpen}
+        onClose={() => setRestrictedModalOpen(false)}
+        showGoToDashboard={true}
+      />
     </aside>
   );
 }

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "prisma-client-generated";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -8,8 +8,13 @@ const SEED_USERS = [
   { email: "demouser1@gmail.com", password: "DemoUser1", role: "super" as const },
 ];
 
+const DEMO_COMPANIES = [
+  { companyName: "Demo Company Alpha", email: "admin@demoalpha.com", password: "DemoAlpha2025!" },
+  { companyName: "Demo Company Beta", email: "admin@demobeta.com", password: "DemoBeta2025!" },
+];
+
 async function main() {
-  // Users
+  // Super / demo users (no company)
   for (const u of SEED_USERS) {
     const existing = await prisma.user.findUnique({ where: { email: u.email } });
     if (!existing) {
@@ -19,6 +24,20 @@ async function main() {
       });
       console.log(`Created user: ${u.email}`);
     }
+  }
+
+  // Two demo companies with admin users (for multi-tenant testing)
+  for (const { companyName, email, password } of DEMO_COMPANIES) {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) continue;
+    const hashed = await bcrypt.hash(password, 10);
+    const company = await prisma.company.create({
+      data: { name: companyName, userLimit: 5 },
+    });
+    await prisma.user.create({
+      data: { email, password: hashed, role: "admin", companyId: company.id },
+    });
+    console.log(`Created demo company: ${companyName} (${email})`);
   }
 
   // Demo documents for dashboard stats (one of each)

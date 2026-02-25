@@ -1,8 +1,11 @@
 import React from "react";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { PdfDocument, PdfImageBw, PdfSection } from "@/components/pdf/PdfDocument";
+import { PdfDocument, PdfImageBw, PdfSection, PdfSignatureBlock, pdfTableStyles } from "@/components/pdf/PdfDocument";
 import { getCompanyLogoUrl } from "@/lib/pdf";
 import appointmentTemplates from "@/app/appointments/templates";
+
+const bodyTextStyle: React.CSSProperties = { color: "#111827", fontSize: 14, lineHeight: 1.6 };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -10,6 +13,90 @@ export const fetchCache = "force-no-store";
 export const runtime = "nodejs";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+/** Sanitize for use in filename (remove / \ : * ? " < > |). */
+function sanitizeForFilename(s: string): string {
+  return s.replace(/[/\\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || "document";
+}
+
+/** Get document title for page title / default PDF filename. */
+async function getPdfDocumentTitle(type: string, id: string): Promise<string> {
+  try {
+    switch (type) {
+      case "appointment": {
+        const a = await prisma.appointment.findUnique({ where: { id }, select: { type: true, appointee: true, date: true } });
+        if (!a) return `Appointment ${id}`;
+        const dateStr = new Date(a.date).toISOString().slice(0, 10);
+        return `Appointment ${sanitizeForFilename(a.type)} - ${sanitizeForFilename(a.appointee)} ${dateStr}`;
+      }
+      case "incident": {
+        const i = await prisma.incident.findUnique({ where: { id }, select: { title: true } });
+        if (!i) return `Incident ${id}`;
+        return `Incident Report - ${sanitizeForFilename(i.title)}`;
+      }
+      case "daily-inspection": {
+        const d = await prisma.dailyInspection.findUnique({ where: { id }, select: { department: true, createdAt: true } });
+        if (!d) return `Daily Inspection ${id}`;
+        const dateStr = new Date(d.createdAt).toISOString().slice(0, 10);
+        return `Daily Inspection ${sanitizeForFilename(d.department)} ${dateStr}`;
+      }
+      case "weekly-inspection": {
+        const w = await prisma.weeklyInspection.findUnique({ where: { id }, select: { department: true, createdAt: true } });
+        if (!w) return `Weekly Inspection ${id}`;
+        const dateStr = new Date(w.createdAt).toISOString().slice(0, 10);
+        return `Weekly Inspection ${sanitizeForFilename(w.department)} ${dateStr}`;
+      }
+      case "monthly-inspection": {
+        const m = await prisma.monthlyInspection.findUnique({ where: { id }, select: { department: true, createdAt: true } });
+        if (!m) return `Monthly Inspection ${id}`;
+        const dateStr = new Date(m.createdAt).toISOString().slice(0, 10);
+        return `Monthly Inspection ${sanitizeForFilename(m.department)} ${dateStr}`;
+      }
+      case "ncr": {
+        const n = await prisma.ncrReport.findUnique({ where: { id }, select: { createdAt: true } });
+        if (!n) return `NCR Report ${id}`;
+        const dateStr = new Date(n.createdAt).toISOString().slice(0, 10);
+        return `NCR Report ${dateStr}`;
+      }
+      case "training-certificate": {
+        const numId = Number(id);
+        if (!Number.isInteger(numId)) return `Certificate ${id}`;
+        const c = await prisma.certificate.findUnique({ where: { id: numId }, select: { employee: true, certificateName: true } });
+        if (!c) return `Certificate ${id}`;
+        return `Certificate ${sanitizeForFilename(c.employee)} - ${sanitizeForFilename(c.certificateName)}`;
+      }
+      case "medical-certificate": {
+        const numId = Number(id);
+        if (!Number.isInteger(numId)) return `Medical ${id}`;
+        const m = await prisma.medical.findUnique({ where: { id: numId }, select: { employee: true, medicalType: true } });
+        if (!m) return `Medical ${id}`;
+        return `Medical ${sanitizeForFilename(m.employee)} - ${sanitizeForFilename(m.medicalType)}`;
+      }
+      case "risk-assessment": {
+        const r = await prisma.riskAssessment.findUnique({ where: { id }, select: { title: true } });
+        if (!r) return `Risk Assessment ${id}`;
+        return `Risk Assessment - ${sanitizeForFilename(r.title)}`;
+      }
+      default:
+        return `${type} ${id}`;
+    }
+  } catch {
+    return `${type} ${id}`;
+  }
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const type = typeof params.type === "string" ? params.type : "";
+  const id = typeof params.id === "string" ? params.id : "";
+  if (!type || !id) return { title: "Document" };
+  const title = await getPdfDocumentTitle(type, id);
+  return { title };
+}
 
 export default async function PdfRendererPage({
   searchParams,
@@ -32,6 +119,10 @@ export default async function PdfRendererPage({
   switch (type) {
     case "daily-inspection":
       return <DailyInspectionTemplate id={id} />;
+    case "weekly-inspection":
+      return <WeeklyInspectionTemplate id={id} />;
+    case "monthly-inspection":
+      return <MonthlyInspectionTemplate id={id} />;
     case "appointment":
       return <AppointmentTemplate id={id} />;
     case "incident":
@@ -58,6 +149,7 @@ export default async function PdfRendererPage({
 async function DailyInspectionTemplate({ id }: { id: string }) {
   const inspection = await prisma.dailyInspection.findUnique({
     where: { id },
+    select: { id: true, department: true, inspector: true, createdAt: true, data: true, companyId: true },
   });
 
   if (!inspection) {
@@ -97,7 +189,7 @@ async function DailyInspectionTemplate({ id }: { id: string }) {
       documentType="Safety System — Daily Inspection Report"
       logoUrl={logoUrl}
     >
-      <div style={{ marginBottom: 25, fontSize: 14 }}>
+      <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <strong>Inspection ID:</strong> {id}
         </div>
@@ -113,50 +205,171 @@ async function DailyInspectionTemplate({ id }: { id: string }) {
         </div>
       </div>
 
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          fontSize: 12,
-        }}
-      >
+      <table style={pdfTableStyles.table}>
         <thead>
           <tr>
-            <th style={{ border: "1px solid #000", padding: 6 }}>#</th>
-            <th
-              style={{ border: "1px solid #000", padding: 6, textAlign: "left" }}
-            >
-              Inspection Item
-            </th>
+            <th style={pdfTableStyles.th}>#</th>
+            <th style={pdfTableStyles.th}>Inspection Item</th>
             {columns.map((col) => (
-              <th key={col} style={{ border: "1px solid #000", padding: 6 }}>
-                {col}
-              </th>
+              <th key={col} style={pdfTableStyles.th}>{col}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {legendItems.map((item, rowIndex) => (
             <tr key={rowIndex}>
-              <td style={{ border: "1px solid #000", padding: 6 }}>
-                {rowIndex + 1}
-              </td>
-              <td
-                style={{
-                  border: "1px solid #000",
-                  padding: 6,
-                  textAlign: "left",
-                }}
-              >
-                {item}
-              </td>
+              <td style={pdfTableStyles.td}>{rowIndex + 1}</td>
+              <td style={pdfTableStyles.td}>{item}</td>
               {columns.map((_, colIndex) => (
-                <td
-                  key={colIndex}
-                  style={{ border: "1px solid #000", padding: 6 }}
-                >
+                <td key={colIndex} style={pdfTableStyles.td}>
                   {rows?.[rowIndex]?.[colIndex] ?? ""}
                 </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </PdfDocument>
+  );
+}
+
+type WeeklyMonthlyRow = { id?: string; description?: string; location?: string; weeks?: string[]; months?: string[] };
+
+async function WeeklyInspectionTemplate({ id }: { id: string }) {
+  const inspection = await prisma.weeklyInspection.findUnique({
+    where: { id },
+    select: { id: true, department: true, inspector: true, createdAt: true, data: true, companyId: true },
+  });
+
+  if (!inspection) {
+    return (
+      <div style={{ padding: 40, fontFamily: "Arial", background: "#fff", color: "#000" }}>
+        <h1>Inspection not found</h1>
+        <p>No weekly inspection exists for ID: {id}</p>
+      </div>
+    );
+  }
+
+  const defaultColumns = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
+  let columns = defaultColumns;
+  let rows: WeeklyMonthlyRow[] = [];
+
+  try {
+    if (inspection.data) {
+      const raw = JSON.parse(inspection.data as string);
+      columns = raw.columns ?? defaultColumns;
+      rows = Array.isArray(raw.rows) ? raw.rows : [];
+    }
+  } catch {
+    // keep defaults
+  }
+
+  const logoUrl = await getCompanyLogoUrl();
+
+  return (
+    <PdfDocument
+      title="Weekly Inspection Report"
+      documentType="Safety System — Weekly Inspection Report"
+      logoUrl={logoUrl}
+    >
+      <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
+        <div><strong>Inspection ID:</strong> {id}</div>
+        <div><strong>Department:</strong> {inspection.department}</div>
+        <div><strong>Inspector:</strong> {inspection.inspector}</div>
+        <div><strong>Created At:</strong> {new Date(inspection.createdAt).toLocaleString()}</div>
+      </div>
+
+      <table style={pdfTableStyles.table}>
+        <thead>
+          <tr>
+            <th style={pdfTableStyles.th}>#</th>
+            <th style={pdfTableStyles.th}>Description</th>
+            <th style={pdfTableStyles.th}>Location</th>
+            {columns.map((col) => (
+              <th key={col} style={pdfTableStyles.th}>{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={row.id ?? rowIndex}>
+              <td style={pdfTableStyles.td}>{rowIndex + 1}</td>
+              <td style={pdfTableStyles.td}>{row.description ?? ""}</td>
+              <td style={pdfTableStyles.td}>{row.location ?? ""}</td>
+              {(row.weeks ?? []).map((cell: string, colIndex: number) => (
+                <td key={colIndex} style={pdfTableStyles.td}>{cell ?? ""}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </PdfDocument>
+  );
+}
+
+async function MonthlyInspectionTemplate({ id }: { id: string }) {
+  const inspection = await prisma.monthlyInspection.findUnique({
+    where: { id },
+    select: { id: true, department: true, inspector: true, createdAt: true, data: true, companyId: true },
+  });
+
+  if (!inspection) {
+    return (
+      <div style={{ padding: 40, fontFamily: "Arial", background: "#fff", color: "#000" }}>
+        <h1>Inspection not found</h1>
+        <p>No monthly inspection exists for ID: {id}</p>
+      </div>
+    );
+  }
+
+  const defaultColumns = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  let columns = defaultColumns;
+  let rows: WeeklyMonthlyRow[] = [];
+
+  try {
+    if (inspection.data) {
+      const raw = JSON.parse(inspection.data as string);
+      columns = raw.columns ?? defaultColumns;
+      rows = Array.isArray(raw.rows) ? raw.rows : [];
+    }
+  } catch {
+    // keep defaults
+  }
+
+  const logoUrl = await getCompanyLogoUrl();
+
+  return (
+    <PdfDocument
+      title="Monthly Inspection Report"
+      documentType="Safety System — Monthly Inspection Report"
+      logoUrl={logoUrl}
+    >
+      <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
+        <div><strong>Inspection ID:</strong> {id}</div>
+        <div><strong>Department:</strong> {inspection.department}</div>
+        <div><strong>Inspector:</strong> {inspection.inspector}</div>
+        <div><strong>Created At:</strong> {new Date(inspection.createdAt).toLocaleString()}</div>
+      </div>
+
+      <table style={pdfTableStyles.table}>
+        <thead>
+          <tr>
+            <th style={pdfTableStyles.th}>#</th>
+            <th style={pdfTableStyles.th}>Description</th>
+            <th style={pdfTableStyles.th}>Location</th>
+            {columns.map((col) => (
+              <th key={col} style={pdfTableStyles.th}>{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={row.id ?? rowIndex}>
+              <td style={pdfTableStyles.td}>{rowIndex + 1}</td>
+              <td style={pdfTableStyles.td}>{row.description ?? ""}</td>
+              <td style={pdfTableStyles.td}>{row.location ?? ""}</td>
+              {(row.months ?? []).map((cell: string, colIndex: number) => (
+                <td key={colIndex} style={pdfTableStyles.td}>{cell ?? ""}</td>
               ))}
             </tr>
           ))}
@@ -191,14 +404,7 @@ async function AppointmentTemplate({ id }: { id: string }) {
       logoUrl={logoUrl}
     >
       {TemplateComponent ? (
-        <div
-          style={{
-            marginBottom: 28,
-            fontSize: 14,
-            lineHeight: 1.6,
-            color: "#000",
-          }}
-        >
+        <div style={{ ...bodyTextStyle, marginBottom: 28 }}>
           <TemplateComponent
             appointee={appointment.appointee}
             appointer={appointment.appointer}
@@ -207,7 +413,7 @@ async function AppointmentTemplate({ id }: { id: string }) {
           />
         </div>
       ) : (
-        <div style={{ marginBottom: 28, fontSize: 14, lineHeight: 1.6 }}>
+        <div style={{ ...bodyTextStyle, marginBottom: 28 }}>
           <p><strong>Type:</strong> {appointment.type}</p>
           <p><strong>Appointee:</strong> {appointment.appointee}</p>
           <p><strong>Appointer:</strong> {appointment.appointer}</p>
@@ -216,53 +422,20 @@ async function AppointmentTemplate({ id }: { id: string }) {
         </div>
       )}
 
-      <PdfSection title="Signature Timeline">
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div>
-            <strong>Appointee Signed At</strong>
-            <div style={{ marginTop: 4 }}>
-              {appointment.appointeeSignedAt
-                ? new Date(appointment.appointeeSignedAt).toLocaleString()
-                : "Not signed"}
-            </div>
-          </div>
-          <div>
-            <strong>Appointer Signed At</strong>
-            <div style={{ marginTop: 4 }}>
-              {appointment.appointerSignedAt
-                ? new Date(appointment.appointerSignedAt).toLocaleString()
-                : "Not signed"}
-            </div>
-          </div>
+      <PdfSection title="Signatures">
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
+          <PdfSignatureBlock
+            label="Appointer"
+            signature={appointment.appointerSignature}
+            signedAt={appointment.appointerSignedAt != null ? (typeof appointment.appointerSignedAt === "string" ? appointment.appointerSignedAt : appointment.appointerSignedAt.toISOString()) : undefined}
+          />
+          <PdfSignatureBlock
+            label="Appointee"
+            signature={appointment.appointeeSignature}
+            signedAt={appointment.appointeeSignedAt != null ? (typeof appointment.appointeeSignedAt === "string" ? appointment.appointeeSignedAt : appointment.appointeeSignedAt.toISOString()) : undefined}
+          />
         </div>
       </PdfSection>
-
-      {(appointment.appointeeSignature || appointment.appointerSignature) && (
-        <PdfSection title="Final Signatures">
-          <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
-            {appointment.appointerSignature && (
-              <div>
-                <div style={{ fontWeight: "bold", marginBottom: 4 }}>Appointer Signature</div>
-                <img
-                  src={appointment.appointerSignature}
-                  alt="Appointer signature"
-                  style={{ maxWidth: 180, maxHeight: 60, border: "1px solid #000" }}
-                />
-              </div>
-            )}
-            {appointment.appointeeSignature && (
-              <div>
-                <div style={{ fontWeight: "bold", marginBottom: 4 }}>Appointee Signature</div>
-                <img
-                  src={appointment.appointeeSignature}
-                  alt="Appointee signature"
-                  style={{ maxWidth: 180, maxHeight: 60, border: "1px solid #000" }}
-                />
-              </div>
-            )}
-          </div>
-        </PdfSection>
-      )}
     </PdfDocument>
   );
 }
@@ -283,8 +456,17 @@ async function IncidentTemplate({ id }: { id: string }) {
     where: { id },
     include: {
       images: true,
-      team: true,
       company: true,
+      team: {
+        select: {
+          id: true,
+          name: true,
+          designation: true,
+          signature: true,
+          signedAt: true,
+          createdAt: true,
+        },
+      },
     },
   });
 
@@ -317,13 +499,20 @@ async function IncidentTemplate({ id }: { id: string }) {
   const incidentTypes = details.incidentTypes ?? details.basic?.incidentTypes ?? [];
   const logoUrl = incident.company?.logoUrl ?? (await getCompanyLogoUrl(incident.companyId));
 
+  // Stable order: creation order
+  const team = incident.team?.length
+    ? [...incident.team].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      )
+    : incident.team ?? [];
+
   return (
     <PdfDocument
       title={`Incident Report — ${incident.title}`}
       documentType="Safety System — Incident Report"
       logoUrl={logoUrl}
     >
-      <div style={{ marginBottom: 20, fontSize: 13, lineHeight: 1.6 }}>
+      <div style={{ ...bodyTextStyle, marginBottom: 20 }}>
         <p><strong>Incident ID:</strong> {incident.id}</p>
         {incident.company && <p><strong>Company:</strong> {incident.company.name}</p>}
         <p><strong>Title:</strong> {incident.title}</p>
@@ -350,14 +539,14 @@ async function IncidentTemplate({ id }: { id: string }) {
 
       {details.injuredPerson && Object.keys(details.injuredPerson).some((k) => details.injuredPerson[k]) && (
         <PdfSection title="Injured Person Details">
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <table style={pdfTableStyles.table}>
             <tbody>
               {Object.entries(details.injuredPerson).map(
                 ([key, value]: [string, any]) =>
                   value && (
                     <tr key={key}>
-                      <td style={{ border: "1px solid #000", padding: 6, fontWeight: "bold", width: "30%" }}>{key}</td>
-                      <td style={{ border: "1px solid #000", padding: 6 }}>{String(value)}</td>
+                      <td style={{ ...pdfTableStyles.td, fontWeight: "bold", width: "30%" }}>{key}</td>
+                      <td style={pdfTableStyles.td}>{String(value)}</td>
                     </tr>
                   )
               )}
@@ -405,26 +594,43 @@ async function IncidentTemplate({ id }: { id: string }) {
         </PdfSection>
       )}
 
-      {incident.team.length > 0 && (
+      {team.length > 0 && (
         <PdfSection title="Investigation Team">
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <table style={pdfTableStyles.table}>
             <thead>
               <tr>
-                <th style={{ border: "1px solid #000", padding: 6 }}>Name</th>
-                <th style={{ border: "1px solid #000", padding: 6 }}>Designation</th>
+                <th style={pdfTableStyles.th}>Name</th>
+                <th style={pdfTableStyles.th}>Designation</th>
               </tr>
             </thead>
             <tbody>
-              {incident.team.map((member) => (
+              {team.map((member) => (
                 <tr key={member.id}>
-                  <td style={{ border: "1px solid #000", padding: 6 }}>{member.name}</td>
-                  <td style={{ border: "1px solid #000", padding: 6 }}>{member.designation}</td>
+                  <td style={pdfTableStyles.td}>{member.name}</td>
+                  <td style={pdfTableStyles.td}>{member.designation}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </PdfSection>
       )}
+
+      <PdfSection title="Signatures">
+        {team.length > 0 ? (
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            {team.map((member) => (
+              <PdfSignatureBlock
+                key={member.id}
+                label={`${member.name} — ${member.designation}`}
+                signature={member.signature ?? null}
+                signedAt={member.signedAt != null ? String(member.signedAt) : (member.createdAt != null ? String(member.createdAt) : null)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p style={{ ...bodyTextStyle, opacity: 0.8 }}>No signatures recorded.</p>
+        )}
+      </PdfSection>
 
       {incident.images.length > 0 && (
         <PdfSection title="Photos">
@@ -475,7 +681,7 @@ async function NcrTemplate({ id }: { id: string }) {
       documentType="Safety System — Non-Conformance Report"
       logoUrl={logoUrl}
     >
-      <div style={{ marginBottom: 25, fontSize: 14 }}>
+      <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Report ID:</strong> {report.id}</p>
         {report.company && <p><strong>Company:</strong> {report.company.name}</p>}
         <p><strong>Created:</strong> {new Date(report.createdAt).toLocaleString()}</p>
@@ -493,8 +699,8 @@ async function NcrTemplate({ id }: { id: string }) {
           style={{
             marginBottom: 25,
             paddingBottom: 15,
-            borderBottom: "1px dashed #000",
-            fontSize: 13,
+            borderBottom: "1px dashed #000000",
+            ...bodyTextStyle,
           }}
         >
           <h2 style={{ fontSize: 15, marginBottom: 8 }}>
@@ -565,7 +771,7 @@ async function CertificateTemplate({ id }: { id: string }) {
       documentType="Safety System — Training Certificate"
       logoUrl={logoUrl}
     >
-      <div style={{ marginBottom: 25, fontSize: 14, lineHeight: 1.6 }}>
+      <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Certificate ID:</strong> {certificate.id}</p>
         <p><strong>Employee:</strong> {certificate.employee}</p>
         <p><strong>Certificate:</strong> {certificate.certificateName}</p>
@@ -618,7 +824,7 @@ async function MedicalTemplate({ id }: { id: string }) {
       documentType="Safety System — Medical Certificate"
       logoUrl={logoUrl}
     >
-      <div style={{ marginBottom: 25, fontSize: 14, lineHeight: 1.6 }}>
+      <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Medical ID:</strong> {medical.id}</p>
         <p><strong>Employee:</strong> {medical.employee}</p>
         <p><strong>Medical Type:</strong> {medical.medicalType}</p>
@@ -661,7 +867,7 @@ async function RiskAssessmentTemplate({ id }: { id: string }) {
       documentType="Safety System — Risk Assessment"
       logoUrl={logoUrl}
     >
-      <div style={{ marginBottom: 25, fontSize: 14, lineHeight: 1.6 }}>
+      <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Assessment ID:</strong> {assessment.id}</p>
         {assessment.company && <p><strong>Company:</strong> {assessment.company.name}</p>}
         <p><strong>Title:</strong> {assessment.title}</p>
@@ -681,18 +887,15 @@ async function RiskAssessmentTemplate({ id }: { id: string }) {
         </PdfSection>
       )}
 
-      {assessment.signature && (
-        <PdfSection title="Signature">
-          <p style={{ marginBottom: 8, fontSize: 12 }}>
-            <strong>Signed:</strong> {assessment.signedAt ? formatDate(assessment.signedAt) : "N/A"}
-          </p>
-          <img
-            src={assessment.signature}
-            alt="Signature"
-            style={{ maxWidth: 200, maxHeight: 80, border: "1px solid #000" }}
+      <PdfSection title="Signatures">
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          <PdfSignatureBlock
+            label="Assessor"
+            signature={assessment.signature}
+            signedAt={assessment.signedAt != null ? (typeof assessment.signedAt === "string" ? assessment.signedAt : assessment.signedAt.toISOString()) : undefined}
           />
-        </PdfSection>
-      )}
+        </div>
+      </PdfSection>
     </PdfDocument>
   );
 }

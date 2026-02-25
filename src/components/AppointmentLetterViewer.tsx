@@ -40,7 +40,7 @@ export default function AppointmentLetterViewer({
   const handleDownloadPdf = () => {
     if (typeof window === "undefined") return;
 
-    const url = `/api/pdf?type=appointment&id=${encodeURIComponent(
+    const url = `/pdf-renderer?type=appointment&id=${encodeURIComponent(
       appointment.id
     )}`;
     window.open(url, "_blank");

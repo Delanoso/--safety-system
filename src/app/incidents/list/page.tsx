@@ -121,7 +121,7 @@ export default function PastIncidentsPage() {
                       type="button"
                       className="button button-pdf flex items-center gap-2"
                       onClick={() => {
-                        const url = `/api/pdf?type=incident&id=${encodeURIComponent(
+                        const url = `/pdf-renderer?type=incident&id=${encodeURIComponent(
                           incident.id
                         )}`;
                         window.open(url, "_blank");

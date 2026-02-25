@@ -4,10 +4,10 @@ CREATE TABLE "EmergencyProcedure" (
     "title" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "department" TEXT,
-    "lastReviewed" DATETIME,
+    "lastReviewed" TIMESTAMP(3),
     "fileUrl" TEXT,
     "companyId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "EmergencyProcedure_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -20,20 +20,20 @@ CREATE TABLE "EmergencyContact" (
     "email" TEXT,
     "department" TEXT,
     "companyId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "EmergencyContact_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "EvacuationDrill" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "drillType" TEXT NOT NULL,
     "location" TEXT,
     "participants" INTEGER,
     "notes" TEXT,
     "companyId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "EvacuationDrill_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -44,23 +44,23 @@ CREATE TABLE "SHECommitteeMember" (
     "role" TEXT NOT NULL,
     "department" TEXT,
     "email" TEXT,
-    "startDate" DATETIME NOT NULL,
-    "endDate" DATETIME,
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3),
     "companyId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "SHECommitteeMember_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "SHECommitteeMeeting" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "agenda" TEXT,
     "minutes" TEXT,
     "attendees" TEXT,
     "actionItems" TEXT,
     "companyId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "SHECommitteeMeeting_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -72,11 +72,11 @@ CREATE TABLE "RiskAssessment" (
     "location" TEXT,
     "assessor" TEXT,
     "riskLevel" TEXT NOT NULL,
-    "reviewDate" DATETIME,
+    "reviewDate" TIMESTAMP(3),
     "controls" TEXT,
     "fileUrl" TEXT,
     "companyId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "RiskAssessment_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -92,6 +92,6 @@ CREATE TABLE "HazardousChemical" (
     "hazardClass" TEXT,
     "notes" TEXT,
     "companyId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "HazardousChemical_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );

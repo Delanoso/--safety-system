@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { LayoutDashboard } from "lucide-react";
+
 export default function LegalRegistersPage() {
   // Links verified against gov.za, SAFLII consolidated acts/regs, and lawlibrary.org.za (Jan 2025)
   const docs = [
@@ -117,6 +120,12 @@ export default function LegalRegistersPage() {
   return (
     <div className="min-h-screen p-10 bg-gradient-to-r from-green-200 to-blue-300">
       <div className="max-w-5xl mx-auto space-y-10">
+        <div className="flex justify-start">
+          <Link href="/dashboard" className="button button-neutral flex items-center gap-2">
+            <LayoutDashboard size={18} />
+            Dashboard
+          </Link>
+        </div>
         <h1 className="text-4xl font-bold text-black">Legal Registers</h1>
         <p className="text-black/70">
           South African Health & Safety legislation across general industry,

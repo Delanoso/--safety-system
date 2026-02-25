@@ -4,14 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "clean": "node scripts/clean-next.js",
+    "dev:clean": "prisma generate && next dev",
+    "dev:fresh": "node scripts/clean-next.js && prisma generate && next dev",
     "build": "prisma generate && next build",
     "build:full": "prisma generate && prisma db push && prisma db seed && next build",
     "start": "next start",
     "postbuild": "node scripts/copy-standalone-assets.js",
-    "lint": "eslint",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
+    "db:migrate": "node scripts/migrate-deploy.js",
     "db:seed": "npx tsx prisma/seed.ts",
+    "db:reset-single": "npx tsx prisma/reset-db-single-company.ts",
     "db:generate": "prisma generate"
   },
   "prisma": {
@@ -34,7 +38,8 @@
     "react-dom": "19.2.3",
     "react-signature-canvas": "^1.1.0-alpha.2",
     "recharts": "^3.7.0",
-    "resend": "^6.8.0"
+    "resend": "^6.8.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -28,9 +28,25 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
-    fetch("/api/dashboard")
-      .then((r) => r.json())
-      .then(setData)
+    fetch("/api/dashboard", { credentials: "include" })
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((json) => {
+        if (json && typeof json.totalIncidents === "number") {
+          setData({
+            totalIncidents: json.totalIncidents,
+            unsignedAppointments: json.unsignedAppointments ?? 0,
+            trainingCompliance: json.trainingCompliance ?? 0,
+            ppeStockAlerts: json.ppeStockAlerts ?? 0,
+            incidentsOverTime: Array.isArray(json.incidentsOverTime) ? json.incidentsOverTime : [],
+            medicalsByType: Array.isArray(json.medicalsByType) ? json.medicalsByType : [],
+          });
+        } else {
+          setData(null);
+        }
+      })
       .catch(() => setData(null));
   }, []);
 
@@ -52,9 +68,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards – linked to modules */}
+      {/* KPI Cards – each linked to the module that supplies the metric */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Link href="/incidents">
+        <Link href="/incidents/list" className="block">
           <Card>
             <h3 className="text-lg font-semibold">Total Incidents</h3>
             <p className="text-3xl font-bold mt-2">
@@ -63,7 +79,7 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/appointments/request-signature">
+        <Link href="/appointments/request-signature" className="block">
           <Card>
             <h3 className="text-lg font-semibold">Unsigned Appointments</h3>
             <p className="text-3xl font-bold mt-2">
@@ -72,7 +88,7 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/training">
+        <Link href="/training/certificates/list" className="block">
           <Card>
             <h3 className="text-lg font-semibold">Training Compliance</h3>
             <p className="text-3xl font-bold mt-2">
@@ -81,7 +97,7 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/ppe-management">
+        <Link href="/ppe-management/stock-list" className="block">
           <Card>
             <h3 className="text-lg font-semibold">PPE Stock Alerts</h3>
             <p className="text-3xl font-bold mt-2">
@@ -91,9 +107,9 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Charts Row – linked to modules */}
+      {/* Charts Row – Incidents graph → Incidents module, Medicals graph → Medicals module */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Link href="/incidents" className="block transition opacity-100 hover:opacity-95">
+        <Link href="/incidents/list" className="block transition opacity-100 hover:opacity-95">
           <Card>
             <h3 className="text-lg font-semibold mb-4">Incidents Over Time</h3>
             <div className="h-64">
@@ -131,9 +147,9 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/medicals" className="block transition opacity-100 hover:opacity-95">
+        <Link href="/medicals/list" className="block transition opacity-100 hover:opacity-95">
           <Card>
-            <h3 className="text-lg font-semibold mb-4">Medicals</h3>
+            <h3 className="text-lg font-semibold mb-4">Medicals by Type</h3>
             <div className="h-64">
               {d.medicalsByType.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">

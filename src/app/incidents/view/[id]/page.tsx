@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FileDown, ArrowLeft } from "lucide-react";
+import { ViewSignatureBlock } from "@/components/ViewSignatureBlock";
 
 export default function IncidentViewerPage() {
   const { id } = useParams();
@@ -10,24 +11,33 @@ export default function IncidentViewerPage() {
 
   const [incident, setIncident] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadIncident();
-  }, []);
+    setError(null);
+    if (id) loadIncident();
+  }, [id]);
 
   async function loadIncident() {
     try {
-      const res = await fetch(`/api/incidents/${id}`);
-      const json = await res.json();
-
+      const res = await fetch(`/api/incidents/${id}`, { credentials: "include" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setIncident(null);
+        setLoading(false);
+        setError(res.status === 403 ? "You don't have permission to view this incident." : (json.error || "Incident not found."));
+        return;
+      }
       const parsedDetails =
         typeof json.details === "string"
           ? safeParse(json.details)
           : json.details;
 
       setIncident({ ...json, details: parsedDetails });
+      setError(null);
     } catch (e) {
       console.error("Failed to load incident:", e);
+      setError("Failed to load incident.");
     } finally {
       setLoading(false);
     }
@@ -57,7 +67,7 @@ export default function IncidentViewerPage() {
   if (!incident) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Incident not found.
+        <p className="text-lg">{error || "Incident not found."}</p>
       </div>
     );
   }
@@ -83,7 +93,7 @@ export default function IncidentViewerPage() {
             className="button button-pdf flex items-center gap-2"
             onClick={() => {
               if (!incident) return;
-              const url = `/api/pdf?type=incident&id=${encodeURIComponent(
+              const url = `/pdf-renderer?type=incident&id=${encodeURIComponent(
                 incident.id
               )}`;
               window.open(url, "_blank");
@@ -149,24 +159,29 @@ export default function IncidentViewerPage() {
                   >
                     <Info label="Name" value={member.name} />
                     <Info label="Designation" value={member.designation} />
-
-                    {member.signature && (
-                      <div>
-                        <div className="text-xs uppercase tracking-wide opacity-70">
-                          Signature
-                        </div>
-                        <img
-                          src={member.signature}
-                          alt="Signature"
-                          className="w-40 h-20 object-contain bg-white rounded-md p-2 shadow"
-                        />
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             </Section>
           )}
+
+          {/* SIGNATURES — always show so they’re visible on view and match PDF */}
+          <Section title="Signatures">
+            {incident.team?.length > 0 ? (
+              <div className="flex flex-wrap gap-6">
+                {incident.team.map((member) => (
+                  <ViewSignatureBlock
+                    key={member.id}
+                    label={`${member.name} — ${member.designation}`}
+                    signature={member.signature ?? null}
+                    signedAt={member.signedAt ?? member.createdAt ?? null}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm opacity-70">No signatures recorded.</p>
+            )}
+          </Section>
 
           <Divider />
 

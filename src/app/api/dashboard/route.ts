@@ -22,24 +22,42 @@ export async function GET() {
     }
     const totalIncidents = await prisma.incident.count({ where: incidentWhere });
 
-    // Unsigned appointments – still need one or more signatures
-    const unsignedAppointments = await prisma.appointment.count({
-      where: {
-        status: {
-          in: ["draft", "pending", "appointer_signed", "appointee_signed"],
-        },
+    // Unsigned appointments – scoped by company
+    const appointmentWhere: { status: { in: string[] }; companyId?: string } = {
+      status: {
+        in: ["draft", "pending", "appointer_signed", "appointee_signed"],
       },
+    };
+    if (current.role !== "super" && current.companyId) {
+      appointmentWhere.companyId = current.companyId;
+    }
+    const unsignedAppointments = await prisma.appointment.count({
+      where: appointmentWhere,
     });
 
-    // Training compliance – valid certs / total certs
-    const certificates = await prisma.certificate.findMany();
+    // Training compliance – valid certs / total certs (scoped by company)
+    const certWhere =
+      current.role !== "super" && current.companyId
+        ? { companyId: current.companyId }
+        : undefined;
+    const certificates = await prisma.certificate.findMany({
+      where: certWhere,
+      select: { expiryDate: true },
+    });
     const totalCerts = certificates.length;
     const validCerts = certificates.filter((c) => c.expiryDate >= now).length;
     const trainingCompliance =
       totalCerts === 0 ? 100 : Math.round((validCerts / totalCerts) * 100);
 
-    // PPE stock alerts – item types with quantity <= threshold
-    const stockList = await prisma.pPEStock.findMany({ include: { itemType: true } });
+    // PPE stock alerts – scoped by company via itemType
+    const ppeWhere =
+      current.role !== "super" && current.companyId
+        ? { itemType: { companyId: current.companyId } }
+        : undefined;
+    const stockList = await prisma.pPEStock.findMany({
+      where: ppeWhere,
+      include: { itemType: true },
+    });
     const ppeStockAlerts = stockList.filter((s) => s.quantity <= PPE_LOW_STOCK_THRESHOLD).length;
 
     // Incidents over time – last 12 months, grouped by month
@@ -64,8 +82,15 @@ export async function GET() {
       .map(([month, count]) => ({ month, count }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
-    // Medicals by type – bar chart
-    const medicals = await prisma.medical.findMany({ select: { medicalType: true } });
+    // Medicals by type – bar chart (scoped by company)
+    const medicalWhere =
+      current.role !== "super" && current.companyId
+        ? { companyId: current.companyId }
+        : undefined;
+    const medicals = await prisma.medical.findMany({
+      where: medicalWhere,
+      select: { medicalType: true },
+    });
     const typeCounts: Record<string, number> = {};
     for (const m of medicals) {
       const t = m.medicalType || "Unknown";

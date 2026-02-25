@@ -4,6 +4,6 @@ CREATE TABLE "Inspection" (
     "type" TEXT NOT NULL,
     "department" TEXT NOT NULL,
     "inspector" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "data" TEXT NOT NULL
 );

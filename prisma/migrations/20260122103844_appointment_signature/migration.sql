@@ -13,14 +13,14 @@ CREATE TABLE "new_Appointment" (
     "appointee" TEXT NOT NULL,
     "appointer" TEXT NOT NULL,
     "department" TEXT NOT NULL,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "appointeeEmail" TEXT,
     "appointerEmail" TEXT,
     "appointeeSignature" TEXT,
     "appointerSignature" TEXT,
-    "appointeeSignedAt" DATETIME,
-    "appointerSignedAt" DATETIME,
+    "appointeeSignedAt" TIMESTAMP(3),
+    "appointerSignedAt" TIMESTAMP(3),
     "appointeeToken" TEXT,
     "appointerToken" TEXT
 );

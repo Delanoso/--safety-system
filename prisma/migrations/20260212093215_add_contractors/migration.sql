@@ -8,7 +8,7 @@ CREATE TABLE "Contractor" (
     "jobDescription" TEXT,
     "uploadToken" TEXT NOT NULL,
     "companyId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "Contractor_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -20,7 +20,7 @@ CREATE TABLE "ContractorDocument" (
     "fileName" TEXT NOT NULL,
     "fileUrl" TEXT NOT NULL,
     "uploadedByContractor" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "ContractorDocument_contractorId_fkey" FOREIGN KEY ("contractorId") REFERENCES "Contractor" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 

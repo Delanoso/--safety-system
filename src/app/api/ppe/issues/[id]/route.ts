@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,9 +16,29 @@ export async function GET(
     include: { person: true, itemType: true },
   });
   if (!issue) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Public access via signing token
   if (token != null && issue.signToken !== token) {
     return NextResponse.json({ error: "Invalid or expired link." }, { status: 403 });
   }
+
+  if (token == null) {
+    // Internal access requires authenticated user with matching company (unless super)
+    let current;
+    try {
+      current = await requireUser();
+    } catch {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (
+      current.role !== "super" &&
+      issue.itemType.companyId != null &&
+      issue.itemType.companyId !== current.companyId
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   return NextResponse.json(issue);
 }
 
@@ -26,6 +47,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
+  const token = new URL(req.url).searchParams.get("token");
   let data: Record<string, unknown>;
   try {
     data = await req.json();
@@ -44,6 +66,26 @@ export async function PATCH(
   if (!issue) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (issue.status === "signed") {
     return NextResponse.json({ error: "Already signed." }, { status: 400 });
+  }
+
+  if (token != null) {
+    if (issue.signToken !== token) {
+      return NextResponse.json({ error: "Invalid or expired link." }, { status: 403 });
+    }
+  } else {
+    let current;
+    try {
+      current = await requireUser();
+    } catch {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (
+      current.role !== "super" &&
+      issue.itemType.companyId != null &&
+      issue.itemType.companyId !== current.companyId
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   await prisma.$transaction(async (tx) => {

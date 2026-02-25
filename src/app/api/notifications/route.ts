@@ -9,10 +9,19 @@ const DAYS_AHEAD = 30;
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    const dbUser = user ? await prisma.user.findUnique({
+    if (!user) {
+      return NextResponse.json({
+        expiringCertificates: [],
+        expiringMedicals: [],
+        unsignedAppointments: [],
+        unsignedPpeIssues: [],
+        total: 0,
+      });
+    }
+    const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
       select: { notificationsEnabled: true },
-    }) : null;
+    });
     const notificationsEnabled = dbUser?.notificationsEnabled ?? true;
     if (!notificationsEnabled) {
       return NextResponse.json({
@@ -23,6 +32,13 @@ export async function GET() {
         total: 0,
       });
     }
+
+    // Scope by company: non-super users only see their company's data
+    const companyFilter =
+      user && user.role !== "super" && user.companyId != null
+        ? { companyId: user.companyId }
+        : undefined;
+
     const now = new Date();
     const cutoff = new Date(now);
     cutoff.setDate(cutoff.getDate() + DAYS_AHEAD);
@@ -31,6 +47,7 @@ export async function GET() {
     const expiringCerts = await prisma.certificate.findMany({
       where: {
         expiryDate: { gte: now, lte: cutoff },
+        ...(companyFilter && { companyId: companyFilter.companyId }),
       },
       orderBy: { expiryDate: "asc" },
       select: {
@@ -45,6 +62,7 @@ export async function GET() {
     const expiringMedicals = await prisma.medical.findMany({
       where: {
         expiryDate: { gte: now, lte: cutoff },
+        ...(companyFilter && { companyId: companyFilter.companyId }),
       },
       orderBy: { expiryDate: "asc" },
       select: {
@@ -61,6 +79,7 @@ export async function GET() {
         status: {
           notIn: ["completed", "signed"],
         },
+        ...(companyFilter && { companyId: companyFilter.companyId }),
       },
       orderBy: { date: "asc" },
       select: {
@@ -73,9 +92,14 @@ export async function GET() {
       },
     });
 
-    // PPE issues pending signature
+    // PPE issues pending signature (scoped via itemType.companyId)
     const unsignedPpeIssues = await prisma.pPEIssue.findMany({
-      where: { status: "pending_signature" },
+      where: {
+        status: "pending_signature",
+        ...(companyFilter && {
+          itemType: { companyId: companyFilter.companyId },
+        }),
+      },
       include: {
         person: { select: { name: true } },
         itemType: { select: { name: true } },

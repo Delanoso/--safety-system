@@ -4,7 +4,7 @@ CREATE TABLE "User" (
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'user',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
@@ -12,7 +12,7 @@ CREATE TABLE "Folder" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "section" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
@@ -22,7 +22,7 @@ CREATE TABLE "File" (
     "url" TEXT NOT NULL,
     "size" INTEGER,
     "folderId" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "File_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "Folder" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -32,11 +32,11 @@ CREATE TABLE "Certificate" (
     "employee" TEXT NOT NULL,
     "certificateName" TEXT NOT NULL,
     "certificateType" TEXT,
-    "issueDate" DATETIME NOT NULL,
-    "expiryDate" DATETIME NOT NULL,
+    "issueDate" TIMESTAMP(3) NOT NULL,
+    "expiryDate" TIMESTAMP(3) NOT NULL,
     "notes" TEXT,
     "fileUrl" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateIndex

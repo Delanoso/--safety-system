@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LayoutDashboard } from "lucide-react";
+import { getInspectionDepartment } from "@/lib/inspection-department";
 
 const actions = [
   {
@@ -22,6 +25,28 @@ const actions = [
 ];
 
 export default function InspectionsHome() {
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const dept = getInspectionDepartment();
+    if (!dept) {
+      router.replace("/inspections/select-department");
+      return;
+    }
+    setReady(true);
+  }, [router]);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen w-full p-10 flex items-center justify-center">
+        <p className="text-lg opacity-80">Loading…</p>
+      </div>
+    );
+  }
+
+  const department = getInspectionDepartment();
+
   return (
     <div className="min-h-screen w-full p-10">
 
@@ -35,7 +60,11 @@ export default function InspectionsHome() {
 
       <h1 className="text-4xl font-bold mb-6">Inspections</h1>
       <p className="text-lg opacity-80 mb-10">
-        Choose what you want to do with inspections.
+        {department === "__all__" ? (
+          <>Viewing <strong>all departments</strong>. Choose what you want to do with inspections.</>
+        ) : (
+          <>Department: <strong>{department}</strong>. Choose what you want to do with inspections.</>
+        )}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">

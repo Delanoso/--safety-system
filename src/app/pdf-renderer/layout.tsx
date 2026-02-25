@@ -1,7 +1,10 @@
+import { PdfPrintBar } from "./PdfPrintBar";
+
 /**
  * PDF renderer layout.
- * Forces white background on html/body and full-viewport overlay to prevent
- * app gradient/theme from bleeding into PDF output.
+ * Forces white background and black text on all content so every PDF is
+ * consistent; only the company logo in the header may use colour.
+ * Includes a "Print / Save as PDF" bar so users can save without server-side Chrome.
  */
 export default function PdfRendererLayout({
   children,
@@ -13,7 +16,13 @@ export default function PdfRendererLayout({
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            html, body { background: #ffffff !important; min-height: 100%; }
+            html, body {
+              background: #ffffff !important;
+              color: #111827 !important;
+              min-height: 100%;
+              margin: 0;
+              padding: 0;
+            }
           `,
         }}
       />
@@ -27,6 +36,7 @@ export default function PdfRendererLayout({
           zIndex: 99999,
         }}
       >
+        <PdfPrintBar />
         {children}
       </div>
     </>

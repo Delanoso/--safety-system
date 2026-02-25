@@ -1,8 +1,26 @@
 import { NextResponse } from "next/server";
 import { getCloudinary } from "@/lib/cloudinary";
+import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const current = await getCurrentUser();
+    if (!current) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { id } = await context.params;
+    const incident = await prisma.incident.findUnique({
+      where: { id },
+      select: { companyId: true },
+    });
+    if (!incident) {
+      return NextResponse.json({ error: "Incident not found" }, { status: 404 });
+    }
+    if (current.role !== "super" && incident.companyId !== current.companyId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const cloud = getCloudinary();
     if (!cloud) {
       return NextResponse.json(
@@ -13,7 +31,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         { status: 503 }
       );
     }
-    const { id } = await context.params; // ✅ Correct Next.js 16 params
 
     const form = await request.formData();
     const files = form.getAll("images") as File[];

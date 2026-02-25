@@ -9,10 +9,10 @@ CREATE TABLE "IncidentRecord" (
     "employee" TEXT NOT NULL,
     "employeeId" TEXT,
     "location" TEXT,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "severity" TEXT,
     "status" TEXT NOT NULL DEFAULT 'draft',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
@@ -25,8 +25,8 @@ CREATE TABLE "CostAnalysis" (
     "otherCost" REAL,
     "totalCost" REAL,
     "notes" TEXT,
-    "date" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "CostAnalysis_incidentId_fkey" FOREIGN KEY ("incidentId") REFERENCES "IncidentRecord" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -39,6 +39,6 @@ CREATE TABLE "IncidentDocument" (
     "fileName" TEXT NOT NULL,
     "fileType" TEXT NOT NULL,
     "filePath" TEXT NOT NULL,
-    "uploadedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "IncidentDocument_incidentId_fkey" FOREIGN KEY ("incidentId") REFERENCES "IncidentRecord" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );

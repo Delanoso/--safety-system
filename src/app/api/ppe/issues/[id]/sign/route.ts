@@ -58,6 +58,16 @@ export async function POST(
         where: { itemTypeId: issue.itemTypeId },
         data: { quantity: newQty },
       });
+      await tx.pPEStockMovement.create({
+        data: {
+          itemTypeId: issue.itemTypeId,
+          movementType: "ISSUE",
+          quantityDelta: -issue.quantity,
+          quantityAfter: newQty,
+          reason: "PPE Issue",
+          notes: `Issue to ${issue.person.name}`,
+        },
+      });
     }
   });
 

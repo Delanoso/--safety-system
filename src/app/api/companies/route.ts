@@ -1,37 +1,143 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "prisma-client-generated";
 import { prisma } from "@/lib/prisma";
-import { requireAdminOrSuper } from "@/lib/auth";
+import { getCurrentUser, requireAdminOrSuper } from "@/lib/auth";
 
 export async function GET() {
-  const current = await requireAdminOrSuper();
-
-  // Only super users can see all companies; admins see only their own
-  let where: any = {};
-  if (current.role === "admin" && current.companyId) {
-    where.id = current.companyId;
+  const current = await getCurrentUser();
+  if (!current) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const companies = await prisma.company.findMany({
-    where,
-    orderBy: { name: "asc" },
-    include: { users: true },
-  });
+  const role = (current.role ?? "").toLowerCase();
 
-  return NextResponse.json(
-    companies.map((c) => ({
-      id: c.id,
-      name: c.name,
-      userLimit: c.userLimit,
-      userCount: c.users.length,
-      logoUrl: c.logoUrl,
-    }))
-  );
+  // Super user: see all companies
+  if (role === "super") {
+    try {
+      const companies = await prisma.company.findMany({
+        orderBy: { name: "asc" },
+        include: { users: true },
+      });
+
+      return NextResponse.json(
+        companies.map((c) => ({
+          id: c.id,
+          name: c.name,
+          userLimit: c.userLimit,
+          userCount: c.users.length,
+          logoUrl: c.logoUrl,
+        }))
+      );
+    } catch (err: any) {
+      // Fallback for older databases without User.allowedModules / inspectionDepartments
+      if (err?.code === "P2022") {
+        const rows = await prisma.$queryRaw<
+          {
+            id: string;
+            name: string;
+            logoUrl: string | null;
+            brandColor: string | null;
+            userLimit: number;
+            userCount: number;
+          }[]
+        >(Prisma.sql`
+          SELECT 
+            c.id,
+            c.name,
+            c."logoUrl",
+            c."brandColor",
+            c."userLimit",
+            COUNT(u.id) AS "userCount"
+          FROM "Company" c
+          LEFT JOIN "User" u ON u."companyId" = c.id
+          GROUP BY c.id, c.name, c."logoUrl", c."brandColor", c."userLimit"
+          ORDER BY c.name ASC
+        `);
+
+        return NextResponse.json(
+          rows.map((c) => ({
+            id: c.id,
+            name: c.name,
+            userLimit: c.userLimit,
+            userCount: Number(c.userCount ?? 0),
+            logoUrl: c.logoUrl,
+          }))
+        );
+      }
+
+      throw err;
+    }
+  }
+
+  // Admins (and optionally normal users) only see their own company
+  if (!current.companyId) {
+    return NextResponse.json(
+      { error: "No company linked to your account" },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const companies = await prisma.company.findMany({
+      where: { id: current.companyId },
+      orderBy: { name: "asc" },
+      include: { users: true },
+    });
+
+    return NextResponse.json(
+      companies.map((c) => ({
+        id: c.id,
+        name: c.name,
+        userLimit: c.userLimit,
+        userCount: c.users.length,
+        logoUrl: c.logoUrl,
+      }))
+    );
+  } catch (err: any) {
+    if (err?.code === "P2022") {
+      const rows = await prisma.$queryRaw<
+        {
+          id: string;
+          name: string;
+          logoUrl: string | null;
+          brandColor: string | null;
+          userLimit: number;
+          userCount: number;
+        }[]
+      >(Prisma.sql`
+        SELECT 
+          c.id,
+          c.name,
+          c."logoUrl",
+          c."brandColor",
+          c."userLimit",
+          COUNT(u.id) AS "userCount"
+        FROM "Company" c
+        LEFT JOIN "User" u ON u."companyId" = c.id
+        WHERE c.id = ${current.companyId}
+        GROUP BY c.id, c.name, c."logoUrl", c."brandColor", c."userLimit"
+        ORDER BY c.name ASC
+      `);
+
+      return NextResponse.json(
+        rows.map((c) => ({
+          id: c.id,
+          name: c.name,
+          userLimit: c.userLimit,
+          userCount: Number(c.userCount ?? 0),
+          logoUrl: c.logoUrl,
+        }))
+      );
+    }
+
+    throw err;
+  }
 }
 
 export async function PATCH(req: Request) {
   const current = await requireAdminOrSuper();
 
-  if (current.role !== "super") {
+  if ((current.role ?? "").toLowerCase() !== "super") {
     return NextResponse.json(
       { error: "Only super users can modify company limits" },
       { status: 403 }

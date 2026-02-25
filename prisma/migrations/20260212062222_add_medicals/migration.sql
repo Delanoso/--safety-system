@@ -3,11 +3,11 @@ CREATE TABLE "Medical" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "employee" TEXT NOT NULL,
     "medicalType" TEXT NOT NULL,
-    "issueDate" DATETIME NOT NULL,
-    "expiryDate" DATETIME NOT NULL,
+    "issueDate" TIMESTAMP(3) NOT NULL,
+    "expiryDate" TIMESTAMP(3) NOT NULL,
     "notes" TEXT,
     "fileUrl" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- RedefineTables
@@ -32,15 +32,15 @@ CREATE TABLE "new_Incident" (
     "employee" TEXT,
     "employeeId" TEXT,
     "location" TEXT,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "severity" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "linkId" TEXT,
     "details" TEXT,
     "companyId" TEXT,
     "createdByUserId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "Incident_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Incident_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -49,7 +49,7 @@ DROP TABLE "Incident";
 ALTER TABLE "new_Incident" RENAME TO "Incident";
 CREATE TABLE "new_NcrReport" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "department" TEXT,
     "status" TEXT NOT NULL DEFAULT 'open',
     "companyId" TEXT,
@@ -65,7 +65,7 @@ CREATE TABLE "new_User" (
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'user',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "companyId" TEXT,
     CONSTRAINT "User_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );

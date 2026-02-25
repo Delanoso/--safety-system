@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo, use } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getInspectionDepartment } from "@/lib/inspection-department";
 
 // Weekly columns
 const weeklyColumns = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
@@ -79,10 +81,12 @@ export default function WeeklyInspectionPage({
   const [deptQuery, setDeptQuery] = useState("");
 
   // ----------------------
-  // Load departments
+  // Load departments and selected department
   // ----------------------
   useEffect(() => {
     setDepartments(loadDepartments());
+    const selectedDept = getInspectionDepartment();
+    if (selectedDept) setDepartment(selectedDept);
   }, []);
 
   // ----------------------
@@ -145,6 +149,11 @@ export default function WeeklyInspectionPage({
   // Save inspection
   // ----------------------
   const handleSave = async () => {
+    if (!department.trim() || !inspectorName.trim()) {
+      alert("Please fill in Department and Inspector Name.");
+      return;
+    }
+
     const all = loadAllInspections();
     const now = Date.now();
     const id = existingId || generateId();
@@ -176,7 +185,7 @@ export default function WeeklyInspectionPage({
     }
 
     try {
-      await fetch("/api/inspections/save", {
+      const res = await fetch("/api/inspections/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -190,8 +199,15 @@ export default function WeeklyInspectionPage({
           frequency: "weekly",
         }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Save failed" }));
+        alert(err.error || "Failed to save inspection. It will not appear on Ongoing Inspections.");
+        return;
+      }
     } catch (err) {
       console.error("Save error:", err);
+      alert("Failed to save inspection. Please try again.");
+      return;
     }
 
     window.location.href = `/inspections/new/weekly/${encodeURIComponent(inspectionType)}?id=${id}`;
@@ -406,6 +422,24 @@ export default function WeeklyInspectionPage({
           Save Document
         </button>
 
+        {existingId && (
+          <>
+            <Link
+              href={`/inspections/view/weekly/${existingId}`}
+              className="px-6 py-3 bg-slate-600/70 text-white rounded-lg shadow hover:bg-slate-700/70 transition"
+            >
+              View document
+            </Link>
+            <a
+              href={`/pdf-renderer?type=weekly-inspection&id=${encodeURIComponent(existingId)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-purple-600/70 text-white rounded-lg shadow hover:bg-purple-700/70 transition"
+            >
+              Download PDF
+            </a>
+          </>
+        )}
       </div>
     </div>
   );

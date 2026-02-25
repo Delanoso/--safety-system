@@ -404,7 +404,7 @@ function TeamInvolved({ incidentId }) {
 
   useEffect(() => {
     loadTeam();
-  }, []);
+  }, [incidentId]);
 
   async function loadTeam() {
     const res = await fetch(`/api/incidents/${incidentId}`, {
@@ -412,9 +412,12 @@ function TeamInvolved({ incidentId }) {
     });
     const json = await res.json();
 
-    if (json.team) {
+    if (json.team && Array.isArray(json.team)) {
+      const sorted = [...json.team].sort(
+        (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+      );
       setTeam(
-        json.team.map((m) => ({
+        sorted.map((m) => ({
           ...m,
           signature: m.signature || "",
         }))
@@ -423,44 +426,54 @@ function TeamInvolved({ incidentId }) {
   }
 
   async function addMember() {
-    if (!newName || !newDesignation || !newSignature) {
-      alert("Name, designation, and signature are required.");
+    if (!newName || !newDesignation) {
+      alert("Name and designation are required.");
+      return;
+    }
+    // Capture current canvas at submit time so we always send the latest drawing (fixes last signature not showing)
+    const signatureToSend = padRef?.getTrimmedCanvas?.()?.toDataURL?.("image/png") ?? newSignature ?? "";
+    if (!signatureToSend) {
+      alert("Please draw a signature and click Add Team Member (or click Add Signature first).");
       return;
     }
 
     const res = await fetch(`/api/incidents/team/add/${incidentId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName, designation: newDesignation }),
+      body: JSON.stringify({
+        name: newName,
+        designation: newDesignation,
+        signature: signatureToSend,
+      }),
     });
 
     const json = await res.json();
 
-    if (!json.success) {
-      alert("Failed to add member.");
+    if (!res.ok || !json.success) {
+      alert(json.error || "Failed to add member.");
       return;
     }
 
-    const memberId = json.member.id;
-
-    await fetch(`/api/incidents/${incidentId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        teamId: memberId,
-        value: newSignature,
-      }),
-    });
-
-    setTeam((prev) => [
-      ...prev,
-      {
-        id: memberId,
-        name: newName,
-        designation: newDesignation,
-        signature: newSignature,
-      },
-    ]);
+    const member = json.member;
+    if (!member?.id) {
+      alert("Failed to add member.");
+      return;
+    }
+    // Append new member with the signature we just sent — do not refetch, so the last signature always shows
+    // (refetch can return truncated JSON and omit the last member's signature)
+    const newEntry = {
+      id: member.id,
+      name: member.name,
+      designation: member.designation,
+      signature: signatureToSend,
+      signedAt: member.signedAt ?? null,
+      createdAt: member.createdAt ?? new Date().toISOString(),
+    };
+    setTeam((prev) =>
+      [...prev, newEntry].sort(
+        (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+      )
+    );
 
     setNewName("");
     setNewDesignation("");
@@ -469,7 +482,7 @@ function TeamInvolved({ incidentId }) {
   }
 
   async function removeMember(id) {
-    await fetch(`/api/incidents/team/delete/${id}`, {
+    await fetch(`/api/incidents/team/add/delete/${id}`, {
       method: "DELETE",
     });
 

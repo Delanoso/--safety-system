@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MODULES } from "@/lib/module-access";
 
 type CurrentUser = {
   id: string;
@@ -17,6 +18,8 @@ type UiUser = {
   companyId: string | null;
   companyName: string | null;
   createdAt: string;
+  allowedModules: string[] | null;
+  inspectionDepartments: string[] | null;
 };
 
 type UiCompany = {
@@ -38,8 +41,17 @@ export default function UsersPage() {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"user" | "admin">("user");
+  const [newAllowedModules, setNewAllowedModules] = useState<string[] | null>(null);
+  const [newInspectionDepts, setNewInspectionDepts] = useState<string[]>([]);
+  const [newDeptInput, setNewDeptInput] = useState("");
   const [targetCompanyId, setTargetCompanyId] = useState<string | "">("");
   const [creatingUser, setCreatingUser] = useState(false);
+
+  // Edit user modal (module access)
+  const [editingUser, setEditingUser] = useState<UiUser | null>(null);
+  const [editAllowedModules, setEditAllowedModules] = useState<string[]>([]);
+  const [editFullAccess, setEditFullAccess] = useState(true);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Company user limit form (super only)
   const [limitCompanyId, setLimitCompanyId] = useState<string | "">("");
@@ -73,19 +85,23 @@ export default function UsersPage() {
           return;
         }
 
-        // Load companies (for admin or super)
-        const companiesRes = await fetch("/api/companies", { cache: "no-store" });
+        // Load companies (for admin or super) – super sees all companies
+        const companiesRes = await fetch("/api/companies", { credentials: "include", cache: "no-store" });
         if (companiesRes.ok) {
-          const companiesJson: UiCompany[] = await companiesRes.json();
-          setCompanies(companiesJson);
-
-          if (!limitCompanyId && companiesJson.length > 0) {
-            setLimitCompanyId(companiesJson[0].id);
+          const companiesJson = await companiesRes.json();
+          if (Array.isArray(companiesJson)) {
+            setCompanies(companiesJson as UiCompany[]);
+            if (!limitCompanyId && companiesJson.length > 0) {
+              setLimitCompanyId(companiesJson[0].id);
+            }
           }
+        } else if ((user.role ?? "").toLowerCase() === "super") {
+          setError("Could not load companies list. You may need to sign in again.");
         }
 
-        // Load users
-        const usersRes = await fetch("/api/users", { cache: "no-store" });
+        // Load users (super sees all when no company filter)
+        const usersUrl = (user.role ?? "").toLowerCase() === "super" ? "/api/users?all=true" : "/api/users";
+        const usersRes = await fetch(usersUrl, { credentials: "include", cache: "no-store" });
         if (usersRes.ok) {
           const usersJson: UiUser[] = await usersRes.json();
           setUsers(usersJson);
@@ -103,7 +119,8 @@ export default function UsersPage() {
 
   const refreshUsers = async () => {
     try {
-      const res = await fetch("/api/users", { cache: "no-store" });
+      const usersUrl = (currentUser?.role ?? "").toLowerCase() === "super" ? "/api/users?all=true" : "/api/users";
+      const res = await fetch(usersUrl, { credentials: "include", cache: "no-store" });
       if (res.ok) {
         const usersJson: UiUser[] = await res.json();
         setUsers(usersJson);
@@ -131,6 +148,14 @@ export default function UsersPage() {
         body.companyId = targetCompanyId;
       }
 
+      if (newAllowedModules !== null && newAllowedModules.length > 0) {
+        body.allowedModules = newAllowedModules;
+      } else {
+        body.allowedModules = null;
+      }
+
+      body.inspectionDepartments = newInspectionDepts.length > 0 ? newInspectionDepts : null;
+
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -148,6 +173,9 @@ export default function UsersPage() {
       setNewEmail("");
       setNewPassword("");
       setNewRole("user");
+      setNewAllowedModules(null);
+      setNewInspectionDepts([]);
+      setNewDeptInput("");
       await refreshUsers();
       setCreatingUser(false);
     } catch (err) {
@@ -179,10 +207,10 @@ export default function UsersPage() {
       }
 
       // Refresh companies to show the new limit
-      const companiesRes = await fetch("/api/companies", { cache: "no-store" });
+      const companiesRes = await fetch("/api/companies", { credentials: "include", cache: "no-store" });
       if (companiesRes.ok) {
-        const companiesJson: UiCompany[] = await companiesRes.json();
-        setCompanies(companiesJson);
+        const companiesJson = await companiesRes.json();
+        if (Array.isArray(companiesJson)) setCompanies(companiesJson as UiCompany[]);
       }
 
       setNewLimit("");
@@ -250,10 +278,10 @@ export default function UsersPage() {
       setLogoMessage("Company logo updated successfully.");
 
       // Refresh companies so the new logo is visible
-      const companiesRes = await fetch("/api/companies", { cache: "no-store" });
+      const companiesRes = await fetch("/api/companies", { credentials: "include", cache: "no-store" });
       if (companiesRes.ok) {
-        const companiesJson: UiCompany[] = await companiesRes.json();
-        setCompanies(companiesJson);
+        const companiesJson = await companiesRes.json();
+        if (Array.isArray(companiesJson)) setCompanies(companiesJson as UiCompany[]);
       }
     } catch (err) {
       console.error("Logo upload error", err);
@@ -314,7 +342,7 @@ export default function UsersPage() {
     );
   }
 
-  const isSuper = currentUser.role === "super";
+  const isSuper = (currentUser.role ?? "").toLowerCase() === "super";
 
   const currentCompany =
     !isSuper && currentUser.companyId
@@ -510,9 +538,91 @@ export default function UsersPage() {
                 <option value="admin">Admin</option>
               </select>
               <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                Users can see only their own work. Admins can see all work from users in their
-                company and manage users for that company.
+                All users see company-wide data. Admins can manage users and restrict which modules a user can open.
               </p>
+            </div>
+
+            <div>
+              <label className="block mb-1 text-[var(--foreground)]">Departments (for inspections)</label>
+              <p className="text-xs text-[var(--muted-foreground)] mb-2">
+                Add departments to restrict inspections to those departments. Leave empty for full access (e.g. demo user can view everything).
+              </p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {newInspectionDepts.map((d) => (
+                  <span
+                    key={d}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/70 border border-[var(--card-border)] text-sm"
+                  >
+                    {d}
+                    <button
+                      type="button"
+                      onClick={() => setNewInspectionDepts((prev) => prev.filter((x) => x !== d))}
+                      className="hover:opacity-70"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="flex-1 p-3 rounded-xl bg-white/70 border"
+                  value={newDeptInput}
+                  onChange={(e) => setNewDeptInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const v = newDeptInput.trim();
+                      if (v && !newInspectionDepts.includes(v)) {
+                        setNewInspectionDepts((prev) => [...prev, v]);
+                        setNewDeptInput("");
+                      }
+                    }
+                  }}
+                  placeholder="Type department name and press Enter"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const v = newDeptInput.trim();
+                    if (v && !newInspectionDepts.includes(v)) {
+                      setNewInspectionDepts((prev) => [...prev, v]);
+                      setNewDeptInput("");
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl border border-[var(--card-border)] hover:bg-black/5"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block mb-1 text-[var(--foreground)]">Module access</label>
+              <p className="text-xs text-[var(--muted-foreground)] mb-2">
+                Leave all unchecked for full access. Or select only the modules this user can open.
+              </p>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-xl border bg-white/50">
+                {MODULES.map((m) => (
+                  <label key={m.slug} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newAllowedModules !== null && newAllowedModules.includes(m.slug)}
+                      onChange={() => {
+                        if (newAllowedModules?.includes(m.slug)) {
+                          const next = newAllowedModules.filter((s) => s !== m.slug);
+                          setNewAllowedModules(next.length === 0 ? null : next);
+                        } else {
+                          setNewAllowedModules(newAllowedModules === null ? [m.slug] : [...newAllowedModules, m.slug]);
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    {m.label}
+                  </label>
+                ))}
+              </div>
             </div>
 
             <button
@@ -615,7 +725,10 @@ export default function UsersPage() {
                   <th className="py-2 pr-4">Email</th>
                   <th className="py-2 pr-4">Role</th>
                   <th className="py-2 pr-4">Company</th>
+                  <th className="py-2 pr-4">Inspection depts</th>
+                  <th className="py-2 pr-4">Access</th>
                   <th className="py-2 pr-4">Created</th>
+                  <th className="py-2 pr-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -626,8 +739,33 @@ export default function UsersPage() {
                     <td className="py-2 pr-4">
                       {u.companyName ?? "—"}
                     </td>
+                    <td className="py-2 pr-4 text-sm">
+                      {u.inspectionDepartments?.length
+                        ? u.inspectionDepartments.join(", ")
+                        : "—"}
+                    </td>
+                    <td className="py-2 pr-4 text-sm">
+                      {!u.allowedModules || u.allowedModules.length === 0
+                        ? "Full access"
+                        : `${u.allowedModules.length} modules`}
+                    </td>
                     <td className="py-2 pr-4">
                       {new Date(u.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="py-2 pr-4">
+                      {u.role !== "super" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingUser(u);
+                            setEditFullAccess(!u.allowedModules || u.allowedModules.length === 0);
+                            setEditAllowedModules(u.allowedModules ?? []);
+                          }}
+                          className="text-sm px-2 py-1 rounded border border-[var(--card-border)] hover:bg-black/5"
+                        >
+                          Restrict access
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -635,6 +773,102 @@ export default function UsersPage() {
             </table>
           </div>
         )}
+
+      {editingUser && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+        >
+          <div
+            className="rounded-2xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--card-border)",
+            }}
+          >
+            <h2 className="text-xl font-semibold text-[var(--foreground)] mb-2">
+              Restrict module access – {editingUser.email}
+            </h2>
+            <p className="text-sm text-[var(--muted-foreground)] mb-4">
+              Select only the modules this user can open. Leave all unchecked for full access.
+            </p>
+            <label className="flex items-center gap-2 mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editFullAccess}
+                onChange={(e) => {
+                  setEditFullAccess(e.target.checked);
+                  if (e.target.checked) setEditAllowedModules([]);
+                }}
+                className="rounded"
+              />
+              <span className="text-sm font-medium">Full access (no restrictions)</span>
+            </label>
+            {!editFullAccess && (
+              <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-xl border bg-white/50 max-h-48 overflow-y-auto">
+                {MODULES.map((m) => (
+                  <label key={m.slug} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editAllowedModules.includes(m.slug)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditAllowedModules((prev) => [...prev, m.slug]);
+                        } else {
+                          setEditAllowedModules((prev) => prev.filter((s) => s !== m.slug));
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    {m.label}
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="px-4 py-2 rounded-xl border border-[var(--card-border)] hover:opacity-80"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingEdit}
+                onClick={async () => {
+                  if (!editingUser) return;
+                  setSavingEdit(true);
+                  try {
+                    const body: { allowedModules: string[] | null } =
+                      editFullAccess || editAllowedModules.length === 0
+                        ? { allowedModules: null }
+                        : { allowedModules: editAllowedModules };
+                    const res = await fetch(`/api/users/${editingUser.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(body),
+                    });
+                    if (res.ok) {
+                      setEditingUser(null);
+                      await refreshUsers();
+                    } else {
+                      const d = await res.json().catch(() => ({}));
+                      setError(d?.error ?? "Failed to update");
+                    }
+                  } finally {
+                    setSavingEdit(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl font-semibold text-black transition disabled:opacity-60"
+                style={{ background: "var(--gold)" }}
+              >
+                {savingEdit ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

@@ -1,16 +1,30 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function RequestSignatureListPage() {
-  // Only show appointments that still need signatures
-  const appointments = await prisma.appointment.findMany({
-    where: {
-      status: {
-        in: ["draft", "pending", "appointer_signed", "appointee_signed"],
-      },
+  const current = await getCurrentUser();
+  if (!current) {
+    redirect("/login");
+  }
+
+  const where: {
+    status: { in: string[] };
+    companyId?: string | null;
+  } = {
+    status: {
+      in: ["draft", "pending", "appointer_signed", "appointee_signed"],
     },
+  };
+  if (current.role !== "super" && current.companyId != null) {
+    where.companyId = current.companyId;
+  }
+
+  const appointments = await prisma.appointment.findMany({
+    where,
     orderBy: { date: "desc" },
   });
 
@@ -98,4 +112,3 @@ export default async function RequestSignatureListPage() {
     </div>
   );
 }
-

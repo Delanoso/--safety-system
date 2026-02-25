@@ -1,21 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
+import { requireUser } from "@/lib/auth";
 
 export async function POST(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const current = await requireUser();
   const { id } = await context.params;
 
   const { appointeeToken } = await req.json();
 
   const appointment = await prisma.appointment.findUnique({
     where: { id },
+    select: { companyId: true, appointee: true, appointer: true, appointeeEmail: true, appointeeToken: true },
   });
 
   if (!appointment) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (current.role !== "super" && appointment.companyId !== current.companyId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   if (!appointment.appointeeEmail) {
@@ -26,7 +32,7 @@ export async function POST(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const signUrl = `${baseUrl}/appointments/sign/${appointment.id}?role=appointee&token=${appointeeToken}`;
+  const signUrl = `${baseUrl}/appointments/sign/${id}?role=appointee&token=${appointeeToken}`;
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {

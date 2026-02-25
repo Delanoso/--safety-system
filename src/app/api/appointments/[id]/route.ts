@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 // -------------------------
 // GET APPOINTMENT BY ID
@@ -8,6 +9,12 @@ export async function GET(
   _req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  let current;
+  try {
+    current = await requireUser();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { id } = await context.params;
 
   if (!id) {
@@ -24,6 +31,9 @@ export async function GET(
 
     if (!appointment) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (current.role !== "super" && appointment.companyId !== current.companyId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json(appointment);
@@ -43,6 +53,12 @@ export async function PATCH(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  let current;
+  try {
+    current = await requireUser();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { id } = await context.params;
 
   if (!id) {
@@ -83,10 +99,16 @@ export async function PATCH(
   if (appointeeToken) updateData.appointeeToken = appointeeToken;
   if (appointerToken) updateData.appointerToken = appointerToken;
 
+  const existing = await prisma.appointment.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (current.role !== "super" && existing.companyId !== current.companyId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // ⭐ AUTO-MARK AS SIGNED WHEN BOTH SIGNATURES EXIST
   if (appointeeSignature || appointerSignature) {
-    const existing = await prisma.appointment.findUnique({ where: { id } });
-
     const finalAppointeeSig =
       appointeeSignature || existing?.appointeeSignature;
     const finalAppointerSig =
@@ -120,6 +142,12 @@ export async function DELETE(
   _req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  let current;
+  try {
+    current = await requireUser();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { id } = await context.params;
 
   if (!id) {
@@ -127,6 +155,14 @@ export async function DELETE(
       { error: "Invalid appointment ID" },
       { status: 400 }
     );
+  }
+
+  const appointment = await prisma.appointment.findUnique({ where: { id } });
+  if (!appointment) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (current.role !== "super" && appointment.companyId !== current.companyId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {

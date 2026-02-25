@@ -1,28 +1,37 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Bell, Search, User } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { Bell, Search, User } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function Topbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [notificationCount, setNotificationCount] = useState(0);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
-    fetch("/api/notifications")
+    fetch('/api/notifications')
       .then((r) => r.json())
       .then((d) => setNotificationCount(d?.total ?? 0))
       .catch(() => setNotificationCount(0));
   }, [pathname]);
 
   const breadcrumbs = pathname
-    .split("/")
+    .split('/')
     .filter(Boolean)
     .map((segment, index, arr) => ({
-      name: segment.replace(/-/g, " "),
-      href: "/" + arr.slice(0, index + 1).join("/"),
+      name: segment.replace(/-/g, ' '),
+      href: '/' + arr.slice(0, index + 1).join('/'),
     }));
+
+  function handleSearch() {
+    const term = query.trim();
+    if (!term) return;
+    // Internal-only search within the app – navigates to dashboard search
+    router.push(`/dashboard/search?q=${encodeURIComponent(term)}`);
+  }
 
   return (
     <header
@@ -55,23 +64,31 @@ export default function Topbar() {
         <div className="relative w-1/2">
           <input
             type="text"
-            placeholder="Search..."
-            className="w-full rounded-full pl-10 pr-4 py-2 text-sm 
+            placeholder="Search in Safety System..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSearch();
+            }}
+            className="w-full rounded-full pl-10 pr-10 py-2 text-sm 
                        bg-[var(--background)] text-[var(--foreground)]
                        border border-[var(--foreground)]/20
                        focus:outline-none focus:ring-2 focus:ring-blue-500
                        shadow-sm hover:shadow-md transition"
           />
-          <Search
-            size={18}
-            className="absolute left-3 top-2.5 opacity-70"
-          />
+          <button
+            type="button"
+            onClick={handleSearch}
+            className="absolute left-3 top-2.5 opacity-70 hover:opacity-100 transition"
+            aria-label="Search within project"
+          >
+            <Search size={18} />
+          </button>
         </div>
       </div>
 
       {/* RIGHT: Icons */}
       <div className="flex items-center gap-6">
-
         {/* Notifications */}
         <div className="relative">
           <Link
@@ -85,7 +102,7 @@ export default function Topbar() {
                            flex items-center justify-center text-[10px] font-bold
                            bg-red-500 text-white rounded-full"
               >
-                {notificationCount > 99 ? "99+" : notificationCount}
+                {notificationCount > 99 ? '99+' : notificationCount}
               </span>
             )}
           </Link>

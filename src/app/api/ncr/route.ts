@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const current = await requireUser();
+    const companyId = current.role === "super" ? null : current.companyId ?? null;
+    if (current.role !== "super" && !companyId) {
+      return NextResponse.json(
+        { error: "No company associated with current user" },
+        { status: 400 }
+      );
+    }
 
-    console.log("📥 BODY RECEIVED:", JSON.stringify(body, null, 2));
+    const body = await req.json();
 
     if (!body.items || !Array.isArray(body.items)) {
       return NextResponse.json(
@@ -19,6 +27,8 @@ export async function POST(req: Request) {
       data: {
         department: "N/A",
         status: "open",
+        companyId,
+        createdByUserId: current.id,
         items: {
           create: body.items.map((item: any) => ({
             description: item.description || "",
