@@ -2,34 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
-
-const INDUSTRY_SECTORS = [
-  "Manufacturing",
-  "Construction",
-  "Healthcare",
-  "Retail",
-  "Office / Administration",
-  "Warehouse & Logistics",
-  "Hospitality",
-  "Agriculture",
-  "Mining & Quarrying",
-  "Oil & Gas",
-  "Other",
-];
-
-const ASSESSMENT_TYPES = [
-  "General Risk Assessment",
-  "Task-based Risk Assessment",
-  "COSHH (Hazardous Substances)",
-  "Fire Risk Assessment",
-  "Manual Handling",
-  "Work at Height",
-  "Contractor Risk Assessment",
-  "Office Risk Assessment",
-  "Machinery Risk Assessment",
-  "Other",
-];
+import { ClipboardList } from "lucide-react";
+import {
+  ASSESSMENT_TYPES,
+  INDUSTRY_SECTORS,
+} from "@/lib/risk-assessment-templates";
 
 export default function GenerateRiskAssessmentPage() {
   const [form, setForm] = useState({
@@ -85,13 +62,14 @@ export default function GenerateRiskAssessmentPage() {
 
         <div className="flex items-center gap-3">
           <span className="text-[var(--gold)]">
-            <Sparkles size={32} />
+            <ClipboardList size={32} />
           </span>
           <h1 className="text-4xl font-bold text-black">Generate Risk Assessment</h1>
         </div>
         <p className="text-black/70">
-          Enter details below. AI will generate a risk assessment tailored to your industry
-          and type. You can edit and sign it on the next page.
+          Salus builds a draft from built-in HSE templates for your industry and assessment type.
+          Mention specific tasks in the description (e.g. forklift, welding, height) to add matching
+          hazards. You can edit everything on the next page — no external AI required.
         </p>
 
         <form
@@ -140,16 +118,20 @@ export default function GenerateRiskAssessmentPage() {
 
           <div>
             <label className="block text-sm font-semibold text-black mb-1">
-              Additional Description or Comments
+              Task / area description (optional)
             </label>
             <textarea
               name="description"
               value={form.description}
               onChange={handleChange}
               rows={4}
-              placeholder="e.g. Forklift operations in main warehouse, specific hazards to consider..."
+              placeholder="e.g. Forklift loading in main warehouse, department: Logistics, location: Bay 3"
               className="w-full p-3 rounded-lg border border-white/40 bg-white/70"
             />
+            <p className="text-xs text-black/60 mt-1">
+              Keywords like forklift, welding, chemical, height, or electrical add relevant hazards
+              automatically.
+            </p>
           </div>
 
           {error && (
@@ -163,8 +145,8 @@ export default function GenerateRiskAssessmentPage() {
             disabled={loading}
             className="button button-save w-full py-3 flex items-center justify-center gap-2"
           >
-            <Sparkles size={18} />
-            {loading ? "Generating..." : "Generate"}
+            <ClipboardList size={18} />
+            {loading ? "Building assessment…" : "Generate from templates"}
           </button>
         </form>
       </div>

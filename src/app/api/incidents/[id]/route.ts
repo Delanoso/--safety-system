@@ -22,7 +22,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let incident: Awaited<ReturnType<typeof prisma.incident.findUnique<{ include: { images: true; team: { select: { id: true; name: true; designation: true; signature: true; signedAt: true; createdAt: true } } } }>>> | null;
+    let incident: Awaited<ReturnType<typeof prisma.incident.findUnique<{ where: { id: string }; include: { images: true; team: { select: { id: true; name: true; designation: true; signature: true; signedAt: true; createdAt: true } } } }>>> | null;
     try {
       incident = await prisma.incident.findUnique({
         where: { id },
@@ -128,6 +128,31 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       const updated = await prisma.incident.update({
         where: { id },
         data: { status: body.status },
+      });
+
+      return NextResponse.json({ success: true, updated });
+    }
+
+    // Full incident update (edit completed / past reports)
+    if (body.title != null || body.details != null) {
+      const data: Record<string, unknown> = {};
+      if (body.title != null) data.title = String(body.title);
+      if (body.description !== undefined) data.description = body.description;
+      if (body.department !== undefined) data.department = body.department;
+      if (body.employee !== undefined) data.employee = body.employee;
+      if (body.employeeId !== undefined) data.employeeId = body.employeeId;
+      if (body.location !== undefined) data.location = body.location;
+      if (body.date != null) data.date = new Date(body.date);
+      if (body.severity != null) data.severity = String(body.severity);
+      if (body.status != null) data.status = String(body.status);
+      if (body.details != null) {
+        data.details =
+          typeof body.details === "string" ? body.details : JSON.stringify(body.details);
+      }
+
+      const updated = await prisma.incident.update({
+        where: { id },
+        data,
       });
 
       return NextResponse.json({ success: true, updated });

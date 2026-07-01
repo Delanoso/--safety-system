@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { openWhatsAppLink } from "@/lib/open-whatsapp";
 
 type InvestigationTeamMember = {
   id: string;
@@ -81,14 +82,16 @@ async function patchSignature(incidentId: string, teamId: string, value: string)
   return res.json();
 }
 
-async function sendSignatureRequest(incidentId: string, email: string, teamId: string) {
+async function sendSignatureRequest(incidentId: string, phone: string, teamId: string) {
   const res = await fetch(`/api/incidents/${incidentId}/send-signature-request`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, teamId }),
+    body: JSON.stringify({ phone, teamId }),
   });
-  if (!res.ok) throw new Error("Failed to send signature request");
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Failed to send signature request");
+  if (data.whatsappUrl) openWhatsAppLink(data.whatsappUrl);
+  return data;
 }
 
 function parseDetails(details: string | null): IncidentDetails {
@@ -319,7 +322,7 @@ const SignatureModal: React.FC<SignatureModalProps> = ({ open, onClose, onSave, 
 type SendForSignatureModalProps = {
   open: boolean;
   onClose: () => void;
-  onSend: (email: string) => Promise<void>;
+  onSend: (phone: string) => Promise<void>;
   member?: InvestigationTeamMember | null;
 };
 
@@ -329,13 +332,13 @@ const SendForSignatureModal: React.FC<SendForSignatureModalProps> = ({
   onSend,
   member,
 }) => {
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
-      setEmail("");
+      setPhone("");
       setError(null);
       setSending(false);
     }
@@ -344,14 +347,15 @@ const SendForSignatureModal: React.FC<SendForSignatureModalProps> = ({
   if (!open || !member) return null;
 
   const handleSend = async () => {
-    if (!email || !email.includes("@")) {
-      setError("Please enter a valid email address.");
+    const digits = phone.replace(/\D/g, "");
+    if (!digits || digits.length < 9) {
+      setError("Please enter a valid WhatsApp phone number.");
       return;
     }
     setSending(true);
     setError(null);
     try {
-      await onSend(email);
+      await onSend(phone);
       onClose();
     } catch (e: any) {
       setError(e?.message || "Failed to send signature request.");
@@ -381,19 +385,19 @@ const SendForSignatureModal: React.FC<SendForSignatureModalProps> = ({
             Request signature from: {member.name} — {member.designation}
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            A branded email will be sent with a secure link to view and sign this incident.
+            A WhatsApp message will open with a secure link to view and sign this incident.
           </div>
         </div>
 
         <label className="block text-sm text-gray-700 mb-1">
-          Recipient email address
+          Recipient WhatsApp number
         </label>
         <input
-          type="email"
+          type="tel"
           className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white/70 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-          placeholder="recipient@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          placeholder="e.g. 0821234567"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           disabled={sending}
         />
 
@@ -418,7 +422,7 @@ const SendForSignatureModal: React.FC<SendForSignatureModalProps> = ({
             className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition disabled:opacity-60"
             disabled={sending}
           >
-            {sending ? "Sending..." : "Send Request"}
+            {sending ? "Opening WhatsApp..." : "Send via WhatsApp"}
           </button>
         </div>
       </div>
@@ -649,9 +653,9 @@ const IncidentViewPage: React.FC = () => {
     setDetails(parseDetails(updated.details));
   };
 
-  const handleSendSignatureRequest = async (email: string) => {
+  const handleSendSignatureRequest = async (phone: string) => {
     if (!incident || !activeMember) return;
-    await sendSignatureRequest(incident.id, email, activeMember.id);
+    await sendSignatureRequest(incident.id, phone, activeMember.id);
   };
 
   const hasBasic = useMemo(

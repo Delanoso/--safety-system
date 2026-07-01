@@ -26,10 +26,19 @@ export function middleware(req: NextRequest) {
     "/api/contractors/upload-by-token",
   ];
 
+  const isPublicApi =
+    pathname.startsWith("/api/ppe/issues/") ||
+    (pathname.startsWith("/api/appointments/") &&
+      (pathname.endsWith("/sign") || pathname.endsWith("/public"))) ||
+    pathname.includes("/team-sign") ||
+    pathname.startsWith("/api/ppe/choose-sizes");
+
   const isPublic =
     publicRoutes.includes(pathname) ||
+    isPublicApi ||
     pathname.startsWith("/api/contractors/by-token/") ||
     pathname.startsWith("/appointments/sign/") ||
+    pathname.startsWith("/incidents/sign/") ||
     pathname.startsWith("/vote/") ||
     pathname.startsWith("/ppe-management/sign/");
 

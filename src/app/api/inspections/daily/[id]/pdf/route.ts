@@ -1,18 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-// Redirect to print view (user saves via browser Print → Save as PDF).
-// This keeps existing links working while centralising PDF generation logic.
 export async function GET(
-  _req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const targetUrl = `${baseUrl}/pdf-renderer?type=daily-inspection&id=${encodeURIComponent(
-    id
-  )}`;
-
-  return NextResponse.redirect(targetUrl);
+  const url = new URL(req.url);
+  const target = new URL("/api/pdf", url.origin);
+  target.searchParams.set("type", "daily-inspection");
+  target.searchParams.set("id", id);
+  return NextResponse.redirect(target);
 }
 

@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { inspectionLegends } from "@/app/data/inspectionLegends";
 import { getInspectionDepartment } from "@/lib/inspection-department";
+import { getPdfDownloadUrl } from "@/lib/pdf-download";
+import { fetchInspectionById } from "@/lib/fetch-inspection";
+import { upsertInspectionCache } from "@/lib/inspection-local-cache";
 
 const dailyColumns = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -22,10 +25,6 @@ function loadAllInspections() {
   } catch {
     return { daily: [], weekly: [], monthly: [] };
   }
-}
-
-function saveAllInspections(data: any) {
-  localStorage.setItem("inspections", JSON.stringify(data));
 }
 
 function loadDepartments(): string[] {
@@ -69,6 +68,7 @@ export default function DailyInspectionPage({
   const [departments, setDepartments] = useState<string[]>([]);
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [deptQuery, setDeptQuery] = useState("");
+  const [loadingExisting, setLoadingExisting] = useState(!!existingId);
 
   useEffect(() => {
     setDepartments(loadDepartments());
@@ -77,17 +77,55 @@ export default function DailyInspectionPage({
   }, []);
 
   useEffect(() => {
-    const all = loadAllInspections();
+    if (!existingId) return;
 
-    if (existingId) {
-      const found = all.daily.find((i: any) => i.id === existingId);
-      if (found) {
-        setDepartment(found.department || "");
-        setInspectorName(found.inspectorName || "");
-        setRows(found.rows || rows);
+    let cancelled = false;
+
+    async function loadExisting() {
+      try {
+        const fromServer = await fetchInspectionById(existingId, "daily");
+        if (cancelled) return;
+
+        if (fromServer) {
+          setDepartment(fromServer.department || "");
+          setInspectorName(fromServer.inspectorName || "");
+          if (Array.isArray(fromServer.rows)) {
+            setRows(fromServer.rows as string[][]);
+          }
+          upsertInspectionCache("daily", {
+            id: existingId,
+            type: fromServer.type,
+            department: fromServer.department,
+            inspectorName: fromServer.inspectorName,
+            timestamp: fromServer.timestamp,
+            rows: fromServer.rows,
+          });
+          return;
+        }
+
+        const all = loadAllInspections();
+        const found = all.daily.find((i: { id: string }) => i.id === existingId) as
+          | { department?: string; inspectorName?: string; rows?: string[][] }
+          | undefined;
+        if (found) {
+          setDepartment(found.department || "");
+          setInspectorName(found.inspectorName || "");
+          if (found.rows) setRows(found.rows);
+        }
+      } finally {
+        if (!cancelled) setLoadingExisting(false);
       }
     }
+
+    loadExisting();
+    return () => {
+      cancelled = true;
+    };
   }, [existingId]);
+
+  if (loadingExisting) {
+    return <div className="p-10 text-xl">Loading inspection…</div>;
+  }
 
   const filteredDepartments = useMemo(() => {
     if (!deptQuery) return departments;
@@ -117,37 +155,9 @@ export default function DailyInspectionPage({
       return;
     }
 
-    const all = loadAllInspections();
     const now = Date.now();
     const id = existingId || generateId();
 
-    const updated = {
-      id,
-      type: inspectionType,
-      department: department.trim(),
-      inspectorName: inspectorName.trim(),
-      timestamp: existingId
-        ? all.daily.find((i: any) => i.id === existingId)?.timestamp ?? now
-        : now,
-      rows,
-    };
-
-    const idx = all.daily.findIndex((i: any) => i.id === id);
-    if (idx !== -1) {
-      all.daily[idx] = updated;
-    } else {
-      all.daily.push(updated);
-    }
-
-    saveAllInspections(all);
-
-    if (department.trim()) {
-      const next = [...departments, department.trim()];
-      saveDepartments(next);
-      setDepartments(Array.from(new Set(next)));
-    }
-
-    // ⭐ Save to Prisma
     const res = await fetch("/api/inspections/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -167,6 +177,27 @@ export default function DailyInspectionPage({
       const err = await res.json().catch(() => ({ error: "Save failed" }));
       alert(err.error || "Failed to save inspection. It will not appear on Ongoing Inspections.");
       return;
+    }
+
+    const all = loadAllInspections();
+    const timestamp =
+      existingId
+        ? (all.daily.find((i: { id: string; timestamp?: number }) => i.id === existingId)?.timestamp ?? now)
+        : now;
+
+    upsertInspectionCache("daily", {
+      id,
+      type: inspectionType,
+      department: department.trim(),
+      inspectorName: inspectorName.trim(),
+      timestamp,
+      rows,
+    });
+
+    if (department.trim()) {
+      const next = [...departments, department.trim()];
+      saveDepartments(next);
+      setDepartments(Array.from(new Set(next)));
     }
 
     window.location.href = `/inspections/new/daily/${inspectionType}?id=${id}`;
@@ -324,7 +355,7 @@ export default function DailyInspectionPage({
               View document
             </Link>
             <a
-              href={`/pdf-renderer?type=daily-inspection&id=${encodeURIComponent(existingId)}`}
+              href={getPdfDownloadUrl("daily-inspection", existingId)}
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-3 bg-purple-600/70 text-white rounded-lg shadow hover:bg-purple-700/70 transition"

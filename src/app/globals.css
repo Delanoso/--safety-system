@@ -1,6 +1,21 @@
 @import "tailwindcss";
 
 /* -------------------------------------------------------
+   RESPONSIVE BASE — scale on small screens, prevent overflow
+------------------------------------------------------- */
+html {
+  font-size: clamp(14px, 2vmin + 8px, 16px);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  overflow-x: hidden;
+}
+/* Allow flex children to shrink below content size so they don't force overflow */
+.min-w-0 {
+  min-width: 0;
+}
+
+/* -------------------------------------------------------
    GLOBAL THEME — LIGHT MODE ONLY
 ------------------------------------------------------- */
 :root {

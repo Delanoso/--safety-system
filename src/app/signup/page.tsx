@@ -8,7 +8,6 @@ export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [userLimit, setUserLimit] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -27,7 +26,6 @@ export default function SignupPage() {
           companyName,
           email,
           password,
-          userLimit: typeof userLimit === "number" && userLimit > 0 ? userLimit : undefined,
         }),
       });
 
@@ -110,25 +108,6 @@ export default function SignupPage() {
             />
           </div>
 
-          <div>
-            <label className="block mb-1 text-[var(--foreground)]">
-              Maximum users for this company (optional)
-            </label>
-            <input
-              type="number"
-              min={1}
-              className="w-full p-3 rounded-xl bg-white/70 border"
-              value={userLimit === "" ? "" : userLimit}
-              onChange={(e) => {
-                const v = e.target.value;
-                setUserLimit(v === "" ? "" : Number(v));
-              }}
-            />
-            <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              If left blank, the default limit from the plan (currently 5) will be used.
-            </p>
-          </div>
-
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
@@ -149,6 +128,17 @@ export default function SignupPage() {
             {loading ? "Registering..." : "Register company"}
           </button>
         </form>
+
+        <div className="mt-4 text-xs text-[var(--muted-foreground)] leading-relaxed">
+          <p className="font-semibold mb-1">Registration and Billing Notice</p>
+          <p>
+            By registering a company, you confirm that you are authorised to act on behalf of
+            that company and that you are entering into an agreement with Delano Solutions.
+            By completing this registration, you accept Delano Solutions&apos; terms and
+            conditions and acknowledge that the company will be liable for all applicable
+            subscription fees and charges associated with the use of this system.
+          </p>
+        </div>
 
         <div className="text-sm text-[var(--muted-foreground)] text-center">
           <p>

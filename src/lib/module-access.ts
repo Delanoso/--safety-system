@@ -13,13 +13,20 @@ export const MODULES = [
   { slug: "she-committee", label: "SHE Committee" },
   { slug: "risk-assessments", label: "Risk Assessments" },
   { slug: "hazardous-chemicals", label: "Hazardous Chemicals" },
+  { slug: "emergency-drills", label: "Emergency Drills" },
   { slug: "legal-registers", label: "Legal Registers" },
+  { slug: "legal-compliance", label: "Legal Compliance Register" },
   { slug: "appointments", label: "Appointments" },
   { slug: "inspections", label: "Inspections" },
   { slug: "incidents", label: "Incidents" },
   { slug: "maintenance-schedule", label: "Maintenance Schedule" },
-  { slug: "users", label: "Users" },
+  { slug: "users", label: "Users and Staff" },
   { slug: "contractors", label: "Contractors" },
+  { slug: "site-safety", label: "Site Safety" },
+  { slug: "toolbox-talks", label: "Toolbox Talks" },
+  { slug: "induction-training", label: "Induction Training" },
+  { slug: "visitor-register", label: "Visitor Register" },
+  { slug: "permit-to-work", label: "Permit to Work" },
 ] as const;
 
 export type ModuleSlug = (typeof MODULES)[number]["slug"];
@@ -35,6 +42,8 @@ const PATH_TO_MODULE: { prefix: string; module: ModuleSlug }[] = [
   { prefix: "/she-committee", module: "she-committee" },
   { prefix: "/risk-assessments", module: "risk-assessments" },
   { prefix: "/hazardous-chemicals", module: "hazardous-chemicals" },
+  { prefix: "/emergency-drills", module: "emergency-drills" },
+  { prefix: "/legal-compliance", module: "legal-compliance" },
   { prefix: "/legal-registers", module: "legal-registers" },
   { prefix: "/appointments", module: "appointments" },
   { prefix: "/inspections", module: "inspections" },
@@ -42,6 +51,11 @@ const PATH_TO_MODULE: { prefix: string; module: ModuleSlug }[] = [
   { prefix: "/maintenance-schedule", module: "maintenance-schedule" },
   { prefix: "/users", module: "users" },
   { prefix: "/contractors", module: "contractors" },
+  { prefix: "/site-safety", module: "site-safety" },
+  { prefix: "/toolbox-talks", module: "toolbox-talks" },
+  { prefix: "/induction-training", module: "induction-training" },
+  { prefix: "/visitor-register", module: "visitor-register" },
+  { prefix: "/permit-to-work", module: "permit-to-work" },
 ];
 
 /**

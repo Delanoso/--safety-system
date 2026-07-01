@@ -16,6 +16,11 @@ type UserMe = {
 
 export default function ModuleGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+
+  if (pathname?.startsWith("/pdf-renderer")) {
+    return <>{children}</>;
+  }
+
   const [user, setUser] = useState<UserMe | null | undefined>(undefined);
   const [restricted, setRestricted] = useState(false);
 

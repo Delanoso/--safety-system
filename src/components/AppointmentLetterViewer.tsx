@@ -7,6 +7,7 @@ import templates, {
   templateRegistry,
   TEMPLATE_VERSION,
 } from "../app/appointments/templates";
+import { downloadPdf } from "@/lib/pdf-download";
 
 interface AppointmentLetterViewerProps {
   appointment: {
@@ -38,12 +39,7 @@ export default function AppointmentLetterViewer({
     templates[appointment.type] as React.ComponentType<AppointmentTemplateProps>;
 
   const handleDownloadPdf = () => {
-    if (typeof window === "undefined") return;
-
-    const url = `/pdf-renderer?type=appointment&id=${encodeURIComponent(
-      appointment.id
-    )}`;
-    window.open(url, "_blank");
+    downloadPdf("appointment", appointment.id);
   };
 
   return (
@@ -87,7 +83,7 @@ export default function AppointmentLetterViewer({
             transition-all duration-300
           "
         >
-          Download / Print PDF
+          Download PDF
         </button>
       </div>
 

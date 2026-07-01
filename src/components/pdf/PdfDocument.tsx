@@ -28,7 +28,6 @@ export function PdfDocument({
     color: PDF_TEXT,
     fontSize: 14,
     lineHeight: 1.6,
-    minHeight: "100vh",
     maxWidth: 210 * 3.78,
     marginLeft: "auto",
     marginRight: "auto",
@@ -54,7 +53,7 @@ export function PdfDocument({
   };
 
   return (
-    <div style={baseStyles}>
+    <div style={baseStyles} className="pdf-page">
       <header style={headerStyles}>
         <div>
           <h1

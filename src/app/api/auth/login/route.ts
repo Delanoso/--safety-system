@@ -1,14 +1,33 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "prisma-client-generated";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { checkLoginRateLimit, clearLoginRateLimit } from "@/lib/rate-limit";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 
-const BOOTSTRAP_SUPER_USERS: { email: string; password: string }[] = [
-  { email: "erichvandenheuvel5@gmail.com", password: "vandenHeuvel97!" },
-  { email: "demouser1@gmail.com", password: "DemoUser1" },
-];
+/** Bootstrap super users from env only (no credentials in code). Use BOOTSTRAP_SUPER_USERS JSON array or single BOOTSTRAP_SUPER_USER_EMAIL + PASSWORD. */
+function getBootstrapSuperUsers(): { email: string; password: string }[] {
+  const json = process.env.BOOTSTRAP_SUPER_USERS;
+  if (json) {
+    try {
+      const parsed = JSON.parse(json) as unknown;
+      if (Array.isArray(parsed)) {
+        const users = parsed
+          .filter((u): u is { email?: string; password?: string } => u != null && typeof u === "object")
+          .map((u) => ({ email: String(u.email ?? "").trim(), password: u.password == null ? "" : String(u.password) }))
+          .filter((u) => u.email && u.password);
+        if (users.length) return users;
+      }
+    } catch {
+      /* ignore invalid JSON */
+    }
+  }
+  const email = process.env.BOOTSTRAP_SUPER_USER_EMAIL?.trim();
+  const password = process.env.BOOTSTRAP_SUPER_USER_PASSWORD;
+  if (!email || !password) return [];
+  return [{ email, password }];
+}
 
 /** Fetch user by email using only columns that exist before allowedModules/inspectionDepartments migrations. */
 async function findUserByEmailRaw(email: string): Promise<{ id: string; email: string; password: string; role: string } | null> {
@@ -27,6 +46,15 @@ async function createUserRaw(data: { id: string; email: string; password: string
 
 export async function POST(req: Request) {
   try {
+    const rate = checkLoginRateLimit(req);
+    if (!rate.allowed) {
+      const retryAfterSec = Math.ceil(rate.resetInMs / 1000);
+      return NextResponse.json(
+        { error: "Too many login attempts. Try again later." },
+        { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+      );
+    }
+
     const { email, password } = await req.json();
 
     if (!email || !password) {
@@ -40,7 +68,7 @@ export async function POST(req: Request) {
 
     try {
       // Bootstrap: ensure super users exist when logging in with a bootstrap email.
-      const bootstrap = BOOTSTRAP_SUPER_USERS.find((u) => u.email === email);
+      const bootstrap = getBootstrapSuperUsers().find((u) => u.email === email);
       if (bootstrap) {
         let superUser = await prisma.user.findUnique({
           where: { email: bootstrap.email },
@@ -62,7 +90,7 @@ export async function POST(req: Request) {
       }
     } catch (err) {
       // DB may be missing User.allowedModules / inspectionDepartments columns; use raw queries.
-      const bootstrap = BOOTSTRAP_SUPER_USERS.find((u) => u.email === email);
+      const bootstrap = getBootstrapSuperUsers().find((u) => u.email === email);
       if (bootstrap) {
         let superUser = await findUserByEmailRaw(bootstrap.email);
         if (!superUser) {
@@ -111,6 +139,7 @@ export async function POST(req: Request) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
+    clearLoginRateLimit(req);
     const res = NextResponse.json({ success: true });
     res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
     return res;

@@ -5,61 +5,48 @@ import { existsSync, realpathSync } from "fs";
 import path from "path";
 import { execSync } from "child_process";
 
-/** On Windows, build 8.3 short path using "dir /x" so Puppeteer gets a path without spaces. */
-function getWindowsShortPath(longPath: string): string | null {
-  if (process.platform !== "win32" || !longPath || !existsSync(longPath)) return null;
-  try {
-    const normalized = path.normalize(longPath);
-    const parts = normalized.split(path.sep).filter(Boolean);
-    if (parts.length === 0) return null;
-    const isUnc = normalized.startsWith("\\\\");
-    const built: string[] = parts[0].includes(":") ? [parts[0] + path.sep] : isUnc ? ["\\\\", parts[0] + path.sep] : [];
-    const startIdx = built.length;
-    for (let i = startIdx; i < parts.length; i++) {
-      const parent = path.join(...built.slice(0, i).map((b) => b.replace(/[/\\]+$/, "")));
-      const segment = parts[i];
-      const full = path.join(parent, segment);
-      if (!existsSync(full)) break;
-      if (!segment.includes(" ")) {
-        built.push(segment + (i < parts.length - 1 ? path.sep : ""));
-        continue;
-      }
-      let shortName: string | null = null;
-      try {
-        const out = execSync(`cmd /c dir /x "${parent}"`, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
-        const escaped = segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const match = new RegExp(`(\\S+)\\s+${escaped}`, "i").exec(out);
-        if (match) shortName = match[1].trim();
-      } catch {
-        // ignore
-      }
-      built.push((shortName || segment) + (i < parts.length - 1 ? path.sep : ""));
-    }
-    const shortPath = path.normalize(built.join(""));
-    if (shortPath && shortPath !== longPath && existsSync(shortPath)) return shortPath;
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-/** Resolve to a canonical path so Puppeteer gets a path that works (handles spaces, symlinks). */
+/** Resolve to a canonical path so Puppeteer gets a stable absolute path. */
 function resolveExecutablePath(p: string): string {
   if (!p || !existsSync(p)) return p;
   try {
-    const resolved = realpathSync.native ? realpathSync.native(p) : realpathSync(p);
-    // On Windows, paths with spaces often break Puppeteer; use 8.3 short path when possible
-    if (process.platform === "win32" && resolved.includes(" ")) {
-      const shortPath = getWindowsShortPath(resolved);
-      if (shortPath) return shortPath;
-    }
-    return resolved;
+    return realpathSync.native ? realpathSync.native(p) : realpathSync(p);
   } catch {
     return path.normalize(p);
   }
 }
 
-export const maxDuration = 60;
+
+/** @sparticuz/chromium only works on Linux (Docker / serverless). Never use on Windows/macOS. */
+function shouldUseBundledChromium(): boolean {
+  if (process.platform !== "linux") return false;
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) return false;
+  return (
+    !!process.env.VERCEL ||
+    process.env.USE_BUNDLED_CHROMIUM === "1"
+  );
+}
+
+/** Remove Next.js scripts so headless Chrome renders SSR HTML only (no hydration errors). */
+function prepareHtmlForPdf(html: string, baseUrl: string): string {
+  let cleaned = html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<script\b[^>]*\/>/gi, "");
+
+  const baseTag = `<base href="${baseUrl}/">`;
+  cleaned = cleaned.includes("<head>")
+    ? cleaned.replace("<head>", `<head>${baseTag}`)
+    : `${baseTag}${cleaned}`;
+
+  return cleaned;
+}
+
+function pdfHtmlLooksBroken(html: string): boolean {
+  return (
+    html.includes("Application error") ||
+    html.includes("client-side exception") ||
+    html.includes("Something went wrong")
+  );
+}
 
 /**
  * Resolve base URL for server-side fetch (avoid self-request issues on localhost).
@@ -156,7 +143,7 @@ export async function GET(req: NextRequest) {
   const baseUrl = getBaseUrl(req);
   const htmlUrl = `${baseUrl}/pdf-renderer?type=${encodeURIComponent(
     type
-  )}&id=${encodeURIComponent(id)}`;
+  )}&id=${encodeURIComponent(id)}&embed=1`;
 
   // Fetch HTML server-side so we don't rely on Puppeteer navigating to the same server
   // (avoids deadlock/timeout and works when Chrome path is custom)
@@ -174,6 +161,12 @@ export async function GET(req: NextRequest) {
       );
     }
     html = await res.text();
+    if (pdfHtmlLooksBroken(html)) {
+      return NextResponse.json(
+        { error: "PDF content failed to render on the server." },
+        { status: 502 }
+      );
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
@@ -182,96 +175,125 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Inject base tag so relative URLs (e.g. images) resolve correctly
-  const baseTag = `<base href="${baseUrl}/">`;
-  const htmlWithBase = html.includes("<head>")
-    ? html.replace("<head>", `<head>${baseTag}`)
-    : html.replace("<!DOCTYPE", `${baseTag}<!DOCTYPE`);
+  const htmlWithBase = prepareHtmlForPdf(html, baseUrl);
 
-  const isVercel = !!process.env.VERCEL;
-  let executablePath: string;
-  let launchArgs: string[];
-  if (isVercel) {
-    executablePath = await chromium.executablePath();
-    launchArgs = chromium.args;
-  } else {
-    const candidates = getChromeCandidatePaths();
-    launchArgs = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu", "--no-first-run"];
-    const found = candidates.find((p) => p && existsSync(p)) ?? candidates[0] ?? "";
-    executablePath = resolveExecutablePath(found) || found;
-  }
+  const useBundledChromium = shouldUseBundledChromium();
+  const winLaunchArgs = [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-gpu",
+    "--no-first-run",
+    "--disable-dev-shm-usage",
+  ];
 
   let browser;
   const launchOptions = {
-    args: launchArgs,
     defaultViewport: { width: 1920, height: 1080, deviceScaleFactor: 1 },
-    headless: true,
+    headless: true as const,
   };
 
-  try {
-    browser = await puppeteer.launch({
+  async function tryLaunch(executablePath: string, args: string[]) {
+    return puppeteer.launch({
       ...launchOptions,
       executablePath,
+      args,
     });
-  } catch (firstErr) {
-    // If env path or first candidate failed, try other candidates (e.g. Chrome in (x86) or Edge)
-    if (!isVercel && getChromeCandidatePaths().length > 1) {
-      const candidates = getChromeCandidatePaths();
-      let lastErr = firstErr;
-      for (const p of candidates) {
-        if (!p || p === executablePath) continue;
-        const resolved = resolveExecutablePath(p);
-        if (!resolved && !existsSync(p)) continue;
+  }
+
+  try {
+    if (useBundledChromium) {
+      browser = await tryLaunch(await chromium.executablePath(), chromium.args);
+    } else {
+      const candidates = getChromeCandidatePaths()
+        .map((p) => (p && existsSync(p) ? resolveExecutablePath(p) : null))
+        .filter((p): p is string => !!p && existsSync(p));
+
+      const unique = [...new Set(candidates)];
+      let lastErr: unknown = null;
+
+      for (const exe of unique) {
         try {
-          browser = await puppeteer.launch({
-            ...launchOptions,
-            executablePath: resolved || p,
-          });
+          browser = await tryLaunch(exe, winLaunchArgs);
           lastErr = null;
           break;
         } catch (e) {
           lastErr = e;
         }
       }
-      if (lastErr) {
+
+      if (!browser) {
         const message = lastErr instanceof Error ? lastErr.message : String(lastErr);
         return NextResponse.json(
           {
             error: "PDF engine unavailable. No Chrome, Edge, or Brave found.",
             detail: message,
-            hint: "Add to .env.local: PUPPETEER_EXECUTABLE_PATH=C:\\path\\to\\chrome.exe (right‑click your browser shortcut → Open file location to find the .exe)",
+            hint: "Add to .env.local: PUPPETEER_EXECUTABLE_PATH=C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
           },
           { status: 503 }
         );
       }
-    } else {
-      const message = firstErr instanceof Error ? firstErr.message : String(firstErr);
-      return NextResponse.json(
-        {
-          error: "PDF engine unavailable. Install Chrome/Edge or set PUPPETEER_EXECUTABLE_PATH.",
-          detail: message,
-          hint: "In .env.local set PUPPETEER_EXECUTABLE_PATH to your browser .exe path (e.g. Chrome or Edge).",
-        },
-        { status: 503 }
-      );
     }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      {
+        error: "PDF engine unavailable.",
+        detail: message,
+        hint: "Set PUPPETEER_EXECUTABLE_PATH in .env.local to your Chrome or Edge .exe path.",
+      },
+      { status: 503 }
+    );
+  }
+
+  if (!browser) {
+    return NextResponse.json(
+      { error: "PDF engine unavailable." },
+      { status: 503 }
+    );
   }
 
   try {
     const page = await browser.newPage();
     await page.setContent(htmlWithBase, {
       waitUntil: "networkidle0",
-      timeout: 20000,
+      timeout: 30000,
     });
 
+    const pageText = await page.evaluate(() => document.body?.innerText ?? "");
+    if (pdfHtmlLooksBroken(pageText)) {
+      return NextResponse.json(
+        { error: "PDF generation produced an error page instead of the document." },
+        { status: 500 }
+      );
+    }
+
+    await page.evaluate(async () => {
+      const images = Array.from(document.images);
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise<void>((resolve) => {
+              if (img.complete) {
+                resolve();
+                return;
+              }
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            })
+        )
+      );
+    });
+
+    const safeName = `${type}-${id}`.replace(/[/\\:*?"<>|]/g, "-");
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
+      preferCSSPageSize: false,
       margin: {
-        top: "20mm",
-        bottom: "20mm",
-        left: "15mm",
-        right: "15mm",
+        top: "15mm",
+        bottom: "15mm",
+        left: "12mm",
+        right: "12mm",
       },
     });
 
@@ -279,7 +301,8 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${type}-${id}.pdf"`,
+        "Content-Disposition": `attachment; filename="${safeName}.pdf"`,
+        "Cache-Control": "no-store",
       },
     });
   } catch (err) {

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import SignaturePad from "react-signature-canvas";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import TeamInvolvedEditor from "@/components/incident/TeamInvolvedEditor";
 
 /* -------------------------------------------------------
    REUSABLE UI COMPONENTS
@@ -136,25 +136,25 @@ export default function OngoingIncidentsPage() {
   const nearMisses = incidents.filter((i) => i.type === "near_miss");
 
   return (
-    <div className="min-h-screen p-10">
-      <div className="max-w-4xl mx-auto space-y-10">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 min-w-0">
+      <div className="max-w-4xl mx-auto space-y-6 sm:space-y-10">
 
         {/* HEADER */}
         <div
-          className="rounded-2xl p-8 backdrop-blur-xl shadow-xl"
+          className="rounded-2xl p-4 sm:p-6 lg:p-8 backdrop-blur-xl shadow-xl"
           style={{
             background: "var(--card-bg)",
             border: "1px solid var(--card-border)",
           }}
         >
-          <h1 className="text-4xl font-bold">Ongoing Incidents</h1>
-          <p className="opacity-70 mt-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">Ongoing Incidents</h1>
+          <p className="opacity-70 mt-2 text-sm sm:text-base">
             All incidents still in progress or awaiting completion.
           </p>
         </div>
 
         {/* INCIDENTS SECTION */}
-        <h2 className="text-2xl font-bold mt-10">Incidents</h2>
+        <h2 className="text-xl sm:text-2xl font-bold mt-6 sm:mt-10">Incidents</h2>
 
         {fullIncidents.length === 0 && (
           <p className="text-center text-lg opacity-70">
@@ -162,14 +162,14 @@ export default function OngoingIncidentsPage() {
           </p>
         )}
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {fullIncidents.map((incident) => {
             const details = safeParseDetails(incident.details);
 
             return (
               <div
                 key={incident.id}
-                className="rounded-2xl p-6 backdrop-blur-xl shadow-xl"
+                className="rounded-2xl p-4 sm:p-6 backdrop-blur-xl shadow-xl"
                 style={{
                   background: "var(--card-bg)",
                   border: "1px solid var(--card-border)",
@@ -219,7 +219,10 @@ export default function OngoingIncidentsPage() {
                 {expanded === incident.id && (
                   <div className="mt-6 space-y-6">
                     <IncidentReportLayout incident={incident} details={details} />
-                    <TeamInvolved incidentId={incident.id} />
+                    <TeamInvolvedEditor
+                      incidentId={incident.id}
+                      incidentTitle={incident.title}
+                    />
                   </div>
                 )}
               </div>
@@ -293,7 +296,10 @@ export default function OngoingIncidentsPage() {
                 {expanded === incident.id && (
                   <div className="mt-6 space-y-6">
                     <NearMissLayout incident={incident} details={details} />
-                    <TeamInvolved incidentId={incident.id} />
+                    <TeamInvolvedEditor
+                      incidentId={incident.id}
+                      incidentTitle={incident.title}
+                    />
                   </div>
                 )}
               </div>
@@ -388,225 +394,6 @@ function IncidentReportLayout({ incident, details }) {
         </p>
       </Section>
     </div>
-  );
-}
-
-/* -------------------------------------------------------
-   TEAM INVOLVED
-------------------------------------------------------- */
-
-function TeamInvolved({ incidentId }) {
-  const [team, setTeam] = useState([]);
-  const [newName, setNewName] = useState("");
-  const [newDesignation, setNewDesignation] = useState("");
-  const [newSignature, setNewSignature] = useState("");
-  const [padRef, setPadRef] = useState(null);
-
-  useEffect(() => {
-    loadTeam();
-  }, [incidentId]);
-
-  async function loadTeam() {
-    const res = await fetch(`/api/incidents/${incidentId}`, {
-      cache: "no-store",
-    });
-    const json = await res.json();
-
-    if (json.team && Array.isArray(json.team)) {
-      const sorted = [...json.team].sort(
-        (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
-      );
-      setTeam(
-        sorted.map((m) => ({
-          ...m,
-          signature: m.signature || "",
-        }))
-      );
-    }
-  }
-
-  async function addMember() {
-    if (!newName || !newDesignation) {
-      alert("Name and designation are required.");
-      return;
-    }
-    // Capture current canvas at submit time so we always send the latest drawing (fixes last signature not showing)
-    const signatureToSend = padRef?.getTrimmedCanvas?.()?.toDataURL?.("image/png") ?? newSignature ?? "";
-    if (!signatureToSend) {
-      alert("Please draw a signature and click Add Team Member (or click Add Signature first).");
-      return;
-    }
-
-    const res = await fetch(`/api/incidents/team/add/${incidentId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: newName,
-        designation: newDesignation,
-        signature: signatureToSend,
-      }),
-    });
-
-    const json = await res.json();
-
-    if (!res.ok || !json.success) {
-      alert(json.error || "Failed to add member.");
-      return;
-    }
-
-    const member = json.member;
-    if (!member?.id) {
-      alert("Failed to add member.");
-      return;
-    }
-    // Append new member with the signature we just sent — do not refetch, so the last signature always shows
-    // (refetch can return truncated JSON and omit the last member's signature)
-    const newEntry = {
-      id: member.id,
-      name: member.name,
-      designation: member.designation,
-      signature: signatureToSend,
-      signedAt: member.signedAt ?? null,
-      createdAt: member.createdAt ?? new Date().toISOString(),
-    };
-    setTeam((prev) =>
-      [...prev, newEntry].sort(
-        (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
-      )
-    );
-
-    setNewName("");
-    setNewDesignation("");
-    setNewSignature("");
-    padRef?.clear();
-  }
-
-  async function removeMember(id) {
-    await fetch(`/api/incidents/team/add/delete/${id}`, {
-      method: "DELETE",
-    });
-
-    setTeam((prev) => prev.filter((m) => m.id !== id));
-  }
-
-  async function completeIncident() {
-    await fetch(`/api/incidents/${incidentId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "completed" }),
-    });
-
-    window.location.href = "/incidents/list";
-  }
-
-  return (
-    <Section title="Team Involved">
-      <div
-        className="mb-6 p-4 rounded-xl"
-        style={{
-          background: "var(--card-bg)",
-          border: "1px solid var(--card-border)",
-        }}
-      >
-        <Grid>
-          <div>
-            <label className="text-xs uppercase tracking-wide opacity-70">
-              Name
-            </label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 rounded-lg border text-sm"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-wide opacity-70">
-              Designation
-            </label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 rounded-lg border text-sm"
-              value={newDesignation}
-              onChange={(e) => setNewDesignation(e.target.value)}
-            />
-          </div>
-        </Grid>
-
-        <div className="mt-4">
-          <label className="text-sm">Signature</label>
-
-          <SignaturePad
-            penColor="black"
-            canvasProps={{
-              width: 350,
-              height: 120,
-              className:
-                "bg-white rounded-xl border border-gray-300 shadow-md",
-            }}
-            ref={(ref) => setPadRef(ref)}
-          />
-
-          <button
-            onClick={() => {
-              if (padRef) {
-                const data = padRef.getTrimmedCanvas().toDataURL();
-                setNewSignature(data);
-                alert("Signature captured.");
-              }
-            }}
-            className="button button-save mt-2"
-          >
-            Add Signature
-          </button>
-        </div>
-
-        <button onClick={addMember} className="button button-save mt-4">
-          + Add Team Member
-        </button>
-      </div>
-
-      {team.map((member) => (
-        <div
-          key={member.id}
-          className="relative mb-6 p-4 rounded-xl"
-          style={{
-            background: "var(--card-bg)",
-            border: "1px solid var(--card-border)",
-          }}
-        >
-          <div
-            role="button"
-            onClick={() => removeMember(member.id)}
-            className="absolute top-3 right-3 cursor-pointer"
-            style={{ color: "var(--button-delete-bg)" }}
-          >
-            <Trash2 size={20} />
-          </div>
-
-          <Grid>
-            <Field label="Name" value={member.name} />
-            <Field label="Designation" value={member.designation} />
-          </Grid>
-
-          {member.signature && (
-            <img
-              src={member.signature}
-              alt="Signature"
-              className="mt-4 w-48 border border-gray-300 rounded-lg bg-white"
-            />
-          )}
-        </div>
-      ))}
-
-      <button
-        onClick={completeIncident}
-        className="button button-save w-full mt-4"
-      >
-        Completed AND Signed
-      </button>
-    </Section>
   );
 }
 

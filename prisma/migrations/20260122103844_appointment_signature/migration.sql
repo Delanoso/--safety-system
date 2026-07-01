@@ -4,28 +4,11 @@
   - You are about to drop the column `createdAt` on the `Appointment` table. All the data in the column will be lost.
 
 */
--- RedefineTables
-PRAGMA defer_foreign_keys=ON;
-PRAGMA foreign_keys=OFF;
-CREATE TABLE "new_Appointment" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "type" TEXT NOT NULL,
-    "appointee" TEXT NOT NULL,
-    "appointer" TEXT NOT NULL,
-    "department" TEXT NOT NULL,
-    "date" TIMESTAMP(3) NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'draft',
-    "appointeeEmail" TEXT,
-    "appointerEmail" TEXT,
-    "appointeeSignature" TEXT,
-    "appointerSignature" TEXT,
-    "appointeeSignedAt" TIMESTAMP(3),
-    "appointerSignedAt" TIMESTAMP(3),
-    "appointeeToken" TEXT,
-    "appointerToken" TEXT
-);
-INSERT INTO "new_Appointment" ("appointee", "appointer", "date", "department", "id", "status", "type") SELECT "appointee", "appointer", "date", "department", "id", "status", "type" FROM "Appointment";
-DROP TABLE "Appointment";
-ALTER TABLE "new_Appointment" RENAME TO "Appointment";
-PRAGMA foreign_keys=ON;
-PRAGMA defer_foreign_keys=OFF;
+-- AlterTable (PostgreSQL: no PRAGMA; use ALTER TABLE)
+ALTER TABLE "Appointment" DROP COLUMN IF EXISTS "createdAt";
+ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "appointeeSignature" TEXT;
+ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "appointerSignature" TEXT;
+ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "appointeeSignedAt" TIMESTAMP(3);
+ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "appointerSignedAt" TIMESTAMP(3);
+ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "appointeeToken" TEXT;
+ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "appointerToken" TEXT;

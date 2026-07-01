@@ -6,24 +6,14 @@
   - You are about to drop the `IncidentRecord` table. If the table is not empty, all the data it contains will be lost.
 
 */
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "CostAnalysis";
-PRAGMA foreign_keys=on;
-
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "IncidentDocument";
-PRAGMA foreign_keys=on;
-
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "IncidentRecord";
-PRAGMA foreign_keys=on;
+-- DropTable (PostgreSQL: no PRAGMA)
+DROP TABLE IF EXISTS "CostAnalysis";
+DROP TABLE IF EXISTS "IncidentDocument";
+DROP TABLE IF EXISTS "IncidentRecord";
 
 -- CreateTable
 CREATE TABLE "Incident" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
@@ -37,14 +27,17 @@ CREATE TABLE "Incident" (
     "linkId" TEXT,
     "details" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "Incident_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "IncidentImage" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "incidentId" TEXT NOT NULL,
     "url" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "IncidentImage_incidentId_fkey" FOREIGN KEY ("incidentId") REFERENCES "Incident" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "IncidentImage_pkey" PRIMARY KEY ("id")
 );
+
+ALTER TABLE "IncidentImage" ADD CONSTRAINT "IncidentImage_incidentId_fkey" FOREIGN KEY ("incidentId") REFERENCES "Incident" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;

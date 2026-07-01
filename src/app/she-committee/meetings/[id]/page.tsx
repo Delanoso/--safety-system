@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { FileDown } from "lucide-react";
+import { downloadPdf } from "@/lib/pdf-download";
 
 type Meeting = {
   id: string;
@@ -66,10 +68,18 @@ export default function SHECommitteeMeetingViewPage() {
         </Link>
 
         <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-8 space-y-6">
-          <div className="border-b border-black/10 pb-4">
+          <div className="border-b border-black/10 pb-4 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-2xl font-bold text-black">
               Meeting — {new Date(meeting.date).toLocaleDateString()}
             </h1>
+            <button
+              type="button"
+              onClick={() => downloadPdf("she-meeting", meeting.id)}
+              className="button button-pdf flex items-center gap-2"
+            >
+              <FileDown size={18} />
+              Download PDF
+            </button>
           </div>
 
           {meeting.agenda && (

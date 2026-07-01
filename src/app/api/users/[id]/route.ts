@@ -133,3 +133,48 @@ export async function GET(
     inspectionDepartments: user.inspectionDepartments ? (JSON.parse(user.inspectionDepartments) as string[]) : [],
   });
 }
+
+export async function DELETE(
+  _req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const current = await requireAdminOrSuper();
+  const { id } = await context.params;
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!targetUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Admins can only delete users in their own company
+  if (current.role === "admin" && targetUser.companyId !== current.companyId) {
+    return NextResponse.json(
+      { error: "You can only delete users in your company" },
+      { status: 403 }
+    );
+  }
+
+  // Admins cannot delete super users
+  if (current.role === "admin" && targetUser.role === "super") {
+    return NextResponse.json(
+      { error: "You cannot delete a super user" },
+      { status: 403 }
+    );
+  }
+
+  // Prevent users from deleting themselves accidentally
+  if (current.id === targetUser.id) {
+    return NextResponse.json(
+      { error: "You cannot delete your own user account" },
+      { status: 400 }
+    );
+  }
+
+  await prisma.user.delete({ where: { id } });
+
+  return NextResponse.json({ success: true });
+}
+

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import AppointmentLetterViewer from "../../../../components/AppointmentLetterViewer";
 import { AppointmentTemplateKey } from "../../../appointments/templates";
+import { openWhatsAppLink } from "@/lib/open-whatsapp";
 
 interface Appointment {
   id: string;
@@ -27,8 +28,8 @@ export default function RequestSignaturePage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [savingSignature, setSavingSignature] = useState(false);
 
-  const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [role, setRole] = useState<"appointer" | "appointee">("appointer");
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -60,28 +61,52 @@ export default function RequestSignaturePage() {
     load();
   }, [params.id, router]);
 
-  // Signature pad logic
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const getPos = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    if ("touches" in e) {
+      const t =
+        e.touches[0] ||
+        (e as unknown as React.TouchEvent<HTMLCanvasElement>).changedTouches[0];
+      return {
+        x: ((t.clientX - rect.left) * canvas.width) / rect.width,
+        y: ((t.clientY - rect.top) * canvas.height) / rect.height,
+      };
+    }
+    const me = e as React.MouseEvent<HTMLCanvasElement>;
+    return { x: me.clientX - rect.left, y: me.clientY - rect.top };
+  };
+
+  const startDrawing = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     drawing.current = true;
+    const pos = getPos(e);
     ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.moveTo(pos.x, pos.y);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    e.preventDefault();
     if (!drawing.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
     ctx.strokeStyle = "#0f172a";
     ctx.lineWidth = 2;
     ctx.stroke();
@@ -160,17 +185,18 @@ export default function RequestSignaturePage() {
   const handleSendForSignature = async () => {
     if (!appointment) return;
 
-    if (!email.trim()) {
-      setEmailError("Email is required");
+    if (!phone.trim()) {
+      setPhoneError("Phone number is required");
       return;
     }
 
-    if (!email.includes("@") || !email.includes(".")) {
-      setEmailError("Enter a valid email address");
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 9) {
+      setPhoneError("Enter a valid phone number");
       return;
     }
 
-    setEmailError("");
+    setPhoneError("");
     setUpdatingStatus(true);
 
     try {
@@ -179,20 +205,25 @@ export default function RequestSignaturePage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, role }),
+          body: JSON.stringify({ phone: phone.trim(), role }),
         }
       );
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || "Failed to send signature request. Check that RESEND_API_KEY is set in .env.local.");
+        alert(data.error || "Failed to send signature request via WhatsApp.");
         return;
       }
 
+      const data = await res.json().catch(() => ({}));
+      if (data.whatsappUrl) {
+        openWhatsAppLink(data.whatsappUrl);
+      }
+
       alert(
-        `Signature request sent to the ${
+        `WhatsApp opened for the ${
           role === "appointer" ? "appointer" : "appointee"
-        }.`
+        }. Send the message to complete the request.`
       );
     } catch (err) {
       console.error("Error sending signature request:", err);
@@ -249,11 +280,14 @@ export default function RequestSignaturePage() {
               ref={canvasRef}
               width={600}
               height={200}
-              className="w-full h-40 cursor-crosshair"
+              className="w-full h-40 cursor-crosshair touch-none"
               onMouseDown={startDrawing}
               onMouseMove={draw}
               onMouseUp={stopDrawing}
               onMouseLeave={stopDrawing}
+              onTouchStart={startDrawing}
+              onTouchMove={draw}
+              onTouchEnd={stopDrawing}
             />
           </div>
 
@@ -301,22 +335,22 @@ export default function RequestSignaturePage() {
             </select>
           </div>
 
-          {/* Email */}
+          {/* WhatsApp */}
           <div className="flex flex-col gap-2 mb-4">
             <label className="text-sm font-medium text-white/90">
-              Email address
+              WhatsApp number
             </label>
 
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@domain.com"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. 0821234567"
               className="p-2 rounded-md text-teal-900 bg-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-white"
             />
 
-            {emailError && (
-              <p className="text-red-200 text-sm">{emailError}</p>
+            {phoneError && (
+              <p className="text-red-200 text-sm">{phoneError}</p>
             )}
           </div>
 

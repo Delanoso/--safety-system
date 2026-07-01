@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { LayoutDashboard, Plus, Trash2, Send, RefreshCw } from "lucide-react";
+import { openWhatsAppLink } from "@/lib/open-whatsapp";
 
 type Candidate = {
   id: string;
@@ -37,8 +38,19 @@ export default function SHEElectionDetailPage() {
   const [votersInput, setVotersInput] = useState("");
   const [sendingTo, setSendingTo] = useState<string[]>([]);
   const [linksResult, setLinksResult] = useState<{
-    linksForManual?: { id: string; phone: string | null; voteUrl: string }[];
-    created?: { email?: string; phone?: string; voteUrl: string }[];
+    linksForManual?: {
+      id: string;
+      phone: string | null;
+      voteUrl: string;
+      whatsappUrl?: string | null;
+      error?: string;
+    }[];
+    created?: {
+      phone?: string;
+      voteUrl: string;
+      whatsappUrl?: string | null;
+      error?: string;
+    }[];
   } | null>(null);
 
   function load() {
@@ -108,14 +120,14 @@ export default function SHEElectionDetailPage() {
       .split(/[\n,;]/)
       .map((s) => s.trim())
       .filter(Boolean);
-    const voters: { email?: string; phone?: string }[] = [];
+    const voters: { phone?: string }[] = [];
     for (const line of lines) {
-      if (line.includes("@")) voters.push({ email: line });
-      else if (/^\d[\d\s-]+$/.test(line)) voters.push({ phone: line.replace(/\s/g, "") });
-      else voters.push({ email: line }); // assume email
+      const digits = line.replace(/\D/g, "");
+      if (digits.length >= 9) voters.push({ phone: line.replace(/\s/g, "") });
+      else voters.push({ phone: line });
     }
     if (voters.length === 0) {
-      alert("Enter at least one email or phone number (one per line, or comma-separated).");
+      alert("Enter at least one WhatsApp phone number (one per line, or comma-separated).");
       return;
     }
     await fetch(`/api/she-elections/${id}/voters`, {
@@ -143,7 +155,10 @@ export default function SHEElectionDetailPage() {
     setSendingTo([]);
     if (data.error) alert(data.error);
     else {
-      alert(data.message || `Sent to ${data.emailSent} email(s).`);
+      alert(data.message || `Prepared ${data.whatsappPrepared || 0} WhatsApp message(s).`);
+      if (data.deliveries?.length === 1 && data.deliveries[0].whatsappUrl) {
+        openWhatsAppLink(String(data.deliveries[0].whatsappUrl));
+      }
       if (data.linksForManual?.length) {
         setLinksResult((p) => ({ ...p, linksForManual: data.linksForManual }));
       }
@@ -281,7 +296,7 @@ export default function SHEElectionDetailPage() {
               <>
                 <form onSubmit={addVoters} className="mb-4">
                   <textarea
-                    placeholder="Add voters: one email or phone per line, or comma-separated. e.g.&#10;john@company.com&#10;+27123456789"
+                    placeholder="Add voters: one WhatsApp number per line, or comma-separated. e.g.&#10;0821234567&#10;27821234567"
                     value={votersInput}
                     onChange={(e) => setVotersInput(e.target.value)}
                     rows={4}
@@ -306,7 +321,7 @@ export default function SHEElectionDetailPage() {
                       <Send size={18} />
                       {sendingTo.length > 0
                         ? "Sending..."
-                        : "Send vote links via email to all who have not voted"}
+                        : "Send vote links via WhatsApp to all who have not voted"}
                     </button>
                   </div>
                 )}
@@ -320,7 +335,7 @@ export default function SHEElectionDetailPage() {
                   className="flex justify-between items-center p-2 rounded bg-white/40 text-sm"
                 >
                   <span>
-                    {v.email || v.phone || "—"}{" "}
+                    {v.phone || "—"}{" "}
                     {v.votedAt && (
                       <span className="text-green-600 font-medium">✓ Voted</span>
                     )}
@@ -331,7 +346,7 @@ export default function SHEElectionDetailPage() {
                       disabled={sendingTo.includes(v.id)}
                       className="text-blue-600 hover:underline text-xs"
                     >
-                      Send link
+                      Send WhatsApp
                     </button>
                   )}
                 </li>
@@ -341,17 +356,28 @@ export default function SHEElectionDetailPage() {
             {(linksResult?.linksForManual?.length || linksResult?.created?.length) && (
               <div className="mt-4 p-4 rounded-lg bg-amber-50/50 border border-amber-200">
                 <p className="font-semibold mb-2">
-                  Copy links to send via email, SMS or WhatsApp:
+                  WhatsApp vote links (click to open and send):
                 </p>
                 <ul className="space-y-2 text-sm">
                   {((linksResult.linksForManual || linksResult.created) ?? []).map((l, i) => (
                     <li key={i} className="flex flex-wrap gap-2 items-center">
                       <span className="text-black/70 shrink-0">
-                        {[l.email, l.phone].filter(Boolean).join(" · ") || "—"}
+                        {l.phone || "—"}
+                        {"error" in l && l.error ? ` (${l.error})` : ""}
                       </span>
-                      <code className="bg-white/80 px-2 py-1 rounded break-all max-w-full">
-                        {l.voteUrl}
-                      </code>
+                      {"whatsappUrl" in l && l.whatsappUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => openWhatsAppLink(String(l.whatsappUrl))}
+                          className="text-green-700 hover:underline font-medium"
+                        >
+                          Open WhatsApp
+                        </button>
+                      ) : (
+                        <code className="bg-white/80 px-2 py-1 rounded break-all max-w-full">
+                          {l.voteUrl}
+                        </code>
+                      )}
                     </li>
                   ))}
                 </ul>

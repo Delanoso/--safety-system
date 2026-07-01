@@ -1,3 +1,6 @@
+/**
+ * @deprecated Outbound notifications use WhatsApp (see @/lib/whatsapp). Kept for legacy imports only.
+ */
 export const runtime = "nodejs";
 import nodemailer from "nodemailer";
 

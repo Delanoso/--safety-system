@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { computeContractorCompliance, parseExcludedSections } from "@/lib/contractor-compliance";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,8 @@ export async function GET(
     include: { documents: true },
   });
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(item);
+  const compliance = computeContractorCompliance(item.documents, item.excludedSections);
+  return NextResponse.json({ ...item, compliance });
 }
 
 export async function PATCH(
@@ -32,7 +34,17 @@ export async function PATCH(
   if (!current) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, contactEmail, contactPhone, scope, jobDescription } = body;
+  const { name, contactEmail, contactPhone, scope, jobDescription, excludedSections } = body;
+
+  const excludedData =
+    excludedSections !== undefined
+      ? {
+          excludedSections: (() => {
+            const parsed = parseExcludedSections(excludedSections);
+            return parsed.length > 0 ? JSON.stringify(parsed) : null;
+          })(),
+        }
+      : {};
 
   const result = await prisma.contractor.updateMany({
     where: {
@@ -45,6 +57,7 @@ export async function PATCH(
       ...(contactPhone != null && { contactPhone: contactPhone ? String(contactPhone).trim() : null }),
       ...(scope != null && { scope: scope === "specific_job" ? "specific_job" : "ongoing" }),
       ...(jobDescription != null && { jobDescription: jobDescription ? String(jobDescription).trim() : null }),
+      ...excludedData,
     },
   });
   if (result.count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -52,7 +65,9 @@ export async function PATCH(
     where: { id },
     include: { documents: true },
   });
-  return NextResponse.json(updated);
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const compliance = computeContractorCompliance(updated.documents, updated.excludedSections);
+  return NextResponse.json({ ...updated, compliance });
 }
 
 export async function DELETE(

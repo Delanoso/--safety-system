@@ -70,27 +70,27 @@ export default function DepartmentSubListPage() {
 
   if (loading || !department) {
     return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
         <p className="text-black/70">{loading ? "Loading..." : "Department not found."}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
+          <div className="min-w-0">
             <Link href="/ppe-management/size-list" className="text-black/70 hover:underline text-sm block mb-1">
               ← PPE Size List
             </Link>
-            <h1 className="text-4xl font-bold text-black">{department.name}</h1>
-            <p className="text-black/70 mt-1">Sub-departments. Open one to add or remove people and set PPE sizes.</p>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">{department.name}</h1>
+            <p className="text-black/70 mt-1 text-sm sm:text-base">Sub-departments. Open one to add or remove people and set PPE sizes.</p>
           </div>
         </div>
 
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-          <h2 className="text-lg font-bold text-black mb-4">Add sub-department</h2>
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-black mb-4">Add sub-department</h2>
           <form onSubmit={handleAddSub} className="space-y-4">
             <div className="flex gap-2 flex-wrap items-center">
               <input
@@ -98,9 +98,9 @@ export default function DepartmentSubListPage() {
                 value={newSubName}
                 onChange={(e) => setNewSubName(e.target.value)}
                 placeholder="Sub-department name"
-                className="flex-1 min-w-[200px] p-3 rounded-lg border border-white/40 bg-white/70 text-black"
+                className="flex-1 min-w-0 sm:min-w-[200px] p-2.5 sm:p-3 rounded-lg border border-white/40 bg-white/70 text-black text-sm sm:text-base"
               />
-              <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">
+              <button type="submit" className="px-3 py-2 sm:px-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 text-sm sm:text-base">
                 Add sub-department
               </button>
             </div>
@@ -125,14 +125,14 @@ export default function DepartmentSubListPage() {
           </form>
         </div>
 
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden">
-          <h2 className="p-4 bg-white/40 font-bold text-black border-b border-white/40">Sub-departments</h2>
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden min-w-0">
+          <h2 className="p-3 sm:p-4 bg-white/40 font-bold text-black border-b border-white/40 text-base sm:text-lg">Sub-departments</h2>
           {department.subDepartments.length === 0 ? (
-            <p className="p-4 text-black/60">No sub-departments yet. Add one above, then open it to add people.</p>
+            <p className="p-3 sm:p-4 text-black/60 text-sm sm:text-base">No sub-departments yet. Add one above, then open it to add people.</p>
           ) : (
             <ul className="divide-y divide-white/40">
               {department.subDepartments.map((sub) => (
-                <li key={sub.id} className="p-4 flex items-center justify-between flex-wrap gap-2">
+                <li key={sub.id} className="p-3 sm:p-4 flex items-center justify-between flex-wrap gap-2">
                   <span className="font-medium text-black">{sub.name}</span>
                   <div className="flex items-center gap-2">
                     <Link

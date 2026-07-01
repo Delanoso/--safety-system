@@ -19,7 +19,9 @@ type Contractor = {
   scope: string;
   jobDescription: string | null;
   uploadToken: string;
-  _count?: { documents: number };
+  compliancePercentage?: number;
+  complianceComplete?: number;
+  complianceApplicable?: number;
 };
 
 export default function ContractorsPage() {
@@ -50,13 +52,13 @@ export default function ContractorsPage() {
   );
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-amber-100 to-orange-200">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-amber-100 to-orange-200 min-w-0">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
         <div className="flex items-center justify-between">
           <span />
           <Link
             href="/dashboard"
-            className="button button-neutral flex items-center gap-2"
+            className="button button-neutral flex items-center gap-2 text-sm sm:text-base"
           >
             <LayoutDashboard size={18} />
             Dashboard
@@ -64,15 +66,15 @@ export default function ContractorsPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-black">Contractors Portal</h1>
-            <p className="text-black/70">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">Contractors Portal</h1>
+            <p className="text-black/70 text-sm sm:text-base">
               Manage safety files for contractors (specific jobs or ongoing).
             </p>
           </div>
           <Link
             href="/contractors/add"
-            className="button button-save flex items-center gap-2 w-fit"
+            className="button button-save flex items-center gap-2 w-fit shrink-0"
           >
             <Plus size={18} />
             Add Contractor
@@ -84,24 +86,25 @@ export default function ContractorsPage() {
           placeholder="Search by name, email or job..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-md p-3 rounded-xl bg-white/70 border border-white/40"
+          className="w-full max-w-md p-2.5 sm:p-3 rounded-xl bg-white/70 border border-white/40 text-sm sm:text-base"
         />
 
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden">
-          <table className="w-full text-left">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden min-w-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[500px] sm:min-w-0 text-xs sm:text-sm">
             <thead>
               <tr className="border-b border-black/10 bg-black/5">
-                <th className="p-4 font-semibold">Company</th>
-                <th className="p-4 font-semibold">Scope</th>
-                <th className="p-4 font-semibold">Documents</th>
-                <th className="p-4 font-semibold">Contact</th>
-                <th className="p-4 font-semibold">Actions</th>
+                <th className="p-2 sm:p-4 font-semibold">Company</th>
+                <th className="p-2 sm:p-4 font-semibold">Scope</th>
+                <th className="p-2 sm:p-4 font-semibold">Compliance</th>
+                <th className="p-2 sm:p-4 font-semibold">Contact</th>
+                <th className="p-2 sm:p-4 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-black/60">
+                  <td colSpan={5} className="p-4 sm:p-8 text-center text-black/60 text-sm sm:text-base">
                     No contractors yet. Add one to get started.
                   </td>
                 </tr>
@@ -111,10 +114,10 @@ export default function ContractorsPage() {
                     key={c.id}
                     className="border-b border-black/5 hover:bg-white/40"
                   >
-                    <td className="p-4 font-medium">{c.name}</td>
-                    <td className="p-4">
+                    <td className="p-2 sm:p-4 font-medium">{c.name}</td>
+                    <td className="p-2 sm:p-4">
                       <span
-                        className={`px-2 py-1 rounded text-sm ${
+                        className={`px-2 py-1 rounded text-xs sm:text-sm ${
                           c.scope === "specific_job"
                             ? "bg-amber-200 text-amber-900"
                             : "bg-slate-200 text-slate-800"
@@ -123,14 +126,26 @@ export default function ContractorsPage() {
                         {c.scope === "specific_job" ? "Specific Job" : "Ongoing"}
                       </span>
                     </td>
-                    <td className="p-4">
-                      {c._count?.documents ?? 0} file
-                      {(c._count?.documents ?? 0) !== 1 ? "s" : ""}
+                    <td className="p-2 sm:p-4">
+                      <span
+                        className={`font-semibold ${
+                          (c.compliancePercentage ?? 0) >= 80
+                            ? "text-green-700"
+                            : (c.compliancePercentage ?? 0) >= 50
+                              ? "text-orange-600"
+                              : "text-red-600"
+                        }`}
+                      >
+                        {c.compliancePercentage ?? 0}%
+                      </span>
+                      <span className="text-black/50 text-xs block">
+                        {c.complianceComplete ?? 0}/{c.complianceApplicable ?? 0} sections
+                      </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-2 sm:p-4">
                       {c.contactEmail ?? c.contactPhone ?? "—"}
                     </td>
-                    <td className="p-4 flex gap-2">
+                    <td className="p-2 sm:p-4 flex gap-2 flex-wrap">
                       <Link
                         href={`/contractors/${c.id}`}
                         className="button button-neutral flex items-center gap-1 px-3 py-1.5 text-sm"
@@ -162,6 +177,7 @@ export default function ContractorsPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

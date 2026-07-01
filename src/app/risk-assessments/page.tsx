@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Plus, Sparkles, Trash2, ExternalLink } from "lucide-react";
+import { LayoutDashboard, Plus, ClipboardList, Trash2, ExternalLink } from "lucide-react";
 
 type Assessment = {
   id: string;
@@ -66,22 +66,22 @@ export default function RiskAssessmentsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-4xl font-bold text-black">Risk Assessments</h1>
-            <p className="text-black/70">Generate with AI or add manually.</p>
+            <p className="text-black/70">Create a step-by-step assessment, or generate a draft from Salus templates.</p>
           </div>
-          <div className="flex gap-2">
-            <Link
-              href="/risk-assessments/generate"
-              className="button button-save flex items-center gap-2 w-fit"
-            >
-              <Sparkles size={18} />
-              Generate with AI
-            </Link>
+          <div className="flex gap-2 flex-wrap">
             <Link
               href="/risk-assessments/add"
-              className="button button-neutral flex items-center gap-2 w-fit"
+              className="button button-save flex items-center gap-2 w-fit"
             >
               <Plus size={18} />
-              Add Manually
+              New assessment
+            </Link>
+            <Link
+              href="/risk-assessments/generate"
+              className="button button-neutral flex items-center gap-2 w-fit"
+            >
+              <ClipboardList size={18} />
+              Generate from templates
             </Link>
           </div>
         </div>

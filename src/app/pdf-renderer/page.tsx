@@ -3,7 +3,29 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { PdfDocument, PdfImageBw, PdfSection, PdfSignatureBlock, pdfTableStyles } from "@/components/pdf/PdfDocument";
 import { getCompanyLogoUrl } from "@/lib/pdf";
+import { parseRiskAssessmentControls } from "@/lib/risk-assessment";
+import {
+  SHE_REP_COMMITTEE_COMMENTS,
+  SHE_REP_INSPECTION_CHECKLIST_ITEMS,
+  SHE_REP_INSPECTION_DOC_NUMBER,
+  SHE_REP_INSPECTION_DOC_TITLE,
+  SHE_REP_INSPECTION_INSTRUCTIONS,
+} from "@/lib/she-rep-inspection";
 import appointmentTemplates from "@/app/appointments/templates";
+import {
+  ContractorSafetyFilePdfTemplate,
+  CostAnalysisPdfTemplate,
+  EmergencyDrillPdfTemplate,
+  HazardousChemicalsRegisterPdfTemplate,
+  InductionTrainingPdfTemplate,
+  LegalCompliancePdfTemplate,
+  MaintenanceSchedulePdfTemplate,
+  PermitToWorkPdfTemplate,
+  PpeIssuePdfTemplate,
+  SheMeetingPdfTemplate,
+  ToolboxTalkPdfTemplate,
+  VisitorRegisterPdfTemplate,
+} from "@/components/pdf/ExtraPdfTemplates";
 
 const bodyTextStyle: React.CSSProperties = { color: "#111827", fontSize: 14, lineHeight: 1.6 };
 
@@ -77,6 +99,70 @@ async function getPdfDocumentTitle(type: string, id: string): Promise<string> {
         if (!r) return `Risk Assessment ${id}`;
         return `Risk Assessment - ${sanitizeForFilename(r.title)}`;
       }
+      case "she-rep-inspection": {
+        const s = await prisma.sHERepInspection.findUnique({ where: { id }, select: { title: true } });
+        if (!s) return `SHE Rep Inspection ${id}`;
+        return `${SHE_REP_INSPECTION_DOC_NUMBER} - ${sanitizeForFilename(s.title)}`;
+      }
+      case "toolbox-talk": {
+        const t = await prisma.toolboxTalk.findUnique({ where: { id }, select: { title: true } });
+        return t ? `Toolbox Talk - ${sanitizeForFilename(t.title)}` : `Toolbox Talk ${id}`;
+      }
+      case "permit-to-work": {
+        const p = await prisma.permitToWork.findUnique({ where: { id }, select: { title: true } });
+        return p ? `Permit to Work - ${sanitizeForFilename(p.title)}` : `Permit ${id}`;
+      }
+      case "emergency-drill": {
+        const d = await prisma.emergencyDrill.findUnique({ where: { id }, select: { title: true } });
+        return d ? `Emergency Drill - ${sanitizeForFilename(d.title)}` : `Emergency Drill ${id}`;
+      }
+      case "induction-training": {
+        const numId = Number(id);
+        if (!Number.isInteger(numId)) return `Induction ${id}`;
+        const i = await prisma.inductionTraining.findUnique({ where: { id: numId }, select: { employee: true } });
+        return i ? `Induction - ${sanitizeForFilename(i.employee)}` : `Induction ${id}`;
+      }
+      case "visitor-register": {
+        const v = await prisma.visitorRegisterEntry.findUnique({ where: { id }, select: { visitorName: true } });
+        return v ? `Visitor - ${sanitizeForFilename(v.visitorName)}` : `Visitor ${id}`;
+      }
+      case "legal-compliance": {
+        const l = await prisma.legalComplianceItem.findUnique({ where: { id }, select: { requirement: true } });
+        return l ? `Compliance - ${sanitizeForFilename(l.requirement)}` : `Compliance ${id}`;
+      }
+      case "contractor-safety-file": {
+        const c = await prisma.contractor.findUnique({ where: { id }, select: { name: true } });
+        return c ? `Contractor Safety File - ${sanitizeForFilename(c.name)}` : `Contractor ${id}`;
+      }
+      case "maintenance-schedule": {
+        const s = await prisma.maintenanceSchedule.findUnique({ where: { id }, select: { title: true } });
+        return s ? `Maintenance Schedule - ${sanitizeForFilename(s.title)}` : `Maintenance ${id}`;
+      }
+      case "hazardous-chemicals-register":
+        return "Hazardous Chemicals Register";
+      case "ppe-issue": {
+        const numId = Number(id);
+        if (!Number.isInteger(numId)) return `PPE Issue ${id}`;
+        const issue = await prisma.pPEIssue.findUnique({
+          where: { id: numId },
+          select: { person: { select: { name: true } } },
+        });
+        return issue
+          ? `PPE Issue - ${sanitizeForFilename(issue.person.name)}`
+          : `PPE Issue ${id}`;
+      }
+      case "cost-analysis": {
+        const incident = await prisma.incident.findUnique({ where: { id }, select: { title: true, type: true } });
+        if (incident?.type === "cost_analysis") {
+          return `Cost Analysis - ${sanitizeForFilename(incident.title)}`;
+        }
+        return `Cost Analysis ${id}`;
+      }
+      case "she-meeting": {
+        const m = await prisma.sHECommitteeMeeting.findUnique({ where: { id }, select: { date: true } });
+        if (!m) return `SHE Meeting ${id}`;
+        return `SHE Meeting - ${new Date(m.date).toISOString().slice(0, 10)}`;
+      }
       default:
         return `${type} ${id}`;
     }
@@ -135,6 +221,32 @@ export default async function PdfRendererPage({
       return <MedicalTemplate id={id} />;
     case "risk-assessment":
       return <RiskAssessmentTemplate id={id} />;
+    case "she-rep-inspection":
+      return <SHERepInspectionTemplate id={id} />;
+    case "toolbox-talk":
+      return <ToolboxTalkPdfTemplate id={id} />;
+    case "permit-to-work":
+      return <PermitToWorkPdfTemplate id={id} />;
+    case "emergency-drill":
+      return <EmergencyDrillPdfTemplate id={id} />;
+    case "induction-training":
+      return <InductionTrainingPdfTemplate id={id} />;
+    case "visitor-register":
+      return <VisitorRegisterPdfTemplate id={id} />;
+    case "legal-compliance":
+      return <LegalCompliancePdfTemplate id={id} />;
+    case "contractor-safety-file":
+      return <ContractorSafetyFilePdfTemplate id={id} />;
+    case "maintenance-schedule":
+      return <MaintenanceSchedulePdfTemplate id={id} />;
+    case "hazardous-chemicals-register":
+      return <HazardousChemicalsRegisterPdfTemplate companyId={id} />;
+    case "ppe-issue":
+      return <PpeIssuePdfTemplate id={id} />;
+    case "cost-analysis":
+      return <CostAnalysisPdfTemplate id={id} />;
+    case "she-meeting":
+      return <SheMeetingPdfTemplate id={id} />;
 
     default:
       return (
@@ -186,7 +298,7 @@ async function DailyInspectionTemplate({ id }: { id: string }) {
   return (
     <PdfDocument
       title="Daily Inspection Report"
-      documentType="Safety System — Daily Inspection Report"
+      documentType="Salus — Daily Inspection Report"
       logoUrl={logoUrl}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
@@ -269,7 +381,7 @@ async function WeeklyInspectionTemplate({ id }: { id: string }) {
   return (
     <PdfDocument
       title="Weekly Inspection Report"
-      documentType="Safety System — Weekly Inspection Report"
+      documentType="Salus — Weekly Inspection Report"
       logoUrl={logoUrl}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
@@ -341,7 +453,7 @@ async function MonthlyInspectionTemplate({ id }: { id: string }) {
   return (
     <PdfDocument
       title="Monthly Inspection Report"
-      documentType="Safety System — Monthly Inspection Report"
+      documentType="Salus — Monthly Inspection Report"
       logoUrl={logoUrl}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
@@ -400,7 +512,7 @@ async function AppointmentTemplate({ id }: { id: string }) {
   return (
     <PdfDocument
       title="Appointment Letter"
-      documentType="Safety System — Appointment Letter"
+      documentType="Salus — Appointment Letter"
       logoUrl={logoUrl}
     >
       {TemplateComponent ? (
@@ -509,7 +621,7 @@ async function IncidentTemplate({ id }: { id: string }) {
   return (
     <PdfDocument
       title={`Incident Report — ${incident.title}`}
-      documentType="Safety System — Incident Report"
+      documentType="Salus — Incident Report"
       logoUrl={logoUrl}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 20 }}>
@@ -526,7 +638,7 @@ async function IncidentTemplate({ id }: { id: string }) {
       </div>
 
       {incident.description && (
-        <PdfSection title="Short Description">
+        <PdfSection title="Description">
           <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{incident.description}</p>
         </PdfSection>
       )}
@@ -585,12 +697,6 @@ async function IncidentTemplate({ id }: { id: string }) {
       {details.correctiveNotes && (
         <PdfSection title="Corrective Notes">
           <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{details.correctiveNotes}</p>
-        </PdfSection>
-      )}
-
-      {details.narrative && (
-        <PdfSection title="Incident Narrative">
-          <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{details.narrative}</p>
         </PdfSection>
       )}
 
@@ -678,7 +784,7 @@ async function NcrTemplate({ id }: { id: string }) {
   return (
     <PdfDocument
       title="Non-Conformance Report"
-      documentType="Safety System — Non-Conformance Report"
+      documentType="Salus — Non-Conformance Report"
       logoUrl={logoUrl}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
@@ -768,7 +874,7 @@ async function CertificateTemplate({ id }: { id: string }) {
   return (
     <PdfDocument
       title="Training Certificate Summary"
-      documentType="Safety System — Training Certificate"
+      documentType="Salus — Training Certificate"
       logoUrl={logoUrl}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
@@ -821,7 +927,7 @@ async function MedicalTemplate({ id }: { id: string }) {
   return (
     <PdfDocument
       title="Medical Certificate Summary"
-      documentType="Safety System — Medical Certificate"
+      documentType="Salus — Medical Certificate"
       logoUrl={logoUrl}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
@@ -860,11 +966,12 @@ async function RiskAssessmentTemplate({ id }: { id: string }) {
   };
 
   const logoUrl = assessment.company?.logoUrl ?? (await getCompanyLogoUrl(assessment.companyId));
+  const controlsParsed = parseRiskAssessmentControls(assessment.controls);
 
   return (
     <PdfDocument
       title={assessment.title}
-      documentType="Safety System — Risk Assessment"
+      documentType="Salus — Risk Assessment"
       logoUrl={logoUrl}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
@@ -877,13 +984,50 @@ async function RiskAssessmentTemplate({ id }: { id: string }) {
         {assessment.location && <p><strong>Location:</strong> {assessment.location}</p>}
         {assessment.assessor && <p><strong>Assessor:</strong> {assessment.assessor}</p>}
         {assessment.reviewDate && <p><strong>Review Date:</strong> {formatDate(assessment.reviewDate)}</p>}
+        {controlsParsed.type === "structured" && controlsParsed.data.preparedDate && (
+          <p><strong>Date Prepared:</strong> {controlsParsed.data.preparedDate}</p>
+        )}
         {assessment.industrySector && <p><strong>Industry Sector:</strong> {assessment.industrySector}</p>}
         {assessment.assessmentType && <p><strong>Assessment Type:</strong> {assessment.assessmentType}</p>}
       </div>
 
-      {assessment.controls && (
+      {assessment.controls && controlsParsed.type === "legacy" && (
         <PdfSection title="Controls / Mitigations">
-          <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{assessment.controls}</p>
+          <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{controlsParsed.text}</p>
+        </PdfSection>
+      )}
+
+      {controlsParsed.type === "structured" && (
+        <PdfSection title="Hazards and controls">
+          {controlsParsed.data.ppeRequired?.trim() && (
+            <p style={{ marginBottom: 12 }}>
+              <strong>PPE required:</strong> {controlsParsed.data.ppeRequired}
+            </p>
+          )}
+          <table style={pdfTableStyles.table}>
+            <thead>
+              <tr>
+                <th style={pdfTableStyles.th}>Hazard</th>
+                <th style={pdfTableStyles.th}>Who at risk</th>
+                <th style={pdfTableStyles.th}>Before</th>
+                <th style={pdfTableStyles.th}>Control measures</th>
+                <th style={pdfTableStyles.th}>After</th>
+              </tr>
+            </thead>
+            <tbody>
+              {controlsParsed.data.hazards
+                .filter((h) => h.hazard.trim())
+                .map((h, i) => (
+                  <tr key={i}>
+                    <td style={pdfTableStyles.td}>{h.hazard}</td>
+                    <td style={pdfTableStyles.td}>{h.whoAtRisk || "—"}</td>
+                    <td style={pdfTableStyles.td}>{h.riskBefore || "—"}</td>
+                    <td style={pdfTableStyles.td}>{h.controlMeasures}</td>
+                    <td style={pdfTableStyles.td}>{h.riskAfter || "—"}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
         </PdfSection>
       )}
 
@@ -894,6 +1038,126 @@ async function RiskAssessmentTemplate({ id }: { id: string }) {
             signature={assessment.signature}
             signedAt={assessment.signedAt != null ? (typeof assessment.signedAt === "string" ? assessment.signedAt : assessment.signedAt.toISOString()) : undefined}
           />
+        </div>
+      </PdfSection>
+    </PdfDocument>
+  );
+}
+
+async function SHERepInspectionTemplate({ id }: { id: string }) {
+  const inspection = await prisma.sHERepInspection.findUnique({
+    where: { id },
+    include: { company: true },
+  });
+
+  if (!inspection) {
+    return (
+      <div style={{ padding: 40, fontFamily: "Arial", background: "#fff", color: "#000" }}>
+        <h1>Inspection not found</h1>
+        <p>No SHE rep inspection exists for ID: {id}</p>
+      </div>
+    );
+  }
+
+  const logoUrl =
+    inspection.company?.logoUrl ?? (await getCompanyLogoUrl(inspection.companyId));
+
+  const blankLine = "_______________________";
+
+  return (
+    <PdfDocument
+      title={SHE_REP_INSPECTION_DOC_TITLE}
+      documentType={`${SHE_REP_INSPECTION_DOC_NUMBER} — Salus`}
+      logoUrl={logoUrl}
+    >
+      <div style={{ ...bodyTextStyle, marginBottom: 16, fontSize: 12, color: "#6b7280" }}>
+        Document: {SHE_REP_INSPECTION_DOC_NUMBER}
+        {inspection.company && ` · ${inspection.company.name}`}
+        {inspection.period && ` · ${inspection.period}`}
+      </div>
+
+      <div style={{ ...bodyTextStyle, marginBottom: 20 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+          <tbody>
+            <tr>
+              <td style={{ padding: "6px 8px 6px 0", width: "34%" }}><strong>Date of Inspection</strong></td>
+              <td style={{ padding: 6, borderBottom: "1px solid #ccc" }}>{blankLine}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: "6px 8px 6px 0" }}><strong>SHE Representative</strong></td>
+              <td style={{ padding: 6, borderBottom: "1px solid #ccc" }}>{blankLine}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: "6px 8px 6px 0" }}><strong>Area of Inspection</strong></td>
+              <td style={{ padding: 6, borderBottom: "1px solid #ccc" }}>
+                {inspection.title || blankLine}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p style={{ fontSize: 13, fontStyle: "italic", marginBottom: 16 }}>
+          {SHE_REP_INSPECTION_INSTRUCTIONS}
+        </p>
+      </div>
+
+      <PdfSection title="Inspection checklist">
+        <table style={pdfTableStyles.table}>
+          <thead>
+            <tr>
+              <th style={{ ...pdfTableStyles.th, width: "42%" }}>Item under inspection / review</th>
+              <th style={{ ...pdfTableStyles.th, width: "10%" }}>No / Yes</th>
+              <th style={{ ...pdfTableStyles.th, width: "18%" }}>Action required</th>
+              <th style={{ ...pdfTableStyles.th, width: "15%" }}>Action by</th>
+              <th style={{ ...pdfTableStyles.th, width: "15%" }}>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SHE_REP_INSPECTION_CHECKLIST_ITEMS.map((item, i) => (
+              <tr key={i}>
+                <td style={pdfTableStyles.td}>{item}</td>
+                <td style={pdfTableStyles.td}>&nbsp;</td>
+                <td style={pdfTableStyles.td}>&nbsp;</td>
+                <td style={pdfTableStyles.td}>&nbsp;</td>
+                <td style={pdfTableStyles.td}>&nbsp;</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </PdfSection>
+
+      <PdfSection title="Comments by Health and Safety Representative">
+        <div style={{ border: "1px solid #ccc", minHeight: 72, padding: 8, marginBottom: 16 }}>&nbsp;</div>
+        <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <p><strong>Signature: H &amp; Safety Representative</strong></p>
+            <div style={{ borderBottom: "1px solid #000", height: 36, marginTop: 20 }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <p><strong>Date</strong></p>
+            <div style={{ borderBottom: "1px solid #000", height: 36, marginTop: 20 }} />
+          </div>
+        </div>
+      </PdfSection>
+
+      <PdfSection title="Comments by Health and Safety Committee">
+        <p style={{ ...bodyTextStyle, fontSize: 13, marginBottom: 12 }}>
+          {SHE_REP_COMMITTEE_COMMENTS}
+        </p>
+        <div style={{ border: "1px solid #ccc", minHeight: 56, padding: 8, marginBottom: 16 }}>&nbsp;</div>
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <p><strong>Signature: Chairman</strong></p>
+            <div style={{ borderBottom: "1px solid #000", height: 36, marginTop: 20 }} />
+            <p style={{ fontSize: 12, marginTop: 8 }}>Date</p>
+            <div style={{ borderBottom: "1px solid #000", height: 28, marginTop: 8 }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <p><strong>Signature: Employer</strong></p>
+            <div style={{ borderBottom: "1px solid #000", height: 36, marginTop: 20 }} />
+            <p style={{ fontSize: 12, marginTop: 8 }}>Date</p>
+            <div style={{ borderBottom: "1px solid #000", height: 28, marginTop: 8 }} />
+          </div>
         </div>
       </PdfSection>
     </PdfDocument>

@@ -257,37 +257,37 @@ export default function PPEStockListPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
         <p className="text-black/70">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-4xl mx-auto space-y-10">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-4xl mx-auto space-y-6 sm:space-y-10">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-black">Stock List</h1>
-            <p className="text-black/70 mt-1">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">Stock List</h1>
+            <p className="text-black/70 mt-1 text-sm sm:text-base">
               Track PPE in stock. Receive stock, adjust quantities, and view movement history. Stock deducts when someone signs for an issue.
             </p>
           </div>
           <Link
             href="/ppe-management"
-            className="px-4 py-2 rounded-xl bg-white/60 border border-white/40 text-black font-semibold hover:bg-white/80 transition"
+            className="px-3 py-2 sm:px-4 rounded-xl bg-white/60 border border-white/40 text-black font-semibold hover:bg-white/80 transition text-sm sm:text-base shrink-0"
           >
             ← Back to PPE Management
           </Link>
         </div>
 
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-          <h2 className="text-lg font-bold text-black mb-4">Add PPE Item Type</h2>
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-black mb-4">Add PPE Item Type</h2>
           <form onSubmit={handleAddItem} className="flex gap-2 flex-wrap items-center">
             <select
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
-              className="flex-1 min-w-[220px] p-3 rounded-lg border border-white/40 bg-white/70 text-black"
+              className="flex-1 min-w-0 sm:min-w-[220px] p-2.5 sm:p-3 rounded-lg border border-white/40 bg-white/70 text-black text-sm sm:text-base"
             >
               <option value="">
                 {PPE_SIZE_ITEMS.filter(
@@ -307,7 +307,7 @@ export default function PPEStockListPage() {
             <button
               type="submit"
               disabled={!newItemName}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="px-3 py-2 sm:px-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               Add Item
             </button>
@@ -319,8 +319,8 @@ export default function PPEStockListPage() {
 
         {stock.length > 0 && (
           <>
-            <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-              <h2 className="text-lg font-bold text-black mb-4">Receive stock</h2>
+            <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-bold text-black mb-4">Receive stock</h2>
               <form onSubmit={handleReceive} className="flex flex-wrap gap-3 items-end">
                 <div>
                   <label className="block text-xs font-semibold text-black/70 mb-1">Item</label>
@@ -363,8 +363,8 @@ export default function PPEStockListPage() {
               </form>
             </div>
 
-            <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-              <h2 className="text-lg font-bold text-black mb-4">Adjust stock</h2>
+            <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-bold text-black mb-4">Adjust stock</h2>
               <p className="text-sm text-black/60 mb-3">Use a positive or negative number to add or subtract from current stock.</p>
               <form onSubmit={handleAdjust} className="flex flex-wrap gap-3 items-end">
                 <div>
@@ -421,28 +421,29 @@ export default function PPEStockListPage() {
           </>
         )}
 
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden">
-          <table className="w-full text-left">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden min-w-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[500px] sm:min-w-0 text-sm sm:text-base">
             <thead>
               <tr className="bg-white/40">
-                <th className="p-4 font-semibold text-black">Item</th>
-                <th className="p-4 font-semibold text-black">Quantity in stock</th>
-                <th className="p-4 font-semibold text-black">Low-stock alert below</th>
-                <th className="p-4 font-semibold text-black">Actions</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Item</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Quantity in stock</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Low-stock alert below</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Actions</th>
               </tr>
             </thead>
             <tbody>
               {stock.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="p-4 text-center text-black/60">
+                  <td colSpan={4} className="p-2 sm:p-4 text-center text-black/60 text-sm sm:text-base">
                     No items yet. Add item types above (e.g. Shoes, Gloves).
                   </td>
                 </tr>
               )}
               {stock.map((s) => (
                 <tr key={s.id} className="border-t border-white/40">
-                  <td className="p-4 font-medium text-black">{s.itemType.name}</td>
-                  <td className="p-4">
+                  <td className="p-2 sm:p-4 font-medium text-black">{s.itemType.name}</td>
+                  <td className="p-2 sm:p-4">
                     {editingQty[s.itemTypeId] !== undefined ? (
                       <div className="flex gap-2 items-center">
                         <input
@@ -469,7 +470,7 @@ export default function PPEStockListPage() {
                       <span className="text-black/80">{s.quantity}</span>
                     )}
                   </td>
-                  <td className="p-4">
+                  <td className="p-2 sm:p-4">
                     {editingThreshold[s.itemType.id] !== undefined ? (
                       <div className="flex gap-2 items-center">
                         <input
@@ -512,7 +513,7 @@ export default function PPEStockListPage() {
                       </>
                     )}
                   </td>
-                  <td className="p-4 flex gap-2">
+                  <td className="p-2 sm:p-4 flex gap-2 flex-wrap">
                     {editingQty[s.itemTypeId] === undefined && (
                       <button
                         onClick={() => setEditingQty((prev) => ({ ...prev, [s.itemTypeId]: s.quantity }))}
@@ -532,9 +533,10 @@ export default function PPEStockListPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
-        <div id="movements" className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden">
+        <div id="movements" className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden min-w-0">
           <button
             type="button"
             onClick={() => setShowMovements((v) => !v)}

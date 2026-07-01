@@ -105,23 +105,23 @@ export default function PPESignPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
         <p className="text-black/70">Loading...</p>
       </div>
     );
   }
   if (error || !issue) {
     return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
         <p className="text-red-600 font-semibold">{error || "Not found."}</p>
       </div>
     );
   }
   if (issue.status === "signed") {
     return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-8 text-center">
-          <h1 className="text-2xl font-bold text-black">Already signed</h1>
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-8 text-center mx-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-black">Already signed</h1>
           <p className="text-black/70 mt-2">You have already signed for this PPE issue. Thank you.</p>
         </div>
       </div>
@@ -129,9 +129,9 @@ export default function PPESignPage() {
   }
   if (saved) {
     return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-8 text-center">
-          <h1 className="text-2xl font-bold text-green-700">Thank you</h1>
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-8 text-center mx-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-green-700">Thank you</h1>
           <p className="text-black/70 mt-2">Your signature has been recorded successfully.</p>
         </div>
       </div>
@@ -139,10 +139,10 @@ export default function PPESignPage() {
   }
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-xl mx-auto space-y-8">
-        <h1 className="text-3xl font-bold text-black">PPE Issue – Sign to confirm</h1>
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-xl mx-auto space-y-6 sm:space-y-8 px-2">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-black">PPE Issue – Sign to confirm</h1>
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
           <p className="text-black/80 mb-4">
             You are confirming receipt of <strong>{issue.quantity} x {issue.itemType.name}</strong>.
           </p>

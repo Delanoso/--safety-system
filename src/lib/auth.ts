@@ -1,4 +1,4 @@
-import { Prisma } from "prisma-client-generated";
+import { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 

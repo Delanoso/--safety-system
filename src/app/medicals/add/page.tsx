@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import PersonAutocomplete, { type CompanyPersonRecord } from "@/components/PersonAutocomplete";
 
 const MEDICAL_TYPES = [
   "Baseline Medical",
@@ -125,6 +126,16 @@ export default function AddMedicalPage() {
           onSubmit={handleSubmit}
           className="space-y-6 p-8 rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40"
         >
+          <div>
+            <PersonAutocomplete
+              label="Search employee (name or employee number)"
+              onSelect={(person: CompanyPersonRecord) => {
+                const fullName = [person.name, person.surname].filter(Boolean).join(" ");
+                setForm((prev) => ({ ...prev, employee: fullName }));
+              }}
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-semibold text-black mb-1">
               Employee Name

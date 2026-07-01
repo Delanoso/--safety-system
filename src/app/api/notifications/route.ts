@@ -1,36 +1,58 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { computeContractorCompliance } from "@/lib/contractor-compliance";
+import {
+  getExpiringPermitReminders,
+  getHazardousChemicalsNoSdsReminders,
+  getInspectionDueReminders,
+  getMaintenanceDueReminders,
+  getPlannedDrillReminders,
+  getRiskAssessmentReviewReminders,
+  getSheMeetingActionReminders,
+  getUnsignedToolboxAttendeeReminders,
+  getVisitorsOnSiteReminders,
+} from "@/lib/notification-reminders";
 
 export const dynamic = "force-dynamic";
 
 const DAYS_AHEAD = 30;
 
+function emptyNotifications() {
+  return {
+    expiringCertificates: [],
+    expiringMedicals: [],
+    unsignedAppointments: [],
+    unsignedPpeIssues: [],
+    expiringInductions: [],
+    complianceReviewDue: [],
+    contractorsLowCompliance: [],
+    maintenanceDue: [],
+    inspectionsDue: [],
+    expiringPermits: [],
+    visitorsOnSite: [],
+    unsignedToolboxAttendees: [],
+    hazardousChemicalsNoSds: [],
+    plannedDrills: [],
+    riskAssessmentsReviewDue: [],
+    sheMeetingActionsDue: [],
+    total: 0,
+  };
+}
+
 export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({
-        expiringCertificates: [],
-        expiringMedicals: [],
-        unsignedAppointments: [],
-        unsignedPpeIssues: [],
-        total: 0,
-      });
+      return NextResponse.json(emptyNotifications());
     }
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { notificationsEnabled: true },
+      select: { notificationsEnabled: true, inspectionDepartments: true },
     });
     const notificationsEnabled = dbUser?.notificationsEnabled ?? true;
     if (!notificationsEnabled) {
-      return NextResponse.json({
-        expiringCertificates: [],
-        expiringMedicals: [],
-        unsignedAppointments: [],
-        unsignedPpeIssues: [],
-        total: 0,
-      });
+      return NextResponse.json(emptyNotifications());
     }
 
     // Scope by company: non-super users only see their company's data
@@ -107,6 +129,117 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
+    const expiringInductions = await prisma.inductionTraining.findMany({
+      where: {
+        expiryDate: { gte: now, lte: cutoff },
+        ...(companyFilter && { companyId: companyFilter.companyId }),
+      },
+      orderBy: { expiryDate: "asc" },
+      select: {
+        id: true,
+        employee: true,
+        inductionType: true,
+        expiryDate: true,
+      },
+    });
+
+    const complianceReviewDue = await prisma.legalComplianceItem.findMany({
+      where: {
+        nextReviewDue: { lte: cutoff },
+        ...(companyFilter && { companyId: companyFilter.companyId }),
+      },
+      orderBy: { nextReviewDue: "asc" },
+      take: 20,
+      select: {
+        id: true,
+        legislation: true,
+        requirement: true,
+        nextReviewDue: true,
+        auditRef: true,
+      },
+    });
+
+    const contractors = await prisma.contractor.findMany({
+      where: companyFilter ? { companyId: companyFilter.companyId } : {},
+      include: { documents: { select: { section: true } } },
+    });
+    const contractorsLowCompliance = contractors
+      .map((c) => ({
+        contractor: c,
+        compliance: computeContractorCompliance(c.documents, c.excludedSections),
+      }))
+      .filter((x) => x.compliance.percentage < 80)
+      .slice(0, 10);
+
+    const inspectionDepts: string[] = (() => {
+      const raw = dbUser?.inspectionDepartments;
+      if (!raw?.trim()) return [];
+      try {
+        const parsed = JSON.parse(raw) as unknown;
+        return Array.isArray(parsed)
+          ? parsed.filter((x): x is string => typeof x === "string")
+          : [];
+      } catch {
+        return [];
+      }
+    })();
+    const allowedDepartments =
+      inspectionDepts.length > 0 ? inspectionDepts : null;
+
+    const [
+      maintenanceDue,
+      inspectionsDue,
+      expiringPermits,
+      visitorsOnSite,
+      unsignedToolboxAttendees,
+      hazardousChemicalsNoSds,
+      plannedDrills,
+      riskAssessmentsReviewDue,
+      sheMeetingActionsDue,
+    ] = await Promise.all([
+      getMaintenanceDueReminders({
+        companyId: companyFilter?.companyId,
+        now,
+        daysAhead: DAYS_AHEAD,
+      }),
+      getInspectionDueReminders({
+        companyId: companyFilter?.companyId,
+        allowedDepartments,
+        now,
+      }),
+      getExpiringPermitReminders({
+        companyId: companyFilter?.companyId,
+        now,
+        daysAhead: DAYS_AHEAD,
+      }),
+      getVisitorsOnSiteReminders({
+        companyId: companyFilter?.companyId,
+        now,
+      }),
+      getUnsignedToolboxAttendeeReminders({
+        companyId: companyFilter?.companyId,
+        now,
+      }),
+      getHazardousChemicalsNoSdsReminders({
+        companyId: companyFilter?.companyId,
+      }),
+      getPlannedDrillReminders({
+        companyId: companyFilter?.companyId,
+        now,
+        daysAhead: DAYS_AHEAD,
+      }),
+      getRiskAssessmentReviewReminders({
+        companyId: companyFilter?.companyId,
+        now,
+        daysAhead: DAYS_AHEAD,
+      }),
+      getSheMeetingActionReminders({
+        companyId: companyFilter?.companyId,
+        now,
+        daysAhead: DAYS_AHEAD,
+      }),
+    ]);
+
     return NextResponse.json({
       expiringCertificates: expiringCerts.map((c) => ({
         id: `cert-${c.id}`,
@@ -140,23 +273,65 @@ export async function GET() {
         href: `/ppe-management/issue-register`,
         date: i.issueDate,
       })),
+      expiringInductions: expiringInductions.map((r) => ({
+        id: `ind-${r.id}`,
+        type: "induction_expiring" as const,
+        title: `${r.inductionType} – ${r.employee}`,
+        subtitle: r.expiryDate
+          ? `Expires ${r.expiryDate.toLocaleDateString()}`
+          : "Expiry due",
+        href: "/induction-training/list",
+        date: r.expiryDate ?? now,
+      })),
+      complianceReviewDue: complianceReviewDue.map((item) => ({
+        id: `lc-${item.id}`,
+        type: "compliance_review_due" as const,
+        title: item.auditRef
+          ? `${item.auditRef} – ${item.legislation}`
+          : item.legislation,
+        subtitle: item.nextReviewDue
+          ? `Review due ${item.nextReviewDue.toLocaleDateString()}`
+          : "Review overdue",
+        href: `/legal-compliance/${item.id}`,
+        date: item.nextReviewDue ?? now,
+      })),
+      contractorsLowCompliance: contractorsLowCompliance.map(({ contractor: c, compliance }) => ({
+        id: `con-${c.id}`,
+        type: "contractor_low_compliance" as const,
+        title: c.name,
+        subtitle: `${compliance.percentage}% complete (${compliance.completeCount}/${compliance.applicableCount} sections)`,
+        href: `/contractors/${c.id}`,
+        date: now,
+      })),
+      maintenanceDue,
+      inspectionsDue,
+      expiringPermits,
+      visitorsOnSite,
+      unsignedToolboxAttendees,
+      hazardousChemicalsNoSds,
+      plannedDrills,
+      riskAssessmentsReviewDue,
+      sheMeetingActionsDue,
       total:
         expiringCerts.length +
         expiringMedicals.length +
         unsignedAppointments.length +
-        unsignedPpeIssues.length,
+        unsignedPpeIssues.length +
+        expiringInductions.length +
+        complianceReviewDue.length +
+        contractorsLowCompliance.length +
+        maintenanceDue.length +
+        inspectionsDue.length +
+        expiringPermits.length +
+        visitorsOnSite.length +
+        unsignedToolboxAttendees.length +
+        hazardousChemicalsNoSds.length +
+        plannedDrills.length +
+        riskAssessmentsReviewDue.length +
+        sheMeetingActionsDue.length,
     });
   } catch (err) {
     console.error("Notifications error:", err);
-    return NextResponse.json(
-      {
-        expiringCertificates: [],
-        expiringMedicals: [],
-        unsignedAppointments: [],
-        unsignedPpeIssues: [],
-        total: 0,
-      },
-      { status: 200 }
-    );
+    return NextResponse.json(emptyNotifications(), { status: 200 });
   }
 }

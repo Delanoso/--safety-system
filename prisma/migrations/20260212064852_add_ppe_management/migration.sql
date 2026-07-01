@@ -1,6 +1,5 @@
--- CreateTable
 CREATE TABLE "PPEPerson" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "email" TEXT,
     "phone" TEXT,
@@ -9,25 +8,22 @@ CREATE TABLE "PPEPerson" (
     "updatedAt" TIMESTAMP(3) NOT NULL
 );
 
--- CreateTable
 CREATE TABLE "PPEItemType" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- CreateTable
 CREATE TABLE "PPEStock" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "itemTypeId" INTEGER NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 0,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "PPEStock_itemTypeId_fkey" FOREIGN KEY ("itemTypeId") REFERENCES "PPEItemType" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
--- CreateTable
 CREATE TABLE "PPEIssue" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "personId" INTEGER NOT NULL,
     "itemTypeId" INTEGER NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,

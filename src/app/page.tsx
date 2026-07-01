@@ -50,7 +50,7 @@ export default function LoginPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-[var(--foreground)]">Login</h1>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Sign in to your company account to access the Safety System.
+            Sign in to your company account to access Salus.
           </p>
         </div>
 

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileDown, ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
+import { canAccessInspection } from "@/lib/inspection-access";
+import { getPdfDownloadUrl } from "@/lib/pdf-download";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +32,7 @@ export default async function ViewMonthlyInspectionPage({
 
   if (!inspection) notFound();
 
-  const allowed = current.inspectionDepartments ?? [];
-  if (allowed.length > 0 && !allowed.includes(inspection.department)) {
-    notFound(); // demo / no departments = can view any
-  }
+  if (!canAccessInspection(current, inspection)) notFound();
 
   let parsed: {
     columns: string[];
@@ -69,9 +68,7 @@ export default async function ViewMonthlyInspectionPage({
             Back to Inspections
           </Link>
           <a
-            href={`/pdf-renderer?type=monthly-inspection&id=${encodeURIComponent(id)}`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={getPdfDownloadUrl("monthly-inspection", id)}
             className="button button-pdf inline-flex items-center gap-2"
           >
             <FileDown size={20} />
@@ -120,7 +117,7 @@ export default async function ViewMonthlyInspectionPage({
         </div>
 
         <footer className="mt-10 pt-4 border-t border-black text-center text-xs text-black">
-          Safety System — Monthly Inspection Report
+          Salus — Monthly Inspection Report
         </footer>
       </div>
     </div>

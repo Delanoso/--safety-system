@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { prepareWhatsAppDelivery } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,11 +20,11 @@ export async function POST(
   } catch {
     data = {};
   }
-  const email = data.email != null ? String(data.email).trim() : null;
-  const phone = data.phone != null ? String(data.phone).trim() : null;
-  if (!email && !phone) {
+
+  const phone = data.phone != null ? String(data.phone).trim() : "";
+  if (!phone) {
     return NextResponse.json(
-      { error: "Email or phone is required to send the signing link." },
+      { error: "Phone number is required to send the signing link via WhatsApp." },
       { status: 400 }
     );
   }
@@ -46,31 +47,20 @@ export async function POST(
     data: { signToken: token },
   });
 
-  if (email && process.env.RESEND_API_KEY) {
-    try {
-      const { Resend } = await import("resend");
-      const resendClient = new Resend(process.env.RESEND_API_KEY);
-      await resendClient.emails.send({
-        from: process.env.RESEND_FROM || "onboarding@resend.dev",
-        to: email,
-        subject: `PPE Issue – Please sign (${issue.itemType.name} for ${issue.person.name})`,
-        html: `
-          <p>Hello ${issue.person.name},</p>
-          <p>You have been issued <strong>${issue.quantity} x ${issue.itemType.name}</strong>. Please confirm by signing the link below.</p>
-          <p><a href="${signUrl}">Sign here</a></p>
-          <p>This link is single-use. If you did not expect this, please ignore.</p>
-        `,
-      });
-    } catch (e) {
-      console.error("PPE send email error:", e);
-    }
+  const message = `Hi ${issue.person.name}, you have been issued ${issue.quantity} x ${issue.itemType.name}. Please confirm by signing: ${signUrl}`;
+
+  let delivery;
+  try {
+    delivery = prepareWhatsAppDelivery(phone, message);
+  } catch {
+    return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
   }
 
   return NextResponse.json({
     ok: true,
     signUrl,
-    message: email
-      ? "Signing link sent to email (if Resend is configured)."
-      : "Use the link below to share (e.g. via SMS or WhatsApp).",
+    whatsappUrl: delivery.whatsappUrl,
+    message: "Open WhatsApp to send the signing link.",
   });
 }
+

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireUser } from "@/lib/auth";
 import { randomBytes } from "crypto";
+import { computeContractorCompliance, parseExcludedSections } from "@/lib/contractor-compliance";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +17,22 @@ export async function GET() {
     const items = await prisma.contractor.findMany({
       where,
       include: {
-        _count: { select: { documents: true } },
+        documents: { select: { section: true } },
       },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(items);
+
+    const enriched = items.map((c) => {
+      const compliance = computeContractorCompliance(c.documents, c.excludedSections);
+      const { documents, ...rest } = c;
+      return {
+        ...rest,
+        compliancePercentage: compliance.percentage,
+        complianceComplete: compliance.completeCount,
+        complianceApplicable: compliance.applicableCount,
+      };
+    });
+    return NextResponse.json(enriched);
   } catch (err) {
     console.error("Contractors GET:", err);
     return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
@@ -40,7 +52,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, contactEmail, contactPhone, scope, jobDescription } = body;
+    const { name, contactEmail, contactPhone, scope, jobDescription, excludedSections } = body;
     if (!name) {
       return NextResponse.json(
         { error: "Contractor company name is required" },
@@ -50,6 +62,9 @@ export async function POST(req: Request) {
 
     const uploadToken = randomBytes(24).toString("hex");
 
+    const excluded = parseExcludedSections(excludedSections);
+    const excludedJson = excluded.length > 0 ? JSON.stringify(excluded) : null;
+
     const item = await prisma.contractor.create({
       data: {
         name: String(name).trim(),
@@ -57,6 +72,7 @@ export async function POST(req: Request) {
         contactPhone: contactPhone ? String(contactPhone).trim() : null,
         scope: scope === "specific_job" ? "specific_job" : "ongoing",
         jobDescription: jobDescription ? String(jobDescription).trim() : null,
+        excludedSections: excludedJson,
         uploadToken,
         companyId: companyId ?? body.companyId ?? null,
       },

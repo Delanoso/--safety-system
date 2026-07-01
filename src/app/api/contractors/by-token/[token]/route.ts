@@ -21,6 +21,7 @@ export async function GET(
     name: contractor.name,
     scope: contractor.scope,
     jobDescription: contractor.jobDescription,
+    excludedSections: contractor.excludedSections,
     documents: contractor.documents,
   });
 }

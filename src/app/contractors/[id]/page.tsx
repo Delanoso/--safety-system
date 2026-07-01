@@ -12,8 +12,16 @@ import {
   FileText,
   ExternalLink,
   Check,
+  Download,
+  Save,
 } from "lucide-react";
 import { CONTRACTOR_SECTIONS } from "@/lib/contractor-sections";
+import { getApplicableSections } from "@/lib/contractor-compliance";
+import ContractorSectionSelector, { excludedFromContractor } from "@/components/contractors/ContractorSectionSelector";
+import type { ContractorSectionId } from "@/lib/contractor-sections";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { openWhatsAppLink } from "@/lib/open-whatsapp";
+import { downloadPdf } from "@/lib/pdf-download";
 
 type Document = {
   id: string;
@@ -21,6 +29,13 @@ type Document = {
   fileName: string;
   fileUrl: string;
   uploadedByContractor: boolean;
+};
+
+type Compliance = {
+  applicableCount: number;
+  completeCount: number;
+  excludedCount: number;
+  percentage: number;
 };
 
 type Contractor = {
@@ -31,7 +46,9 @@ type Contractor = {
   scope: string;
   jobDescription: string | null;
   uploadToken: string;
+  excludedSections: string | null;
   documents: Document[];
+  compliance?: Compliance;
 };
 
 export default function ContractorDetailPage() {
@@ -41,19 +58,25 @@ export default function ContractorDetailPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [linkCopied, setLinkCopied] = useState(false);
+  const [excludedSections, setExcludedSections] = useState<ContractorSectionId[]>([]);
+  const [savingSections, setSavingSections] = useState(false);
+  const [sectionsDirty, setSectionsDirty] = useState(false);
+
+  async function load() {
+    const res = await fetch(`/api/contractors/${id}`);
+    if (!res.ok) {
+      setContractor(null);
+      setLoading(false);
+      return;
+    }
+    const data = await res.json();
+    setContractor(data);
+    setExcludedSections(excludedFromContractor(data.excludedSections));
+    setSectionsDirty(false);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function load() {
-      const res = await fetch(`/api/contractors/${id}`);
-      if (!res.ok) {
-        setContractor(null);
-        setLoading(false);
-        return;
-      }
-      const data = await res.json();
-      setContractor(data);
-      setLoading(false);
-    }
     load();
   }, [id]);
 
@@ -67,6 +90,40 @@ export default function ContractorDetailPage() {
     await navigator.clipboard.writeText(uploadLink);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
+  }
+
+  function sendUploadLinkWhatsApp() {
+    const phone = contractor?.contactPhone?.trim();
+    if (!phone) {
+      alert("No contractor phone number on file. Add a phone number when creating the contractor.");
+      return;
+    }
+    if (!uploadLink) return;
+    const message = `Hi ${contractor?.name}, please upload your safety file documents here: ${uploadLink}`;
+    try {
+      openWhatsAppLink(buildWhatsAppUrl(phone, message));
+    } catch {
+      alert("Invalid contractor phone number.");
+    }
+  }
+
+  async function saveSections() {
+    if (!contractor) return;
+    setSavingSections(true);
+    const res = await fetch(`/api/contractors/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ excludedSections }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setContractor(data);
+      setExcludedSections(excludedFromContractor(data.excludedSections));
+      setSectionsDirty(false);
+    } else {
+      alert("Failed to save section settings");
+    }
+    setSavingSections(false);
   }
 
   async function handleUpload(section: string, files: FileList | null) {
@@ -86,9 +143,21 @@ export default function ContractorDetailPage() {
 
       if (res.ok) {
         const doc = await res.json();
-        setContractor((prev) =>
-          prev ? { ...prev, documents: [...prev.documents, doc] } : null
-        );
+        setContractor((prev) => {
+          if (!prev) return null;
+          const compliance = prev.compliance
+            ? {
+                ...prev.compliance,
+                completeCount: new Set([...prev.documents, doc].map((d) => d.section)).size,
+              }
+            : prev.compliance;
+          return {
+            ...prev,
+            documents: [...prev.documents, doc],
+            compliance,
+          };
+        });
+        await load();
       }
     }
 
@@ -101,11 +170,7 @@ export default function ContractorDetailPage() {
       method: "DELETE",
     });
     if (!res.ok) return;
-    setContractor((prev) =>
-      prev
-        ? { ...prev, documents: prev.documents.filter((d) => d.id !== docId) }
-        : null
-    );
+    await load();
   }
 
   if (loading) {
@@ -128,6 +193,8 @@ export default function ContractorDetailPage() {
     );
   }
 
+  const compliance = contractor.compliance;
+  const applicableSections = getApplicableSections(excludedSections);
   const docsBySection: Record<string, Document[]> = {};
   contractor.documents.forEach((d) => {
     if (!docsBySection[d.section]) docsBySection[d.section] = [];
@@ -145,25 +212,53 @@ export default function ContractorDetailPage() {
         </div>
 
         <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-          <h1 className="text-2xl font-bold text-black">{contractor.name}</h1>
-          <p className="text-black/70 mt-1">
-            {contractor.scope === "specific_job" ? "Specific Job" : "Ongoing"} •{" "}
-            {contractor.contactEmail ?? contractor.contactPhone ?? "No contact"}
-          </p>
-          {contractor.jobDescription && (
-            <p className="text-black/70 mt-2 text-sm">{contractor.jobDescription}</p>
-          )}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-black">{contractor.name}</h1>
+              <p className="text-black/70 mt-1">
+                {contractor.scope === "specific_job" ? "Specific Job" : "Ongoing"} •{" "}
+                {contractor.contactEmail ?? contractor.contactPhone ?? "No contact"}
+              </p>
+              {contractor.jobDescription && (
+                <p className="text-black/70 mt-2 text-sm">{contractor.jobDescription}</p>
+              )}
+            </div>
+            {compliance && (
+              <div className="text-right">
+                <p
+                  className={`text-3xl font-bold ${
+                    compliance.percentage >= 80
+                      ? "text-green-700"
+                      : compliance.percentage >= 50
+                        ? "text-orange-600"
+                        : "text-red-600"
+                  }`}
+                >
+                  {compliance.percentage}%
+                </p>
+                <p className="text-sm text-black/60">
+                  {compliance.completeCount}/{compliance.applicableCount} applicable sections
+                </p>
+                {compliance.excludedCount > 0 && (
+                  <p className="text-xs text-black/50">{compliance.excludedCount} marked N/A</p>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
             <button
-              onClick={copyLink}
+              onClick={sendUploadLinkWhatsApp}
               className="button button-save flex items-center gap-2"
             >
-              {linkCopied ? (
-                <Check size={18} />
-              ) : (
-                <Copy size={18} />
-              )}
+              <Copy size={18} />
+              Send upload link via WhatsApp
+            </button>
+            <button
+              onClick={copyLink}
+              className="button button-neutral flex items-center gap-2"
+            >
+              {linkCopied ? <Check size={18} /> : <Copy size={18} />}
               {linkCopied ? "Copied!" : "Copy upload link"}
             </button>
             <a
@@ -175,16 +270,46 @@ export default function ContractorDetailPage() {
               <Link2 size={18} />
               Open upload page
             </a>
+            <button
+              type="button"
+              onClick={() => downloadPdf("contractor-safety-file", contractor.id)}
+              className="button button-neutral flex items-center gap-2"
+            >
+              <Download size={18} />
+              Download PDF
+            </button>
           </div>
+        </div>
+
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6 space-y-4">
+          <ContractorSectionSelector
+            excluded={excludedSections}
+            onChange={(next) => {
+              setExcludedSections(next);
+              setSectionsDirty(true);
+            }}
+          />
+          {sectionsDirty && (
+            <button
+              type="button"
+              onClick={saveSections}
+              disabled={savingSections}
+              className="button button-save flex items-center gap-2"
+            >
+              <Save size={16} />
+              {savingSections ? "Saving…" : "Save section settings"}
+            </button>
+          )}
         </div>
 
         <h2 className="text-xl font-semibold text-black">Safety file sections</h2>
         <p className="text-black/70 -mt-4">
-          Upload documents on behalf of the contractor or send them the link above to upload themselves.
+          Upload documents on behalf of the contractor or send them the upload link via WhatsApp.
+          Only applicable sections are shown below.
         </p>
 
         <div className="space-y-6">
-          {CONTRACTOR_SECTIONS.map(({ id: sectionId, label }) => {
+          {applicableSections.map(({ id: sectionId, label }) => {
             const docs = docsBySection[sectionId] ?? [];
             const isUploading = uploading[sectionId];
 
@@ -255,6 +380,17 @@ export default function ContractorDetailPage() {
             );
           })}
         </div>
+
+        {excludedSections.length > 0 && (
+          <div className="rounded-xl border border-white/40 bg-white/40 p-4">
+            <p className="text-sm font-medium text-black/70 mb-2">Sections marked not applicable</p>
+            <ul className="text-sm text-black/50 space-y-1">
+              {CONTRACTOR_SECTIONS.filter((s) => excludedSections.includes(s.id)).map((s) => (
+                <li key={s.id}>• {s.label}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

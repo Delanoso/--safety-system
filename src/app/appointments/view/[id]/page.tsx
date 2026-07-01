@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import templates from "@/app/appointments/templates";
 import { ViewSignatureBlock } from "@/components/ViewSignatureBlock";
 import { redirect } from "next/navigation";
+import { getPdfDownloadUrl } from "@/lib/pdf-download";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +56,7 @@ export default async function ViewSingleAppointmentPage({
 
           {/* Download PDF – same content as this view */}
           <a
-            href={`/pdf-renderer?type=appointment&id=${encodeURIComponent(appointment.id)}`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={getPdfDownloadUrl("appointment", appointment.id)}
             className="px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md"
           >
             Download PDF

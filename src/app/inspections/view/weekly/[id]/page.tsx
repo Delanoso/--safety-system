@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileDown, ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
+import { canAccessInspection } from "@/lib/inspection-access";
+import { getPdfDownloadUrl } from "@/lib/pdf-download";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +29,7 @@ export default async function ViewWeeklyInspectionPage({
 
   if (!inspection) notFound();
 
-  const allowed = current.inspectionDepartments ?? [];
-  if (allowed.length > 0 && !allowed.includes(inspection.department)) {
-    notFound(); // demo / no departments = can view any
-  }
+  if (!canAccessInspection(current, inspection)) notFound();
 
   let parsed: {
     columns: string[];
@@ -66,9 +65,7 @@ export default async function ViewWeeklyInspectionPage({
             Back to Inspections
           </Link>
           <a
-            href={`/pdf-renderer?type=weekly-inspection&id=${encodeURIComponent(id)}`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={getPdfDownloadUrl("weekly-inspection", id)}
             className="button button-pdf inline-flex items-center gap-2"
           >
             <FileDown size={20} />
@@ -117,7 +114,7 @@ export default async function ViewWeeklyInspectionPage({
         </div>
 
         <footer className="mt-10 pt-4 border-t border-black text-center text-xs text-black">
-          Safety System — Weekly Inspection Report
+          Salus — Weekly Inspection Report
         </footer>
       </div>
     </div>

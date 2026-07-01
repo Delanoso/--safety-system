@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 import { MODULES } from "@/lib/module-access";
+import { COMPANY_PEOPLE_HEADERS, personToExportRow } from "@/lib/company-people-excel";
 
 type CurrentUser = {
   id: string;
@@ -28,6 +30,21 @@ type UiCompany = {
   userLimit: number;
   userCount: number;
   logoUrl?: string | null;
+};
+
+type UiCompanyPerson = {
+  id: string;
+  name: string;
+  surname: string | null;
+  employeeNumber: string | null;
+  idNumber: string | null;
+  occupation: string | null;
+  department: string | null;
+  supervisor: string | null;
+  contactNumber: string | null;
+  address: string | null;
+  idDocumentUrl: string | null;
+  createdAt: string;
 };
 
 export default function UsersPage() {
@@ -62,6 +79,23 @@ export default function UsersPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoMessage, setLogoMessage] = useState<string | null>(null);
 
+  // Staff members (non-login employees)
+  const [people, setPeople] = useState<UiCompanyPerson[]>([]);
+  const [peopleLoading, setPeopleLoading] = useState(false);
+  const [peopleCompanyId, setPeopleCompanyId] = useState<string | "">("");
+  const [addingPerson, setAddingPerson] = useState(false);
+  const [personName, setPersonName] = useState("");
+  const [personSurname, setPersonSurname] = useState("");
+  const [personEmployeeNumber, setPersonEmployeeNumber] = useState("");
+  const [personIdNumber, setPersonIdNumber] = useState("");
+  const [personOccupation, setPersonOccupation] = useState("");
+  const [personDepartment, setPersonDepartment] = useState("");
+  const [personSupervisor, setPersonSupervisor] = useState("");
+  const [personContact, setPersonContact] = useState("");
+  const [personAddress, setPersonAddress] = useState("");
+  const [importingPeople, setImportingPeople] = useState(false);
+  const [uploadingIdFor, setUploadingIdFor] = useState<string | null>(null);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -80,19 +114,28 @@ export default function UsersPage() {
         }
 
         if (user.role === "user") {
-          // Normal users do not manage others
+          if (user.companyId) {
+            setPeopleCompanyId(user.companyId);
+            const peopleRes = await fetch("/api/company-people", { cache: "no-store" });
+            if (peopleRes.ok) {
+              const peopleJson = await peopleRes.json();
+              if (Array.isArray(peopleJson)) setPeople(peopleJson);
+            }
+          }
           setLoading(false);
           return;
         }
 
         // Load companies (for admin or super) – super sees all companies
+        let loadedCompanies: UiCompany[] = [];
         const companiesRes = await fetch("/api/companies", { credentials: "include", cache: "no-store" });
         if (companiesRes.ok) {
           const companiesJson = await companiesRes.json();
           if (Array.isArray(companiesJson)) {
-            setCompanies(companiesJson as UiCompany[]);
-            if (!limitCompanyId && companiesJson.length > 0) {
-              setLimitCompanyId(companiesJson[0].id);
+            loadedCompanies = companiesJson as UiCompany[];
+            setCompanies(loadedCompanies);
+            if (!limitCompanyId && loadedCompanies.length > 0) {
+              setLimitCompanyId(loadedCompanies[0].id);
             }
           }
         } else if ((user.role ?? "").toLowerCase() === "super") {
@@ -105,6 +148,22 @@ export default function UsersPage() {
         if (usersRes.ok) {
           const usersJson: UiUser[] = await usersRes.json();
           setUsers(usersJson);
+        }
+
+        const companyForPeople =
+          (user.role ?? "").toLowerCase() === "super"
+            ? loadedCompanies[0]?.id ?? ""
+            : user.companyId ?? "";
+        if (companyForPeople) {
+          setPeopleCompanyId(companyForPeople);
+          const peopleRes = await fetch(
+            `/api/company-people?companyId=${encodeURIComponent(companyForPeople)}`,
+            { cache: "no-store" }
+          );
+          if (peopleRes.ok) {
+            const peopleJson = await peopleRes.json();
+            if (Array.isArray(peopleJson)) setPeople(peopleJson);
+          }
         }
       } catch (err) {
         console.error("Failed to load users/companies", err);
@@ -127,6 +186,223 @@ export default function UsersPage() {
       }
     } catch (err) {
       console.error("Failed to refresh users", err);
+    }
+  };
+
+  const refreshPeople = async (companyId?: string) => {
+    const cid =
+      companyId ??
+      peopleCompanyId ??
+      (currentUser?.role === "super" ? "" : currentUser?.companyId ?? "");
+    if (!cid) return;
+
+    setPeopleLoading(true);
+    try {
+      const url =
+        currentUser?.role === "super"
+          ? `/api/company-people?companyId=${encodeURIComponent(cid)}`
+          : "/api/company-people";
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setPeople(data);
+      }
+    } catch (err) {
+      console.error("Failed to refresh people", err);
+    } finally {
+      setPeopleLoading(false);
+    }
+  };
+
+  const handleAddPerson = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!personName.trim()) return;
+
+    const companyIdForPerson =
+      currentUser?.role === "super"
+        ? peopleCompanyId
+        : currentUser?.companyId ?? "";
+
+    if (!companyIdForPerson) {
+      setError(
+        currentUser?.role === "super"
+          ? "Select a company before adding a person."
+          : "Your account is not linked to a company. Contact an admin."
+      );
+      return;
+    }
+
+    setAddingPerson(true);
+    setError(null);
+    try {
+      const body: Record<string, string> = {
+        name: personName.trim(),
+        surname: personSurname.trim(),
+        employeeNumber: personEmployeeNumber.trim(),
+        idNumber: personIdNumber.trim(),
+        occupation: personOccupation.trim(),
+        department: personDepartment.trim(),
+        supervisor: personSupervisor.trim(),
+        contactNumber: personContact.trim(),
+        address: personAddress.trim(),
+      };
+      if (currentUser?.role === "super") {
+        body.companyId = companyIdForPerson;
+      }
+
+      const res = await fetch("/api/company-people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error || "Failed to add person.");
+        return;
+      }
+
+      setPersonName("");
+      setPersonSurname("");
+      setPersonEmployeeNumber("");
+      setPersonIdNumber("");
+      setPersonOccupation("");
+      setPersonDepartment("");
+      setPersonSupervisor("");
+      setPersonContact("");
+      setPersonAddress("");
+      await refreshPeople();
+    } catch (err) {
+      console.error("Add person error", err);
+      setError("Unexpected error while adding person.");
+    } finally {
+      setAddingPerson(false);
+    }
+  };
+
+  const handleDeletePerson = async (person: UiCompanyPerson) => {
+    const label = [person.name, person.surname].filter(Boolean).join(" ");
+    if (!window.confirm(`Remove ${label || "this person"} from company records?`)) return;
+
+    setError(null);
+    try {
+      const res = await fetch(`/api/company-people/${person.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error || "Failed to remove person.");
+        return;
+      }
+      await refreshPeople();
+    } catch (err) {
+      console.error("Delete person error", err);
+      setError("Unexpected error while removing person.");
+    }
+  };
+
+  const handleExportPeople = () => {
+    const rows: (string | number)[][] = [
+      [...COMPANY_PEOPLE_HEADERS, "Added"],
+      ...people.map((p) => personToExportRow(p)),
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Staff members");
+    XLSX.writeFile(wb, "staff-members.xlsx");
+  };
+
+  const handleDownloadTemplate = () => {
+    const rows: (string | number)[][] = [[...COMPANY_PEOPLE_HEADERS, "Added"]];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Staff members");
+    XLSX.writeFile(wb, "staff-members-template.xlsx");
+  };
+
+  const handleImportPeople = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setImportingPeople(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (currentUser?.role === "super" && peopleCompanyId) {
+        formData.append("companyId", peopleCompanyId);
+      }
+
+      const res = await fetch("/api/company-people/import", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Import failed.");
+        return;
+      }
+
+      const msg = `Import complete: ${data.created ?? 0} added, ${data.updated ?? 0} updated.`;
+      if (data.errors?.length) {
+        alert(`${msg}\n\nSome rows had errors:\n${data.errors.slice(0, 5).join("\n")}`);
+      } else {
+        alert(msg);
+      }
+      await refreshPeople();
+    } catch (err) {
+      console.error("Import people error", err);
+      setError("Unexpected error while importing.");
+    } finally {
+      setImportingPeople(false);
+    }
+  };
+
+  const handleUploadIdDocument = async (personId: string, file: File) => {
+    setUploadingIdFor(personId);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`/api/company-people/${personId}/id-document`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Failed to upload ID document.");
+        return;
+      }
+      await refreshPeople();
+    } catch (err) {
+      console.error("ID upload error", err);
+      setError("Unexpected error while uploading ID.");
+    } finally {
+      setUploadingIdFor(null);
+    }
+  };
+
+  const handleDeleteUser = async (user: UiUser) => {
+    if (!currentUser) return;
+
+    const label = user.email || "this user";
+    const confirm = window.confirm(`Are you sure you want to remove ${label}? This cannot be undone.`);
+    if (!confirm) return;
+
+    setError(null);
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error || "Failed to delete user.");
+        return;
+      }
+      await refreshUsers();
+    } catch (err) {
+      console.error("Delete user error", err);
+      setError("Unexpected error while deleting user.");
     }
   };
 
@@ -291,9 +567,236 @@ export default function UsersPage() {
     }
   };
 
+  const renderStaffMembersSection = (showCompanyPicker: boolean) => (
+    <div
+      id="staff-members"
+      className="rounded-2xl p-6 shadow-xl space-y-4"
+      style={{
+        background: "var(--card-bg)",
+        border: "1px solid var(--card-border)",
+      }}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-[var(--foreground)]">
+            Staff members
+          </h2>
+          <p className="text-sm text-[var(--muted-foreground)] mt-1">
+            Load employees who are not system users. Download the Excel template, fill it in, and upload to import in bulk. You can also attach a copy of each person&apos;s ID (image or PDF).
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleDownloadTemplate}
+            className="px-4 py-2 rounded-xl font-semibold text-sm border border-[var(--card-border)] hover:bg-white/50 transition"
+          >
+            Excel template
+          </button>
+          <label className="px-4 py-2 rounded-xl font-semibold text-sm border border-[var(--card-border)] hover:bg-white/50 transition cursor-pointer">
+            {importingPeople ? "Importing…" : "Upload Excel"}
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              disabled={importingPeople}
+              onChange={handleImportPeople}
+            />
+          </label>
+          {people.length > 0 && (
+            <button
+              type="button"
+              onClick={handleExportPeople}
+              className="px-4 py-2 rounded-xl font-semibold text-sm border border-[var(--card-border)] hover:bg-white/50 transition"
+            >
+              Download Excel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showCompanyPicker && companies.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium mb-1">Company</label>
+          <select
+            className="w-full max-w-md p-2 rounded-lg border border-[var(--card-border)] bg-white/50"
+            value={peopleCompanyId}
+            onChange={async (e) => {
+              const id = e.target.value;
+              setPeopleCompanyId(id);
+              await refreshPeople(id);
+            }}
+          >
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <form onSubmit={handleAddPerson} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs mb-1">Name *</label>
+            <input
+              className="w-full p-2 rounded-lg border border-[var(--card-border)]"
+              value={personName}
+              onChange={(e) => setPersonName(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1">Surname</label>
+            <input
+              className="w-full p-2 rounded-lg border border-[var(--card-border)]"
+              value={personSurname}
+              onChange={(e) => setPersonSurname(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1">Employee / clock number</label>
+            <input
+              className="w-full p-2 rounded-lg border border-[var(--card-border)]"
+              value={personEmployeeNumber}
+              onChange={(e) => setPersonEmployeeNumber(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1">ID number</label>
+            <input
+              className="w-full p-2 rounded-lg border border-[var(--card-border)]"
+              value={personIdNumber}
+              onChange={(e) => setPersonIdNumber(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1">Occupation</label>
+            <input
+              className="w-full p-2 rounded-lg border border-[var(--card-border)]"
+              value={personOccupation}
+              onChange={(e) => setPersonOccupation(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1">Department</label>
+            <input
+              className="w-full p-2 rounded-lg border border-[var(--card-border)]"
+              value={personDepartment}
+              onChange={(e) => setPersonDepartment(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1">Supervisor</label>
+            <input
+              className="w-full p-2 rounded-lg border border-[var(--card-border)]"
+              value={personSupervisor}
+              onChange={(e) => setPersonSupervisor(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1">Contact number</label>
+            <input
+              className="w-full p-2 rounded-lg border border-[var(--card-border)]"
+              value={personContact}
+              onChange={(e) => setPersonContact(e.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="block text-xs mb-1">Address</label>
+            <input
+              className="w-full p-2 rounded-lg border border-[var(--card-border)]"
+              value={personAddress}
+              onChange={(e) => setPersonAddress(e.target.value)}
+            />
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={addingPerson}
+          className="px-4 py-2 rounded-xl font-semibold text-black transition disabled:opacity-60"
+          style={{ background: "var(--gold)" }}
+        >
+          {addingPerson ? "Adding…" : "Add person"}
+        </button>
+      </form>
+
+      {peopleLoading ? (
+        <p className="text-sm text-[var(--muted-foreground)]">Loading people…</p>
+      ) : people.length === 0 ? (
+        <p className="text-sm text-[var(--muted-foreground)]">No people loaded yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--card-border)] text-left">
+                <th className="py-2 pr-4">Name</th>
+                <th className="py-2 pr-4">Employee #</th>
+                <th className="py-2 pr-4">Department</th>
+                <th className="py-2 pr-4">Occupation</th>
+                <th className="py-2 pr-4">ID document</th>
+                <th className="py-2 pr-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {people.map((p) => (
+                <tr key={p.id} className="border-b border-[var(--card-border)]">
+                  <td className="py-2 pr-4">
+                    {[p.name, p.surname].filter(Boolean).join(" ")}
+                  </td>
+                  <td className="py-2 pr-4">{p.employeeNumber ?? "—"}</td>
+                  <td className="py-2 pr-4">{p.department ?? "—"}</td>
+                  <td className="py-2 pr-4">{p.occupation ?? "—"}</td>
+                  <td className="py-2 pr-4">
+                    {p.idDocumentUrl ? (
+                      <a
+                        href={p.idDocumentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        View ID
+                      </a>
+                    ) : (
+                      <span className="text-xs opacity-60">None</span>
+                    )}
+                    <label className="block mt-1 text-xs cursor-pointer text-emerald-700 hover:underline">
+                      {uploadingIdFor === p.id ? "Uploading…" : "Upload ID (PDF/image)"}
+                      <input
+                        type="file"
+                        accept=".pdf,image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        disabled={uploadingIdFor === p.id}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = "";
+                          if (f) handleUploadIdDocument(p.id, f);
+                        }}
+                      />
+                    </label>
+                  </td>
+                  <td className="py-2 pr-4">
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePerson(p)}
+                      className="text-sm px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="p-10">
+      <div className="p-4 sm:p-6 lg:p-10">
         <p className="text-[var(--foreground)]">Loading user management…</p>
       </div>
     );
@@ -301,7 +804,7 @@ export default function UsersPage() {
 
   if (!currentUser) {
     return (
-      <div className="p-10">
+      <div className="p-4 sm:p-6 lg:p-10">
         <p className="text-red-600 font-semibold">
           You are not logged in. Please go back to the login page.
         </p>
@@ -311,15 +814,19 @@ export default function UsersPage() {
 
   if (currentUser.role === "user") {
     return (
-      <div className="p-10 space-y-4">
-        <h1 className="text-3xl font-bold text-[var(--foreground)]">
+      <div className="p-4 sm:p-6 lg:p-10 space-y-6 min-w-0">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">
           Your profile
         </h1>
         <p className="text-[var(--muted-foreground)] max-w-xl">
-          You are a standard user in the system. You can use all the modules you
-          are permitted to, but user and company administration is handled by your
-          company&apos;s admins or the system super user.
+          You can manage staff members for incidents and medicals. User and company
+          administration is handled by your company&apos;s admins or the system super user.
         </p>
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 max-w-2xl">
+            {error}
+          </p>
+        )}
         <div
           className="rounded-2xl p-6 shadow-xl max-w-md"
           style={{
@@ -338,6 +845,13 @@ export default function UsersPage() {
             {currentUser.companyName ?? "Not assigned"}
           </p>
         </div>
+        {currentUser.companyId ? (
+          renderStaffMembersSection(false)
+        ) : (
+          <p className="text-sm text-[var(--muted-foreground)]">
+            No company is assigned to your account. Contact an admin to add staff members.
+          </p>
+        )}
       </div>
     );
   }
@@ -350,12 +864,12 @@ export default function UsersPage() {
       : null;
 
   return (
-    <div className="p-10 space-y-8">
+    <div className="p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 min-w-0">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-[var(--foreground)]">
-          User management
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">
+          Users and Staff
         </h1>
-        <p className="text-[var(--muted-foreground)] max-w-2xl">
+        <p className="text-[var(--muted-foreground)] max-w-2xl text-sm sm:text-base">
           {isSuper
             ? "You are the super user. You can manage all companies and all users in the system."
             : "You are an admin for your company. You can add and manage users for your own company only."}
@@ -703,13 +1217,13 @@ export default function UsersPage() {
 
       {/* Users table */}
       <div
-        className="rounded-2xl p-6 shadow-xl space-y-4"
+        className="rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 min-w-0"
         style={{
           background: "var(--card-bg)",
           border: "1px solid var(--card-border)",
         }}
       >
-        <h2 className="text-xl font-semibold text-[var(--foreground)]">
+        <h2 className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">
           {isSuper ? "All users" : "Users in your company"}
         </h2>
 
@@ -718,8 +1232,8 @@ export default function UsersPage() {
             No users found yet.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+          <div className="overflow-x-auto -mx-1 sm:mx-0">
+            <table className="min-w-[600px] sm:min-w-full w-full text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-[var(--card-border)] text-left">
                   <th className="py-2 pr-4">Email</th>
@@ -753,19 +1267,30 @@ export default function UsersPage() {
                       {new Date(u.createdAt).toLocaleDateString()}
                     </td>
                     <td className="py-2 pr-4">
-                      {u.role !== "super" && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingUser(u);
-                            setEditFullAccess(!u.allowedModules || u.allowedModules.length === 0);
-                            setEditAllowedModules(u.allowedModules ?? []);
-                          }}
-                          className="text-sm px-2 py-1 rounded border border-[var(--card-border)] hover:bg-black/5"
-                        >
-                          Restrict access
-                        </button>
-                      )}
+                      <div className="flex gap-2">
+                        {u.role !== "super" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingUser(u);
+                              setEditFullAccess(!u.allowedModules || u.allowedModules.length === 0);
+                              setEditAllowedModules(u.allowedModules ?? []);
+                            }}
+                            className="text-sm px-2 py-1 rounded border border-[var(--card-border)] hover:bg-black/5"
+                          >
+                            Restrict access
+                          </button>
+                        )}
+                        {u.role !== "super" && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(u)}
+                            className="text-sm px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -773,6 +1298,9 @@ export default function UsersPage() {
             </table>
           </div>
         )}
+      </div>
+
+      {renderStaffMembersSection(isSuper)}
 
       {editingUser && (
         <div
@@ -869,7 +1397,6 @@ export default function UsersPage() {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }

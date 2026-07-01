@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Upload, FileText, Loader2, CheckCircle } from "lucide-react";
-import { CONTRACTOR_SECTIONS } from "@/lib/contractor-sections";
+import { getApplicableSections, parseExcludedSections } from "@/lib/contractor-compliance";
 
 type Document = {
   id: string;
@@ -18,6 +18,7 @@ type ContractorInfo = {
   name: string;
   scope: string;
   jobDescription: string | null;
+  excludedSections: string | null;
   documents: Document[];
 };
 
@@ -116,6 +117,8 @@ function ContractorUploadContent() {
     docsBySection[d.section].push(d);
   });
 
+  const applicableSections = getApplicableSections(parseExcludedSections(info.excludedSections));
+
   return (
     <div className="min-h-screen p-10 bg-gradient-to-br from-slate-800 to-slate-900">
       <div className="max-w-3xl mx-auto space-y-8">
@@ -128,7 +131,7 @@ function ContractorUploadContent() {
         </div>
 
         <p className="text-slate-300 text-center">
-          Upload your documents in each section below. You can upload multiple files per section.
+          Upload your documents in each applicable section below. Sections marked not applicable by your client are hidden.
         </p>
 
         {uploadError && (
@@ -138,7 +141,7 @@ function ContractorUploadContent() {
         )}
 
         <div className="space-y-6">
-          {CONTRACTOR_SECTIONS.map(({ id: sectionId, label }) => {
+          {applicableSections.map(({ id: sectionId, label }) => {
             const docs = docsBySection[sectionId] ?? [];
             const isUploading = uploading[sectionId];
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { downloadPdf } from "@/lib/pdf-download";
 
 type Medical = {
   id: number;
@@ -53,7 +54,7 @@ export default function MedicalsListPage() {
   function handleDownloadPdf(m: Medical) {
     const id = m.id != null ? String(m.id) : "";
     if (!id) return;
-    window.open(`/pdf-renderer?type=medical-certificate&id=${encodeURIComponent(id)}`, "_blank");
+    downloadPdf("medical-certificate", id);
   }
 
   const filtered = medicals.filter((m) => {
@@ -68,36 +69,36 @@ export default function MedicalsListPage() {
     url && url.toLowerCase().includes(".pdf");
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-6xl mx-auto space-y-10">
-        <h1 className="text-4xl font-bold text-black">All Medicals</h1>
-        <p className="text-black/70">Browse, filter and manage all medical records.</p>
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">All Medicals</h1>
+        <p className="text-black/70 text-sm sm:text-base">Browse, filter and manage all medical records.</p>
 
         <input
           type="text"
           placeholder="Search by employee or medical type..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full p-3 rounded-lg border border-white/40 bg-white/70"
+          className="w-full p-2.5 sm:p-3 rounded-lg border border-white/40 bg-white/70 text-sm sm:text-base"
         />
 
-        <div className="overflow-x-auto rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40">
-          <table className="w-full text-left">
+        <div className="overflow-x-auto rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 min-w-0">
+          <table className="w-full text-left min-w-[600px] sm:min-w-0 text-xs sm:text-sm">
             <thead>
               <tr className="bg-white/40">
-                <th className="p-4 font-semibold">Employee</th>
-                <th className="p-4 font-semibold">Medical Type</th>
-                <th className="p-4 font-semibold">Issue Date</th>
-                <th className="p-4 font-semibold">Expiry Date</th>
-                <th className="p-4 font-semibold">Status</th>
-                <th className="p-4 font-semibold">Actions</th>
+                <th className="p-2 sm:p-4 font-semibold">Employee</th>
+                <th className="p-2 sm:p-4 font-semibold">Medical Type</th>
+                <th className="p-2 sm:p-4 font-semibold">Issue Date</th>
+                <th className="p-2 sm:p-4 font-semibold">Expiry Date</th>
+                <th className="p-2 sm:p-4 font-semibold">Status</th>
+                <th className="p-2 sm:p-4 font-semibold">Actions</th>
               </tr>
             </thead>
 
             {filtered.length === 0 && (
               <tbody>
                 <tr>
-                  <td colSpan={6} className="p-4 text-center text-black/60">
+                  <td colSpan={6} className="p-2 sm:p-4 text-center text-black/60">
                     No medicals found.
                   </td>
                 </tr>
@@ -109,14 +110,14 @@ export default function MedicalsListPage() {
               return (
                 <tbody key={m.id}>
                   <tr className="border-t border-white/40">
-                    <td className="p-4">{m.employee}</td>
-                    <td className="p-4">{m.medicalType}</td>
-                    <td className="p-4">{formatDate(m.issueDate)}</td>
-                    <td className="p-4">{formatDate(m.expiryDate)}</td>
-                    <td className={`p-4 font-semibold ${status.color}`}>
+                    <td className="p-2 sm:p-4">{m.employee}</td>
+                    <td className="p-2 sm:p-4">{m.medicalType}</td>
+                    <td className="p-2 sm:p-4">{formatDate(m.issueDate)}</td>
+                    <td className="p-2 sm:p-4">{formatDate(m.expiryDate)}</td>
+                    <td className={`p-2 sm:p-4 font-semibold ${status.color}`}>
                       {status.label}
                     </td>
-                    <td className="p-4 flex gap-2">
+                    <td className="p-2 sm:p-4 flex gap-2 flex-wrap">
                       <button
                         onClick={() => handleDownloadPdf(m)}
                         className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { downloadPdf } from "@/lib/pdf-download";
 
 export default function CertificatesListPage() {
   const [certificates, setCertificates] = useState([]);
@@ -47,8 +48,7 @@ export default function CertificatesListPage() {
   function handleDownloadPdf(c) {
     const id = c.id != null ? String(c.id) : "";
     if (!id) return;
-    const url = `/pdf-renderer?type=training-certificate&id=${encodeURIComponent(id)}`;
-    window.open(url, "_blank");
+    downloadPdf("training-certificate", id);
   }
 
   const filtered = certificates.filter((c) => {
@@ -65,37 +65,37 @@ export default function CertificatesListPage() {
   }
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-6xl mx-auto space-y-10">
-        <h1 className="text-4xl font-bold text-black">All Certificates</h1>
-        <p className="text-black/70">Browse, filter and manage all certificates.</p>
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">All Certificates</h1>
+        <p className="text-black/70 text-sm sm:text-base">Browse, filter and manage all certificates.</p>
 
         <input
           type="text"
           placeholder="Search by employee, certificate or type..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full p-3 rounded-lg border border-white/40 bg-white/70"
+          className="w-full p-2.5 sm:p-3 rounded-lg border border-white/40 bg-white/70 text-sm sm:text-base"
         />
 
-        <div className="overflow-x-auto rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40">
-          <table className="w-full text-left">
+        <div className="overflow-x-auto rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 min-w-0">
+          <table className="w-full text-left min-w-[640px] sm:min-w-0 text-xs sm:text-sm">
             <thead>
               <tr className="bg-white/40">
-                <th className="p-4 font-semibold">Employee</th>
-                <th className="p-4 font-semibold">Certificate</th>
-                <th className="p-4 font-semibold">Type</th>
-                <th className="p-4 font-semibold">Issue Date</th>
-                <th className="p-4 font-semibold">Expiry Date</th>
-                <th className="p-4 font-semibold">Status</th>
-                <th className="p-4 font-semibold">Actions</th>
+                <th className="p-2 sm:p-4 font-semibold">Employee</th>
+                <th className="p-2 sm:p-4 font-semibold">Certificate</th>
+                <th className="p-2 sm:p-4 font-semibold">Type</th>
+                <th className="p-2 sm:p-4 font-semibold">Issue Date</th>
+                <th className="p-2 sm:p-4 font-semibold">Expiry Date</th>
+                <th className="p-2 sm:p-4 font-semibold">Status</th>
+                <th className="p-2 sm:p-4 font-semibold">Actions</th>
               </tr>
             </thead>
 
             {filtered.length === 0 && (
               <tbody>
                 <tr>
-                  <td colSpan={7} className="p-4 text-center text-black/60">
+                  <td colSpan={7} className="p-2 sm:p-4 text-center text-black/60">
                     No certificates found.
                   </td>
                 </tr>
@@ -113,17 +113,17 @@ export default function CertificatesListPage() {
                 <tbody key={c.id}>
                   {/* MAIN ROW */}
                   <tr className="border-t border-white/40">
-                    <td className="p-4">{c.employee}</td>
-                    <td className="p-4">{c.certificateName}</td>
-                    <td className="p-4">{c.certificateType || "N/A"}</td>
-                    <td className="p-4">{formatDate(c.issueDate)}</td>
-                    <td className="p-4">{formatDate(c.expiryDate)}</td>
+                    <td className="p-2 sm:p-4">{c.employee}</td>
+                    <td className="p-2 sm:p-4">{c.certificateName}</td>
+                    <td className="p-2 sm:p-4">{c.certificateType || "N/A"}</td>
+                    <td className="p-2 sm:p-4">{formatDate(c.issueDate)}</td>
+                    <td className="p-2 sm:p-4">{formatDate(c.expiryDate)}</td>
 
-                    <td className={`p-4 font-semibold ${status.color}`}>
+                    <td className={`p-2 sm:p-4 font-semibold ${status.color}`}>
                       {status.label}
                     </td>
 
-                    <td className="p-4 flex gap-2">
+                    <td className="p-2 sm:p-4 flex gap-2 flex-wrap">
                       <button
                         onClick={() => handleDownloadPdf(c)}
                         className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700"

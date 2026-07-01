@@ -27,7 +27,7 @@ function loadEnv(filePath: string) {
 loadEnv(path.join(root, ".env"));
 loadEnv(path.join(root, ".env.local"));
 
-const { PrismaClient } = require("../node_modules/prisma-client-generated");
+const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 const DEMO_EMAIL = "demouser1@gmail.com";

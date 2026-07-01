@@ -143,26 +143,26 @@ export default function RemindersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
         <p className="text-black/70">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div>
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
+        <div className="min-w-0">
           <Link href="/ppe-management" className="text-black/70 hover:underline text-sm block mb-1">
             ← PPE Management
           </Link>
-          <h1 className="text-4xl font-bold text-black">PPE size reminders</h1>
-          <p className="text-black/70 mt-1">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">PPE size reminders</h1>
+          <p className="text-black/70 mt-1 text-sm sm:text-base">
             Send a link via WhatsApp so people can open it and choose their PPE sizes (based on their sub-department).
           </p>
         </div>
 
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 flex flex-wrap gap-4 items-center">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-3 sm:p-4 flex flex-wrap gap-3 sm:gap-4 items-center">
           <span className="font-medium text-black">Filter:</span>
           <select
             value={filterDeptId}
@@ -195,7 +195,7 @@ export default function RemindersPage() {
                 type="text"
                 readOnly
                 value={linkUrl}
-                className="flex-1 min-w-[200px] p-2 rounded-lg border bg-white/80 text-black text-sm"
+                className="flex-1 min-w-0 sm:min-w-[200px] p-2 rounded-lg border bg-white/80 text-black text-sm"
               />
               <button
                 type="button"

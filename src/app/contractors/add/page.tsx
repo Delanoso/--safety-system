@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import ContractorSectionSelector, { excludedFromContractor } from "@/components/contractors/ContractorSectionSelector";
+import type { ContractorSectionId } from "@/lib/contractor-sections";
 
 export default function AddContractorPage() {
   const [loading, setLoading] = useState(false);
+  const [excludedSections, setExcludedSections] = useState<ContractorSectionId[]>([]);
   const [form, setForm] = useState({
     name: "",
     contactEmail: "",
@@ -35,6 +38,7 @@ export default function AddContractorPage() {
           contactPhone: form.contactPhone.trim() || null,
           scope: form.scope,
           jobDescription: form.jobDescription.trim() || null,
+          excludedSections,
         }),
       });
 
@@ -142,6 +146,12 @@ export default function AddContractorPage() {
               />
             </div>
           )}
+
+          <ContractorSectionSelector
+            excluded={excludedSections}
+            onChange={setExcludedSections}
+            disabled={loading}
+          />
 
           <button
             type="submit"

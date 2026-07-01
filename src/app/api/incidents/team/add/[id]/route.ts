@@ -60,7 +60,7 @@ export async function POST(
     try {
       const refetched = await prisma.investigationTeamMember.findUnique({
         where: { id: created.id },
-        select: { id: true, name: true, designation: true, signature: true, signedAt: true, createdAt: true },
+        select: { id: true, name: true, designation: true, signature: true, signedAt: true, createdAt: true, incidentId: true },
       });
       if (refetched) member = refetched;
     } catch {

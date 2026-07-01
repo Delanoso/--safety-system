@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { downloadPdf } from "@/lib/pdf-download";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { openWhatsAppLink } from "@/lib/open-whatsapp";
 
 // Safe ID generator (no SSR mismatch)
 const generateId = () =>
@@ -34,7 +37,7 @@ const createEmptyItem = (): NcrItem => ({
 
 export default function NonConformancePage() {
   const [items, setItems] = useState<NcrItem[]>([]);
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [lastSavedReportId, setLastSavedReportId] = useState<string | null>(null);
 
   // Department memory
@@ -205,12 +208,25 @@ export default function NonConformancePage() {
     }
 
     setLastSavedReportId(report.id);
-    const url = `/pdf-renderer?type=ncr&id=${encodeURIComponent(report.id)}`;
-    window.open(url, "_blank");
+    downloadPdf("ncr", report.id);
   };
 
-  const handleSendEmail = () => {
-    alert(`Report will be sent to: ${email} (stub).`);
+  const handleSendWhatsApp = () => {
+    if (!phone.trim()) {
+      alert("Enter a WhatsApp phone number.");
+      return;
+    }
+    if (!lastSavedReportId) {
+      alert("Save the report first using Download PDF, then send via WhatsApp.");
+      return;
+    }
+    const viewUrl = `${window.location.origin}/inspections/non-conformance/view/${lastSavedReportId}`;
+    const message = `Please review this non-conformance report: ${viewUrl}`;
+    try {
+      openWhatsAppLink(buildWhatsAppUrl(phone.trim(), message));
+    } catch {
+      alert("Invalid phone number.");
+    }
   };
 
   return (
@@ -472,7 +488,7 @@ export default function NonConformancePage() {
                 onClick={handleSavePdf}
                 className="px-5 py-3 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition text-sm"
               >
-                Save as PDF
+                Download PDF
               </button>
               {lastSavedReportId && (
                 <Link
@@ -485,24 +501,24 @@ export default function NonConformancePage() {
             </div>
           </div>
 
-          {/* SEND BY EMAIL */}
+          {/* SEND BY WHATSAPP */}
           <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/30 space-y-4">
             <h2 className="text-xl font-semibold text-black dark:text-white">
-              Send by Email
+              Send via WhatsApp
             </h2>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="w-full p-3 rounded-lg bg-white/70 border border-white/30 shadow text-black"
-              placeholder="recipient@example.com"
+              placeholder="e.g. 0821234567"
             />
             <button
               type="button"
-              onClick={handleSendEmail}
-              className="mt-2 w-full px-5 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition text-sm"
+              onClick={handleSendWhatsApp}
+              className="mt-2 w-full px-5 py-3 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition text-sm"
             >
-              Send Report
+              Send Report via WhatsApp
             </button>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FileDown, ArrowLeft } from "lucide-react";
+import { downloadPdf } from "@/lib/pdf-download";
 import { ViewSignatureBlock } from "@/components/ViewSignatureBlock";
 
 export default function IncidentViewerPage() {
@@ -75,11 +76,11 @@ export default function IncidentViewerPage() {
   const details = incident.details || {};
 
   return (
-    <div className="min-h-screen p-10">
-      <div className="max-w-5xl mx-auto space-y-10">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 min-w-0">
+      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-10">
 
         {/* TOP BAR */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <button
             onClick={() => router.back()}
             className="button button-neutral flex items-center gap-2"
@@ -93,10 +94,7 @@ export default function IncidentViewerPage() {
             className="button button-pdf flex items-center gap-2"
             onClick={() => {
               if (!incident) return;
-              const url = `/pdf-renderer?type=incident&id=${encodeURIComponent(
-                incident.id
-              )}`;
-              window.open(url, "_blank");
+              downloadPdf("incident", incident.id);
             }}
           >
             <FileDown size={20} />
@@ -106,7 +104,7 @@ export default function IncidentViewerPage() {
 
         {/* FORM CONTAINER */}
         <div
-          className="rounded-2xl p-10 backdrop-blur-xl shadow-xl space-y-10"
+          className="rounded-2xl p-4 sm:p-6 lg:p-10 backdrop-blur-xl shadow-xl space-y-6 sm:space-y-10"
           style={{
             background: "var(--card-bg)",
             border: "1px solid var(--card-border)",
@@ -114,7 +112,7 @@ export default function IncidentViewerPage() {
         >
           {/* HEADER */}
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold">{incident.title}</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{incident.title}</h1>
             <p className="opacity-70">
               Completed Incident Report • {formatDate(incident.date)}
             </p>
@@ -619,7 +617,7 @@ export default function IncidentViewerPage() {
               {/* GRAND TOTAL */}
               <Divider />
               <Section title="Grand Total">
-                <h2 className="text-3xl font-bold">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold">
                   {details.currency === "USD"
                     ? "$"
                     : details.currency === "EUR"

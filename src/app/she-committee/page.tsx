@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Vote, Calendar } from "lucide-react";
+import { LayoutDashboard, Vote, Calendar, ClipboardCheck } from "lucide-react";
 
 export default function SHECommitteePage() {
   const router = useRouter();
@@ -19,6 +19,12 @@ export default function SHECommitteePage() {
       description: "View and add meeting minutes, agendas and action items.",
       route: "/she-committee/meetings",
       icon: <Calendar size={24} />,
+    },
+    {
+      title: "SHE Rep Inspections",
+      description: "Monthly SHE rep checklist (DS.007.01.04) — download, complete, and upload.",
+      route: "/she-committee/rep-inspections",
+      icon: <ClipboardCheck size={24} />,
     },
   ];
 

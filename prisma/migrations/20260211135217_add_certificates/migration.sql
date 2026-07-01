@@ -28,7 +28,7 @@ CREATE TABLE "File" (
 
 -- CreateTable
 CREATE TABLE "Certificate" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL PRIMARY KEY,
     "employee" TEXT NOT NULL,
     "certificateName" TEXT NOT NULL,
     "certificateType" TEXT,

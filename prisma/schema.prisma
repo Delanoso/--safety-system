@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../node_modules/prisma-client-generated"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -208,6 +208,39 @@ model Company {
 
   certificates    Certificate[]
   medicals        Medical[]
+  companyPeople   CompanyPerson[]
+  sheRepInspections SHERepInspection[]
+  legalComplianceItems LegalComplianceItem[]
+
+  // Site Safety
+  toolboxTalks           ToolboxTalk[]
+  inductionTrainings     InductionTraining[]
+  visitorRegisterEntries VisitorRegisterEntry[]
+  permitsToWork          PermitToWork[]
+  emergencyDrills        EmergencyDrill[]
+  companyDocumentDivisions CompanyDocumentDivision[]
+}
+
+/// Employees / people loaded for a company (not login users). Used in incidents, medicals, etc.
+model CompanyPerson {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name            String
+  surname         String?
+  employeeNumber  String?
+  idNumber        String?
+  occupation      String?
+  department      String?
+  supervisor      String?
+  contactNumber   String?
+  address         String?
+  idDocumentUrl   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, employeeNumber])
 }
 
 model InvestigationTeamMember {
@@ -257,6 +290,35 @@ model User {
 
   ncrReports NcrReport[]
   incidents  Incident[]
+  companyDocumentsUploaded CompanyDocument[]
+}
+
+model CompanyDocumentDivision {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  documents CompanyDocument[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model CompanyDocument {
+  id           String   @id @default(cuid())
+  name         String
+  fileUrl      String
+  mimeType     String?
+  size         Int?
+  divisionId   String
+  division     CompanyDocumentDivision @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([divisionId])
 }
 
 model Folder {
@@ -422,6 +484,20 @@ model SHECommitteeMeeting {
   createdAt   DateTime @default(now())
 }
 
+/// SHE rep workplace inspection — download blank form, upload completed document
+model SHERepInspection {
+  id          String    @id @default(cuid())
+  title       String
+  period      String?
+  status      String    @default("pending") // pending | completed
+  fileUrl     String?
+  fileName    String?
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id])
+  uploadedAt  DateTime?
+  createdAt   DateTime  @default(now())
+}
+
 // SHE Rep Election
 model SHEElection {
   id          String   @id @default(cuid())
@@ -506,6 +582,7 @@ model Contractor {
   scope           String   @default("ongoing") // specific_job | ongoing
   jobDescription  String?  // For specific job: description of work
   uploadToken     String   @unique // Token for contractor upload link
+  excludedSections String? // JSON array of section ids not applicable to this contractor
   companyId       String?
   company         Company? @relation(fields: [companyId], references: [id])
   documents       ContractorDocument[]
@@ -556,5 +633,173 @@ model MaintenanceService {
   performedBy     String?
   notes           String?
   createdAt       DateTime @default(now())
+}
+
+/// Company legal compliance register — track obligations, status, evidence, review dates.
+model LegalComplianceItem {
+  id                String    @id @default(cuid())
+  companyId         String?
+  company           Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  auditRef          String?
+  section           String?
+  subsection        String?
+  legislation       String
+  requirement       String
+  appliesTo         String?
+  status            String    @default("under_review")
+  weight            Int?
+  achieved          String?
+  score             Int?
+  observations      String?
+  responsiblePerson String?
+  lastReviewedAt    DateTime?
+  nextReviewDue     DateTime?
+  evidenceUrl       String?
+  evidenceNotes     String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([companyId, nextReviewDue])
+  @@index([companyId, section])
+  @@unique([companyId, auditRef])
+}
+
+// Site Safety — Toolbox Talks
+model ToolboxTalk {
+  id              String   @id @default(cuid())
+  title           String
+  topic           String?
+  department      String?
+  location        String?
+  presenter       String?
+  talkDate        DateTime
+  durationMinutes Int?
+  notes           String?
+  fileUrl         String?
+  status          String   @default("completed")
+  companyId       String?
+  company         Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  attendees       ToolboxTalkAttendee[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, talkDate])
+}
+
+model ToolboxTalkAttendee {
+  id              String      @id @default(cuid())
+  talk            ToolboxTalk @relation(fields: [talkId], references: [id], onDelete: Cascade)
+  talkId          String
+  name            String
+  surname         String?
+  idNumber        String?
+  department      String?
+  companyPersonId String?
+  signature       String?
+  signedAt        DateTime?
+  signToken       String?     @unique
+  createdAt       DateTime    @default(now())
+
+  @@index([talkId])
+}
+
+// Site Safety — Induction Training
+model InductionTraining {
+  id            Int       @id @default(autoincrement())
+  employee      String
+  inductionType String
+  issueDate     DateTime
+  expiryDate    DateTime?
+  department    String?
+  trainer       String?
+  notes         String?
+  fileUrl       String?
+  status        String    @default("active")
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+
+  @@index([companyId])
+  @@index([companyId, expiryDate])
+}
+
+// Site Safety — Visitor Register
+model VisitorRegisterEntry {
+  id             String    @id @default(cuid())
+  visitorName    String
+  visitorCompany String?
+  idNumber       String?
+  contactNumber  String?
+  hostName       String
+  hostDepartment String?
+  purpose        String?
+  location       String?
+  vehicleReg     String?
+  checkInAt      DateTime  @default(now())
+  checkOutAt     DateTime?
+  notes          String?
+  companyId      String?
+  company        Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, checkInAt])
+}
+
+// Site Safety — Permit to Work
+model PermitToWork {
+  id                String    @id @default(cuid())
+  permitNumber      String?
+  permitType        String
+  title             String
+  workDescription   String?
+  department        String?
+  location          String?
+  startDate         DateTime
+  endDate           DateTime?
+  hazards           String?
+  controls          String?
+  status            String    @default("draft")
+  issuerName        String?
+  receiverName      String?
+  fileUrl           String?
+  companyId         String?
+  company           Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([companyId, startDate])
+}
+
+// Health & Safety — Emergency Drills
+model EmergencyDrill {
+  id                String   @id @default(cuid())
+  drillType         String
+  title             String
+  drillDate         DateTime
+  location          String?
+  department        String?
+  coordinator       String?
+  participantCount  Int?
+  durationMinutes   Int?
+  findings          String?
+  correctiveActions String?
+  status            String   @default("completed")
+  fileUrl           String?
+  companyId         String?
+  company           Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, drillDate])
+  @@index([companyId, status])
 }
 

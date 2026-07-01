@@ -55,7 +55,7 @@ function ChooseSizesContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+      <div className="min-h-screen p-4 sm:p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
         <p className="text-black/70">Loading...</p>
       </div>
     );
@@ -63,8 +63,8 @@ function ChooseSizesContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6 max-w-md text-center">
+      <div className="min-h-screen p-4 sm:p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6 max-w-md text-center mx-2">
           <p className="text-red-700 font-medium">{error}</p>
           <p className="text-black/70 text-sm mt-2">Request a new link from your supervisor if needed.</p>
         </div>
@@ -74,8 +74,8 @@ function ChooseSizesContent() {
 
   if (done) {
     return (
-      <div className="min-h-screen p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6 max-w-md text-center">
+      <div className="min-h-screen p-4 sm:p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6 max-w-md text-center mx-2">
           <p className="text-green-700 font-semibold text-lg">Sizes saved.</p>
           <p className="text-black/70 mt-2">Thank you. You can close this page.</p>
         </div>
@@ -85,8 +85,8 @@ function ChooseSizesContent() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6 max-w-md text-center">
+      <div className="min-h-screen p-4 sm:p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6 max-w-md text-center mx-2">
           <p className="text-black font-medium">No PPE items to choose</p>
           <p className="text-black/70 text-sm mt-2">Your sub-department has no PPE items configured. Contact your supervisor.</p>
         </div>
@@ -95,10 +95,10 @@ function ChooseSizesContent() {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-lg mx-auto">
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-          <h1 className="text-2xl font-bold text-black">Choose your PPE sizes</h1>
+    <div className="min-h-screen p-4 sm:p-6 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-lg mx-auto px-2">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-black">Choose your PPE sizes</h1>
           <p className="text-black/70 mt-1">Hi {personName}, enter your size for each item below.</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -131,7 +131,7 @@ function ChooseSizesContent() {
 export default function ChooseSizesPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+      <div className="min-h-screen p-4 sm:p-6 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
         <p className="text-black/70">Loading...</p>
       </div>
     }>

@@ -4,6 +4,9 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getInspectionDepartment } from "@/lib/inspection-department";
+import { getPdfDownloadUrl } from "@/lib/pdf-download";
+import { fetchInspectionById } from "@/lib/fetch-inspection";
+import { upsertInspectionCache } from "@/lib/inspection-local-cache";
 
 // -------------------------------------------------------------
 // MONTHLY COLUMNS
@@ -42,6 +45,7 @@ export default function MonthlyInspectionPage({
 
   const searchParams = useSearchParams();
   const existingId = searchParams.get("id");
+  const [loadingExisting, setLoadingExisting] = useState(!!existingId);
 
   const generateId = () => Math.random().toString(36).substring(2, 12);
 
@@ -60,10 +64,6 @@ export default function MonthlyInspectionPage({
     }
   }
 
-  function saveAllInspections(data: { daily: unknown[]; weekly: unknown[]; monthly: unknown[] }) {
-    localStorage.setItem("inspections", JSON.stringify(data));
-  }
-
   useEffect(() => {
     const selectedDept = getInspectionDepartment();
     if (selectedDept) setDepartment(selectedDept);
@@ -71,18 +71,56 @@ export default function MonthlyInspectionPage({
 
   useEffect(() => {
     if (!existingId) return;
-    const all = loadAllInspections();
-    const found = all.monthly.find((i: { id: string }) => i.id === existingId) as {
-      department?: string;
-      inspectorName?: string;
-      rows?: typeof rows;
-    } | undefined;
-    if (found) {
-      setDepartment(found.department || "");
-      setInspectorName(found.inspectorName || "");
-      if (found.rows && Array.isArray(found.rows)) setRows(found.rows);
+
+    let cancelled = false;
+
+    async function loadExisting() {
+      try {
+        const fromServer = await fetchInspectionById(existingId, "monthly");
+        if (cancelled) return;
+
+        if (fromServer) {
+          setDepartment(fromServer.department || "");
+          setInspectorName(fromServer.inspectorName || "");
+          if (Array.isArray(fromServer.rows)) {
+            setRows(fromServer.rows as typeof rows);
+          }
+          upsertInspectionCache("monthly", {
+            id: existingId,
+            type: fromServer.type,
+            department: fromServer.department,
+            inspectorName: fromServer.inspectorName,
+            timestamp: fromServer.timestamp,
+            rows: fromServer.rows,
+          });
+          return;
+        }
+
+        const all = loadAllInspections();
+        const found = all.monthly.find((i: { id: string }) => i.id === existingId) as {
+          department?: string;
+          inspectorName?: string;
+          rows?: typeof rows;
+        } | undefined;
+        if (found) {
+          setDepartment(found.department || "");
+          setInspectorName(found.inspectorName || "");
+          if (found.rows && Array.isArray(found.rows)) setRows(found.rows);
+        }
+      } finally {
+        if (!cancelled) setLoadingExisting(false);
+      }
     }
+
+    loadExisting();
+    return () => {
+      cancelled = true;
+    };
   }, [existingId]);
+
+  if (loadingExisting) {
+    return <div className="p-10 text-xl">Loading inspection…</div>;
+  }
 
   const addRow = () => setRows([...rows, createRow(rows.length + 1)]);
   const deleteRow = (index: number) =>
@@ -111,28 +149,8 @@ export default function MonthlyInspectionPage({
       return;
     }
     setSaving(true);
-    const all = loadAllInspections();
     const now = Date.now();
     const id = existingId || generateId();
-
-    const updated = {
-      id,
-      type: inspectionType,
-      department: department.trim(),
-      inspectorName: inspectorName.trim(),
-      timestamp: existingId
-        ? (all.monthly.find((i: { id: string }) => i.id === id) as { timestamp?: number })?.timestamp ?? now
-        : now,
-      rows,
-    };
-
-    const idx = all.monthly.findIndex((i: { id: string }) => i.id === id);
-    if (idx !== -1) {
-      all.monthly[idx] = updated;
-    } else {
-      all.monthly.push(updated);
-    }
-    saveAllInspections(all);
 
     try {
       const res = await fetch("/api/inspections/save", {
@@ -161,6 +179,21 @@ export default function MonthlyInspectionPage({
       setSaving(false);
       return;
     }
+
+    const all = loadAllInspections();
+    const timestamp =
+      existingId
+        ? (all.monthly.find((i: { id: string; timestamp?: number }) => i.id === id) as { timestamp?: number })?.timestamp ?? now
+        : now;
+
+    upsertInspectionCache("monthly", {
+      id,
+      type: inspectionType,
+      department: department.trim(),
+      inspectorName: inspectorName.trim(),
+      timestamp,
+      rows,
+    });
 
     setSaving(false);
     window.location.href = `/inspections/new/monthly/${encodeURIComponent(inspectionType)}?id=${id}`;
@@ -351,7 +384,7 @@ export default function MonthlyInspectionPage({
                 View document
               </Link>
               <a
-                href={`/pdf-renderer?type=monthly-inspection&id=${encodeURIComponent(existingId)}`}
+                href={getPdfDownloadUrl("monthly-inspection", existingId)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-6 py-3 bg-purple-600/70 text-white rounded-lg shadow hover:bg-purple-700/70 transition"

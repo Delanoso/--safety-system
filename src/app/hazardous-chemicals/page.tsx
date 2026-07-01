@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Plus, Trash2, ExternalLink } from "lucide-react";
+import { LayoutDashboard, Plus, Trash2, ExternalLink, FileDown } from "lucide-react";
+import { downloadPdf } from "@/lib/pdf-download";
 
 type Chemical = {
   id: string;
@@ -18,6 +19,14 @@ type Chemical = {
 export default function HazardousChemicalsPage() {
   const [items, setItems] = useState<Chemical[]>([]);
   const [search, setSearch] = useState("");
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setCompanyId(d?.user?.companyId ?? null))
+      .catch(() => setCompanyId(null));
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -60,13 +69,25 @@ export default function HazardousChemicalsPage() {
             <h1 className="text-4xl font-bold text-black">Hazardous Chemicals Register</h1>
             <p className="text-black/70">Manage chemical inventory and SDS links.</p>
           </div>
-          <Link
-            href="/hazardous-chemicals/add"
-            className="button button-save flex items-center gap-2 w-fit"
-          >
-            <Plus size={18} />
-            Add Chemical
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {companyId && (
+              <button
+                type="button"
+                onClick={() => downloadPdf("hazardous-chemicals-register", companyId)}
+                className="button button-pdf flex items-center gap-2 w-fit"
+              >
+                <FileDown size={18} />
+                Download Register PDF
+              </button>
+            )}
+            <Link
+              href="/hazardous-chemicals/add"
+              className="button button-save flex items-center gap-2 w-fit"
+            >
+              <Plus size={18} />
+              Add Chemical
+            </Link>
+          </div>
         </div>
 
         <input

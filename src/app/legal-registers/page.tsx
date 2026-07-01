@@ -131,6 +131,15 @@ export default function LegalRegistersPage() {
           South African Health & Safety legislation across general industry,
           construction, mining, electrical, fire, and environmental sectors.
         </p>
+        <Link
+          href="/legal-compliance"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white shadow hover:bg-emerald-700 transition text-sm font-medium"
+        >
+          Open your Legal Compliance Register →
+        </Link>
+        <p className="text-black/60 text-sm -mt-6">
+          Track compliance status, evidence, and review dates for your company.
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {docs.map((doc, index) => (

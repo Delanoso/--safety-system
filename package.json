@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "test": "node scripts/smoke-test.mjs",
+    "test:smoke": "node scripts/smoke-test.mjs",
     "clean": "node scripts/clean-next.js",
     "dev:clean": "prisma generate && next dev",
     "dev:fresh": "node scripts/clean-next.js && prisma generate && next dev",
@@ -24,6 +26,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^5.15.0",
+    "@sentry/nextjs": "^10.40.0",
     "@sparticuz/chromium": "^143.0.4",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",

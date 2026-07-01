@@ -1,0 +1,44 @@
+# Local "all-in-one" run: app + Postgres.
+# Usage:
+#   1. Copy .env.example to .env and set DATABASE_URL (see below).
+#   2. docker compose up --build
+#   3. Open http://localhost:3000
+#
+# Database: Postgres runs in a container. Use this DATABASE_URL in .env:
+#   DATABASE_URL=postgresql://safety:safety@db:5432/safety
+# (User/pass/db match the environment below.)
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: safety
+      POSTGRES_PASSWORD: safety
+      POSTGRES_DB: safety
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safety -d safety"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    # Use 80 for production (Cloudflare connects to origin on port 80). Local dev: use 3000:3000 if you prefer.
+    ports:
+      - "80:3000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://safety:safety@db:5432/safety
+    depends_on:
+      db:
+        condition: service_healthy
+    # Apply migrations, then fall back to schema sync if needed
+    command: >
+      sh -c "node node_modules/prisma/build/index.js migrate deploy || node node_modules/prisma/build/index.js db push --accept-data-loss; exec node server.js"
+
+volumes:
+  postgres_data:

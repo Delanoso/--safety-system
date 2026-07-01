@@ -1,77 +1,75 @@
--- CreateTable
-CREATE TABLE "Medical" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "employee" TEXT NOT NULL,
-    "medicalType" TEXT NOT NULL,
-    "issueDate" TIMESTAMP(3) NOT NULL,
-    "expiryDate" TIMESTAMP(3) NOT NULL,
-    "notes" TEXT,
-    "fileUrl" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- Introduce Medicals and multi-tenant links (PostgreSQL-compatible)
+
+-- Create Medical table matching Prisma schema
+CREATE TABLE IF NOT EXISTS "Medical" (
+  "id" SERIAL PRIMARY KEY,
+  "employee" TEXT NOT NULL,
+  "medicalType" TEXT NOT NULL,
+  "issueDate" TIMESTAMP(3) NOT NULL,
+  "expiryDate" TIMESTAMP(3) NOT NULL,
+  "notes" TEXT,
+  "fileUrl" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- RedefineTables
-PRAGMA defer_foreign_keys=ON;
-PRAGMA foreign_keys=OFF;
-CREATE TABLE "new_Company" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
-    "logoUrl" TEXT,
-    "brandColor" TEXT,
-    "userLimit" INTEGER NOT NULL DEFAULT 5
-);
-INSERT INTO "new_Company" ("brandColor", "id", "logoUrl", "name") SELECT "brandColor", "id", "logoUrl", "name" FROM "Company";
-DROP TABLE "Company";
-ALTER TABLE "new_Company" RENAME TO "Company";
-CREATE TABLE "new_Incident" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "type" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT,
-    "department" TEXT,
-    "employee" TEXT,
-    "employeeId" TEXT,
-    "location" TEXT,
-    "date" TIMESTAMP(3) NOT NULL,
-    "severity" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'draft',
-    "linkId" TEXT,
-    "details" TEXT,
-    "companyId" TEXT,
-    "createdByUserId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    CONSTRAINT "Incident_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "Incident_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
-INSERT INTO "new_Incident" ("companyId", "createdAt", "date", "department", "description", "details", "employee", "employeeId", "id", "linkId", "location", "severity", "status", "title", "type", "updatedAt") SELECT "companyId", "createdAt", "date", "department", "description", "details", "employee", "employeeId", "id", "linkId", "location", "severity", "status", "title", "type", "updatedAt" FROM "Incident";
-DROP TABLE "Incident";
-ALTER TABLE "new_Incident" RENAME TO "Incident";
-CREATE TABLE "new_NcrReport" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "department" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'open',
-    "companyId" TEXT,
-    "createdByUserId" TEXT,
-    CONSTRAINT "NcrReport_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "NcrReport_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
-INSERT INTO "new_NcrReport" ("createdAt", "department", "id", "status") SELECT "createdAt", "department", "id", "status" FROM "NcrReport";
-DROP TABLE "NcrReport";
-ALTER TABLE "new_NcrReport" RENAME TO "NcrReport";
-CREATE TABLE "new_User" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "role" TEXT NOT NULL DEFAULT 'user',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "companyId" TEXT,
-    CONSTRAINT "User_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
-INSERT INTO "new_User" ("createdAt", "email", "id", "password", "role") SELECT "createdAt", "email", "id", "password", "role" FROM "User";
-DROP TABLE "User";
-ALTER TABLE "new_User" RENAME TO "User";
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-PRAGMA foreign_keys=ON;
-PRAGMA defer_foreign_keys=OFF;
+-- Ensure Company has userLimit (default 5)
+ALTER TABLE "Company"
+  ADD COLUMN IF NOT EXISTS "userLimit" INTEGER NOT NULL DEFAULT 5;
+
+-- Add multi-tenant fields (if not already present)
+ALTER TABLE "Incident"
+  ADD COLUMN IF NOT EXISTS "companyId" TEXT,
+  ADD COLUMN IF NOT EXISTS "createdByUserId" TEXT;
+
+ALTER TABLE "NcrReport"
+  ADD COLUMN IF NOT EXISTS "companyId" TEXT,
+  ADD COLUMN IF NOT EXISTS "createdByUserId" TEXT;
+
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "companyId" TEXT;
+
+-- Add / ensure foreign keys for new relations
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'Incident_companyId_fkey'
+  ) THEN
+    ALTER TABLE "Incident"
+      ADD CONSTRAINT "Incident_companyId_fkey"
+      FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'Incident_createdByUserId_fkey'
+  ) THEN
+    ALTER TABLE "Incident"
+      ADD CONSTRAINT "Incident_createdByUserId_fkey"
+      FOREIGN KEY ("createdByUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'NcrReport_companyId_fkey'
+  ) THEN
+    ALTER TABLE "NcrReport"
+      ADD CONSTRAINT "NcrReport_companyId_fkey"
+      FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'NcrReport_createdByUserId_fkey'
+  ) THEN
+    ALTER TABLE "NcrReport"
+      ADD CONSTRAINT "NcrReport_createdByUserId_fkey"
+      FOREIGN KEY ("createdByUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'User_companyId_fkey'
+  ) THEN
+    ALTER TABLE "User"
+      ADD CONSTRAINT "User_companyId_fkey"
+      FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END$$;
+

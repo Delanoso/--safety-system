@@ -30,7 +30,7 @@ export default function PPEManagementPage() {
     },
     {
       title: "PPE Issue Register",
-      description: "Issue PPE to people and record signatures. Send for electronic signature via email or phone.",
+      description: "Issue PPE to people and record signatures. Send for electronic signature via WhatsApp.",
       route: "/ppe-management/issue-register",
     },
     {
@@ -41,27 +41,27 @@ export default function PPEManagementPage() {
   ];
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-5xl mx-auto space-y-10">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-10">
         <div className="flex justify-start">
-          <Link href="/dashboard" className="button button-neutral flex items-center gap-2">
+          <Link href="/dashboard" className="button button-neutral flex items-center gap-2 text-sm sm:text-base">
             <LayoutDashboard size={18} />
             Dashboard
           </Link>
         </div>
-        <h1 className="text-4xl font-bold text-black">PPE Management</h1>
-        <p className="text-black/70">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">PPE Management</h1>
+        <p className="text-black/70 text-sm sm:text-base">
           Dashboard, size list, stock tracking, issuing and signatures, and reports. People from the size list appear in the issue register.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {items.map((item, index) => (
             <button
               key={index}
               onClick={() => router.push(item.route)}
-              className="text-left p-6 rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 hover:bg-white/80 transition"
+              className="text-left p-4 sm:p-6 rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 hover:bg-white/80 transition"
             >
-              <h2 className="text-xl font-bold text-black mb-2">{item.title}</h2>
+              <h2 className="text-base sm:text-xl font-bold text-black mb-2">{item.title}</h2>
               <p className="text-black/70 text-sm">{item.description}</p>
             </button>
           ))}

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output (we rebuild inside Docker)
+.next
+out
+build
+dist
+
+# Env and secrets (inject at runtime)
+.env
+.env.*
+!.env.example
+
+# Git and IDE
+.git
+.gitignore
+.cursor
+.vscode
+*.md
+!PRODUCTION.md
+
+# Tests and misc
+coverage
+.nyc_output
+*.log
+.DS_Store
+terminals
+
+# Optional: keep image smaller
+.cache

@@ -12,7 +12,9 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
+  FileDown,
 } from "lucide-react";
+import { downloadPdf } from "@/lib/pdf-download";
 import {
   MAINTENANCE_TYPES,
   MAINTENANCE_TEMPLATES,
@@ -191,12 +193,22 @@ export default function ScheduleDetailPage() {
             <h1 className="text-2xl font-bold text-black">{schedule.title}</h1>
             <p className="text-black/60">{schedule.items.length} item(s)</p>
           </div>
-          <Link
-            href="/maintenance-schedule"
-            className="button button-neutral flex items-center gap-2 w-fit"
-          >
-            All schedules
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => downloadPdf("maintenance-schedule", id)}
+              className="button button-pdf flex items-center gap-2 w-fit"
+            >
+              <FileDown size={18} />
+              Download PDF
+            </button>
+            <Link
+              href="/maintenance-schedule"
+              className="button button-neutral flex items-center gap-2 w-fit"
+            >
+              All schedules
+            </Link>
+          </div>
         </div>
 
         <div className="space-y-4">

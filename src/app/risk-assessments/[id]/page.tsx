@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ExternalLink, FileDown, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { ViewSignatureBlock } from "@/components/ViewSignatureBlock";
+import { RiskAssessmentHazardsView } from "@/components/RiskAssessmentHazardsView";
+import { getPdfDownloadUrl } from "@/lib/pdf-download";
 
 type Assessment = {
   id: string;
@@ -81,13 +83,11 @@ export default function RiskAssessmentViewPage() {
               </Link>
             )}
             <a
-              href={`/pdf-renderer?type=risk-assessment&id=${encodeURIComponent(id)}`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={getPdfDownloadUrl("risk-assessment", id)}
               className="button button-pdf flex items-center gap-2"
             >
               <FileDown size={18} />
-              Save as PDF
+              Download PDF
             </a>
             <button
               onClick={handleDelete}
@@ -143,7 +143,7 @@ export default function RiskAssessmentViewPage() {
                 onClick={() => setControlsExpanded((e) => !e)}
                 className="flex items-center gap-2 text-lg font-semibold text-black mb-2 w-full text-left"
               >
-                Controls / Mitigations
+                Hazards &amp; controls
                 {controlsExpanded ? (
                   <ChevronUp size={20} />
                 ) : (
@@ -151,7 +151,7 @@ export default function RiskAssessmentViewPage() {
                 )}
               </button>
               {controlsExpanded && (
-                <p className="text-black/80 whitespace-pre-wrap">{assessment.controls}</p>
+                <RiskAssessmentHazardsView controls={assessment.controls} />
               )}
             </div>
           )}

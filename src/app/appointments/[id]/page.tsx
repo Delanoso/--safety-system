@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FileDown } from "lucide-react";
+import { downloadPdf } from "@/lib/pdf-download";
 
 export default function AppointmentViewer() {
   const { id } = useParams();
@@ -94,10 +95,7 @@ export default function AppointmentViewer() {
           className="button button-pdf flex items-center gap-2 w-full justify-center"
           onClick={() => {
             if (!appointment) return;
-            const url = `/pdf-renderer?type=appointment&id=${encodeURIComponent(
-              appointment.id
-            )}`;
-            window.open(url, "_blank");
+            downloadPdf("appointment", appointment.id);
           }}
         >
           <FileDown size={18} />

@@ -8,6 +8,15 @@ import {
   FileSignature,
   Package,
   ArrowLeft,
+  ClipboardList,
+  HardHat,
+  Users,
+  Wrench,
+  Search,
+  Calendar,
+  FlaskConical,
+  AlertTriangle,
+  Shield,
 } from "lucide-react";
 
 type NotificationItem = {
@@ -24,6 +33,18 @@ type NotificationData = {
   expiringMedicals: NotificationItem[];
   unsignedAppointments: NotificationItem[];
   unsignedPpeIssues: NotificationItem[];
+  expiringInductions: NotificationItem[];
+  complianceReviewDue: NotificationItem[];
+  contractorsLowCompliance: NotificationItem[];
+  maintenanceDue: NotificationItem[];
+  inspectionsDue: NotificationItem[];
+  expiringPermits: NotificationItem[];
+  visitorsOnSite: NotificationItem[];
+  unsignedToolboxAttendees: NotificationItem[];
+  hazardousChemicalsNoSds: NotificationItem[];
+  plannedDrills: NotificationItem[];
+  riskAssessmentsReviewDue: NotificationItem[];
+  sheMeetingActionsDue: NotificationItem[];
   total: number;
 };
 
@@ -32,6 +53,19 @@ const typeIcons: Record<string, React.ReactNode> = {
   medical_expiring: <Stethoscope size={20} />,
   unsigned_appointment: <FileSignature size={20} />,
   unsigned_ppe: <Package size={20} />,
+  induction_expiring: <Users size={20} />,
+  compliance_review_due: <ClipboardList size={20} />,
+  contractor_low_compliance: <HardHat size={20} />,
+  maintenance_due: <Wrench size={20} />,
+  inspection_due: <Search size={20} />,
+  ncr_open: <ClipboardList size={20} />,
+  permit_expiring: <Calendar size={20} />,
+  visitor_on_site: <Users size={20} />,
+  toolbox_unsigned: <HardHat size={20} />,
+  chemical_no_sds: <FlaskConical size={20} />,
+  drill_planned: <AlertTriangle size={20} />,
+  risk_review_due: <Shield size={20} />,
+  she_action_due: <ClipboardList size={20} />,
 };
 
 const typeLabels: Record<string, string> = {
@@ -39,6 +73,19 @@ const typeLabels: Record<string, string> = {
   medical_expiring: "Medical expiring",
   unsigned_appointment: "Awaiting signature",
   unsigned_ppe: "PPE awaiting signature",
+  induction_expiring: "Induction expiring",
+  compliance_review_due: "Compliance review due",
+  contractor_low_compliance: "Contractor compliance low",
+  maintenance_due: "Maintenance due",
+  inspection_due: "Inspection due",
+  ncr_open: "Open non-conformance",
+  permit_expiring: "Permit expiring",
+  visitor_on_site: "Visitor on site",
+  toolbox_unsigned: "Toolbox talk unsigned",
+  chemical_no_sds: "Chemical missing SDS",
+  drill_planned: "Planned emergency drill",
+  risk_review_due: "Risk assessment review due",
+  she_action_due: "SHE meeting action due",
 };
 
 function NotificationCard({ item }: { item: NotificationItem }) {
@@ -87,6 +134,18 @@ export default function NotificationsPage() {
         ...data.expiringMedicals,
         ...data.unsignedAppointments,
         ...data.unsignedPpeIssues,
+        ...(data.expiringInductions ?? []),
+        ...(data.complianceReviewDue ?? []),
+        ...(data.contractorsLowCompliance ?? []),
+        ...(data.maintenanceDue ?? []),
+        ...(data.inspectionsDue ?? []),
+        ...(data.expiringPermits ?? []),
+        ...(data.visitorsOnSite ?? []),
+        ...(data.unsignedToolboxAttendees ?? []),
+        ...(data.hazardousChemicalsNoSds ?? []),
+        ...(data.plannedDrills ?? []),
+        ...(data.riskAssessmentsReviewDue ?? []),
+        ...(data.sheMeetingActionsDue ?? []),
       ].sort(
         (a, b) =>
           new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -108,8 +167,7 @@ export default function NotificationsPage() {
             Notifications
           </h1>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Expiring certificates and medicals (30 days), documents awaiting
-            signature
+            Expiring certificates, medicals and inductions, inspections and maintenance due, compliance reviews, and documents awaiting signature
           </p>
         </div>
       </div>
@@ -176,6 +234,162 @@ export default function NotificationsPage() {
               </h2>
               <div className="space-y-2">
                 {data.unsignedPpeIssues.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.expiringInductions?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Users size={18} />
+                Inductions expiring in 30 days
+              </h2>
+              <div className="space-y-2">
+                {data.expiringInductions.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.complianceReviewDue?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <ClipboardList size={18} />
+                Legal compliance reviews due
+              </h2>
+              <div className="space-y-2">
+                {data.complianceReviewDue.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.inspectionsDue?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Search size={18} />
+                Inspections due & open NCRs
+              </h2>
+              <div className="space-y-2">
+                {data.inspectionsDue.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.maintenanceDue?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Wrench size={18} />
+                Maintenance due (30 days)
+              </h2>
+              <div className="space-y-2">
+                {data.maintenanceDue.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.contractorsLowCompliance?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <HardHat size={18} />
+                Contractors below 80% compliance
+              </h2>
+              <div className="space-y-2">
+                {data.contractorsLowCompliance.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.expiringPermits?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Calendar size={18} />
+                Permits expiring in 30 days
+              </h2>
+              <div className="space-y-2">
+                {data.expiringPermits.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.visitorsOnSite?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Users size={18} />
+                Visitors currently on site
+              </h2>
+              <div className="space-y-2">
+                {data.visitorsOnSite.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.unsignedToolboxAttendees?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <HardHat size={18} />
+                Toolbox talk attendees awaiting signature
+              </h2>
+              <div className="space-y-2">
+                {data.unsignedToolboxAttendees.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.hazardousChemicalsNoSds?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <FlaskConical size={18} />
+                Chemicals without SDS
+              </h2>
+              <div className="space-y-2">
+                {data.hazardousChemicalsNoSds.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.plannedDrills?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <AlertTriangle size={18} />
+                Planned emergency drills
+              </h2>
+              <div className="space-y-2">
+                {data.plannedDrills.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.riskAssessmentsReviewDue?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Shield size={18} />
+                Risk assessment reviews due
+              </h2>
+              <div className="space-y-2">
+                {data.riskAssessmentsReviewDue.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.sheMeetingActionsDue?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <ClipboardList size={18} />
+                SHE meeting actions due
+              </h2>
+              <div className="space-y-2">
+                {data.sheMeetingActionsDue.map((item) => (
                   <NotificationCard key={item.id} item={item} />
                 ))}
               </div>

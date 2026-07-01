@@ -74,20 +74,20 @@ export default function RelevantDocumentsPage() {
   ];
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-5xl mx-auto space-y-10">
-        <h1 className="text-4xl font-bold text-black">Relevant Documentation</h1>
-        <p className="text-black/70">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">Relevant Documentation</h1>
+        <p className="text-black/70 text-sm sm:text-base">
           Official COIDA and RMA forms required for workplace injuries and occupational diseases.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {docs.map((doc, index) => (
             <div
               key={index}
-              className="p-6 rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40"
+              className="p-4 sm:p-6 rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40"
             >
-              <h2 className="text-xl font-bold text-black mb-2">{doc.title}</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-black mb-2">{doc.title}</h2>
               <p className="text-black/70 text-sm mb-4">{doc.description}</p>
 
               <a

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Trash2, Eye } from "lucide-react";
 import { getInspectionDepartment } from "@/lib/inspection-department";
 
 type Frequency = "daily" | "weekly" | "monthly";
@@ -65,14 +65,15 @@ function Dropdown({
         <div className="mt-4 flex flex-col gap-3">
           {items.map((item) => {
             const typeSlug = encodeURIComponent(item.type || "Inspection");
-            const href = `/inspections/new/${frequency}/${typeSlug}?id=${item.id}`;
+            const editHref = `/inspections/new/${frequency}/${typeSlug}?id=${item.id}`;
+            const viewHref = `/inspections/view/${frequency}/${item.id}`;
 
             return (
               <div
                 key={item.id}
                 className="p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/20 hover:bg-white/50 dark:hover:bg-white/10 transition shadow flex items-start justify-between gap-3"
               >
-                <Link href={href} className="flex-1 min-w-0">
+                <Link href={editHref} className="flex-1 min-w-0">
                   <div className="font-semibold">{item.type || "Inspection"}</div>
                   <div className="text-sm opacity-70">
                     Department: {item.department || "—"}
@@ -84,7 +85,15 @@ function Dropdown({
                     Created: {new Date(item.timestamp).toLocaleString()}
                   </div>
                 </Link>
-                <button
+                <div className="flex shrink-0 items-center gap-1">
+                  <Link
+                    href={viewHref}
+                    className="p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/10 transition"
+                    title="View completed document"
+                  >
+                    <Eye size={18} />
+                  </Link>
+                  <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
@@ -98,6 +107,7 @@ function Dropdown({
                 >
                   <Trash2 size={18} />
                 </button>
+                </div>
               </div>
             );
           })}

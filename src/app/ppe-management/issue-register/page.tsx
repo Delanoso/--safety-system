@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { FileDown } from "lucide-react";
+import { openWhatsAppLink } from "@/lib/open-whatsapp";
+import { downloadPdf } from "@/lib/pdf-download";
 
 type Person = { id: number; name: string; email: string | null; phone: string | null };
 type ItemType = { id: number; name: string };
@@ -25,7 +28,6 @@ export default function PPEIssueRegisterPage() {
   const [addForm, setAddForm] = useState({ personId: "", itemTypeId: "", quantity: 1 });
   const [signingIssueId, setSigningIssueId] = useState<number | null>(null);
   const [sendLinkIssueId, setSendLinkIssueId] = useState<number | null>(null);
-  const [sendEmail, setSendEmail] = useState("");
   const [sendPhone, setSendPhone] = useState("");
   const [signUrl, setSignUrl] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -130,29 +132,30 @@ export default function PPEIssueRegisterPage() {
   }
 
   function requestSignToken(issueId: number) {
+    if (!sendPhone.trim()) {
+      alert("Enter a WhatsApp phone number.");
+      return;
+    }
     fetch(`/api/ppe/issues/${issueId}/send-for-signature`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: sendEmail.trim() || undefined,
-        phone: sendPhone.trim() || undefined,
-      }),
+      body: JSON.stringify({ phone: sendPhone.trim() }),
     })
       .then((r) => r.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
         setSignUrl(data.signUrl || null);
         setSendLinkIssueId(null);
-        setSendEmail("");
         setSendPhone("");
+        if (data.whatsappUrl) openWhatsAppLink(data.whatsappUrl);
         load();
       })
-      .catch((err) => alert(err?.message || err?.error || "Failed to send."));
+      .catch((err) => alert(err?.message || err?.error || "Failed to send via WhatsApp."));
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
         <p className="text-black/70">Loading...</p>
       </div>
     );
@@ -161,22 +164,22 @@ export default function PPEIssueRegisterPage() {
   const signingIssue = issues.find((i) => i.id === signingIssueId);
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-6xl mx-auto space-y-10">
-        <h1 className="text-4xl font-bold text-black">PPE Issue Register</h1>
-        <p className="text-black/70">
-          Issue PPE to people. They sign per item. Send the signing link to their email or phone for electronic signature.
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">PPE Issue Register</h1>
+        <p className="text-black/70 text-sm sm:text-base">
+          Issue PPE to people. They sign per item. Send the signing link via WhatsApp for electronic signature.
         </p>
 
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-          <h2 className="text-lg font-bold text-black mb-4">Add issue (then sign or send for signature)</h2>
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-black mb-4">Add issue (then sign or send for signature)</h2>
           <form onSubmit={handleAddIssue} className="flex flex-wrap gap-4 items-end">
             <div>
               <label className="block text-sm font-semibold text-black mb-1">Person</label>
               <select
                 value={addForm.personId}
                 onChange={(e) => setAddForm((f) => ({ ...f, personId: e.target.value }))}
-                className="p-2 rounded-lg border border-white/40 bg-white/70 min-w-[180px]"
+                className="p-2 rounded-lg border border-white/40 bg-white/70 min-w-0 sm:min-w-[180px]"
               >
                 <option value="">Select person</option>
                 {persons.map((p) => (
@@ -189,7 +192,7 @@ export default function PPEIssueRegisterPage() {
               <select
                 value={addForm.itemTypeId}
                 onChange={(e) => setAddForm((f) => ({ ...f, itemTypeId: e.target.value }))}
-                className="p-2 rounded-lg border border-white/40 bg-white/70 min-w-[140px]"
+                className="p-2 rounded-lg border border-white/40 bg-white/70 min-w-0 sm:min-w-[140px]"
               >
                 <option value="">
                   {itemTypes.length === 0 ? "No items — add in Stock List first" : "Select item"}
@@ -214,7 +217,7 @@ export default function PPEIssueRegisterPage() {
                 className="p-2 rounded-lg border border-white/40 bg-white/70 w-20"
               />
             </div>
-            <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">
+            <button type="submit" className="px-3 py-2 sm:px-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 text-sm sm:text-base">
               Add & sign
             </button>
           </form>
@@ -251,28 +254,21 @@ export default function PPEIssueRegisterPage() {
 
         {sendLinkIssueId != null && (
           <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-            <h2 className="text-lg font-bold text-black mb-4">Send signing link</h2>
-            <p className="text-sm text-black/60 mb-4">Enter email and/or phone. Link will be sent by email if Resend is configured, or copy the link to send via SMS/WhatsApp.</p>
+            <h2 className="text-lg font-bold text-black mb-4">Send signing link via WhatsApp</h2>
+            <p className="text-sm text-black/60 mb-4">Enter the person&apos;s WhatsApp number. WhatsApp will open with the signing link ready to send.</p>
             <div className="flex flex-wrap gap-4 mb-4">
               <input
-                type="email"
-                placeholder="Email"
-                value={sendEmail}
-                onChange={(e) => setSendEmail(e.target.value)}
-                className="p-2 rounded border bg-white/80 min-w-[200px]"
-              />
-              <input
-                type="text"
-                placeholder="Phone"
+                type="tel"
+                placeholder="WhatsApp number"
                 value={sendPhone}
                 onChange={(e) => setSendPhone(e.target.value)}
-                className="p-2 rounded border bg-white/80 min-w-[160px]"
+                className="p-2 rounded border bg-white/80 min-w-[200px]"
               />
               <button
                 onClick={() => requestSignToken(sendLinkIssueId)}
                 className="px-4 py-2 rounded-lg bg-green-600 text-white"
               >
-                Send link
+                Send via WhatsApp
               </button>
               <button onClick={() => setSendLinkIssueId(null)} className="px-4 py-2 rounded bg-gray-300">Cancel</button>
             </div>
@@ -289,45 +285,46 @@ export default function PPEIssueRegisterPage() {
           </div>
         )}
 
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden">
-          <table className="w-full text-left">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden min-w-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[500px] sm:min-w-0 text-sm sm:text-base">
             <thead>
               <tr className="bg-white/40">
-                <th className="p-4 font-semibold text-black">Person</th>
-                <th className="p-4 font-semibold text-black">Item</th>
-                <th className="p-4 font-semibold text-black">Qty</th>
-                <th className="p-4 font-semibold text-black">Date</th>
-                <th className="p-4 font-semibold text-black">Status</th>
-                <th className="p-4 font-semibold text-black">Actions</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Person</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Item</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Qty</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Date</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Status</th>
+                <th className="p-2 sm:p-4 font-semibold text-black">Actions</th>
               </tr>
             </thead>
             <tbody>
               {issues.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-4 text-center text-black/60">
+                  <td colSpan={6} className="p-2 sm:p-4 text-center text-black/60">
                     No issues yet. Add an issue above.
                   </td>
                 </tr>
               )}
               {issues.map((i) => (
                 <tr key={i.id} className="border-t border-white/40">
-                  <td className="p-4 text-black">{i.person.name}</td>
-                  <td className="p-4 text-black">{i.itemType.name}</td>
-                  <td className="p-4 text-black">{i.quantity}</td>
-                  <td className="p-4 text-black/80">{new Date(i.issueDate).toLocaleDateString()}</td>
-                  <td className="p-4">
+                  <td className="p-2 sm:p-4 text-black">{i.person.name}</td>
+                  <td className="p-2 sm:p-4 text-black">{i.itemType.name}</td>
+                  <td className="p-2 sm:p-4 text-black">{i.quantity}</td>
+                  <td className="p-2 sm:p-4 text-black/80">{new Date(i.issueDate).toLocaleDateString()}</td>
+                  <td className="p-2 sm:p-4">
                     {i.status === "signed" ? (
                       <span className="text-green-600 font-semibold">Signed</span>
                     ) : (
                       <span className="text-orange-600 font-semibold">Pending</span>
                     )}
                   </td>
-                  <td className="p-4">
+                  <td className="p-2 sm:p-4">
                     {i.status === "signed" && i.signature && (
                       <img src={i.signature} alt="Signature" className="h-10 w-24 object-contain border rounded" />
                     )}
                     {i.status === "pending_signature" && (
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <button
                           onClick={() => handleSignNow(i.id)}
                           className="px-2 py-1 rounded bg-blue-600 text-white text-sm"
@@ -342,11 +339,20 @@ export default function PPEIssueRegisterPage() {
                         </button>
                       </div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => downloadPdf("ppe-issue", i.id)}
+                      className="mt-1 px-2 py-1 rounded bg-gray-700 text-white text-sm flex items-center gap-1"
+                    >
+                      <FileDown size={14} />
+                      PDF
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

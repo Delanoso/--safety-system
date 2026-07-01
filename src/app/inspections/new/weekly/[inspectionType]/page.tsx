@@ -4,6 +4,9 @@ import { useState, useEffect, useMemo, use } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getInspectionDepartment } from "@/lib/inspection-department";
+import { getPdfDownloadUrl } from "@/lib/pdf-download";
+import { fetchInspectionById } from "@/lib/fetch-inspection";
+import { upsertInspectionCache } from "@/lib/inspection-local-cache";
 
 // Weekly columns
 const weeklyColumns = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
@@ -27,10 +30,6 @@ function loadAllInspections() {
   } catch {
     return { daily: [], weekly: [], monthly: [] };
   }
-}
-
-function saveAllInspections(data: any) {
-  localStorage.setItem("inspections", JSON.stringify(data));
 }
 
 function loadDepartments(): string[] {
@@ -79,6 +78,7 @@ export default function WeeklyInspectionPage({
   const [departments, setDepartments] = useState<string[]>([]);
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [deptQuery, setDeptQuery] = useState("");
+  const [loadingExisting, setLoadingExisting] = useState(!!existingId);
 
   // ----------------------
   // Load departments and selected department
@@ -93,18 +93,55 @@ export default function WeeklyInspectionPage({
   // Load existing inspection
   // ----------------------
   useEffect(() => {
-    const all = loadAllInspections();
+    if (!existingId) return;
 
-    if (existingId) {
-      const found = all.weekly.find((i: any) => i.id === existingId);
-      if (found) {
-        setDepartment(found.department || "");
-        setInspectorName(found.inspectorName || "");
-        setRows(found.rows || rows);
-        return;
+    let cancelled = false;
+
+    async function loadExisting() {
+      try {
+        const fromServer = await fetchInspectionById(existingId, "weekly");
+        if (cancelled) return;
+
+        if (fromServer) {
+          setDepartment(fromServer.department || "");
+          setInspectorName(fromServer.inspectorName || "");
+          if (Array.isArray(fromServer.rows)) {
+            setRows(fromServer.rows as typeof rows);
+          }
+          upsertInspectionCache("weekly", {
+            id: existingId,
+            type: fromServer.type,
+            department: fromServer.department,
+            inspectorName: fromServer.inspectorName,
+            timestamp: fromServer.timestamp,
+            rows: fromServer.rows,
+          });
+          return;
+        }
+
+        const all = loadAllInspections();
+        const found = all.weekly.find((i: { id: string }) => i.id === existingId) as
+          | { department?: string; inspectorName?: string; rows?: typeof rows }
+          | undefined;
+        if (found) {
+          setDepartment(found.department || "");
+          setInspectorName(found.inspectorName || "");
+          if (found.rows) setRows(found.rows);
+        }
+      } finally {
+        if (!cancelled) setLoadingExisting(false);
       }
     }
+
+    loadExisting();
+    return () => {
+      cancelled = true;
+    };
   }, [existingId]);
+
+  if (loadingExisting) {
+    return <div className="p-10 text-xl">Loading inspection…</div>;
+  }
 
   // ----------------------
   // Department suggestions
@@ -154,35 +191,8 @@ export default function WeeklyInspectionPage({
       return;
     }
 
-    const all = loadAllInspections();
     const now = Date.now();
     const id = existingId || generateId();
-
-    const updated = {
-      id,
-      type: inspectionType,
-      department: department.trim(),
-      inspectorName: inspectorName.trim(),
-      timestamp: existingId
-        ? all.weekly.find((i: any) => i.id === existingId)?.timestamp ?? now
-        : now,
-      rows,
-    };
-
-    const idx = all.weekly.findIndex((i: any) => i.id === id);
-    if (idx !== -1) {
-      all.weekly[idx] = updated;
-    } else {
-      all.weekly.push(updated);
-    }
-
-    saveAllInspections(all);
-
-    if (department.trim()) {
-      const next = [...departments, department.trim()];
-      saveDepartments(next);
-      setDepartments(Array.from(new Set(next)));
-    }
 
     try {
       const res = await fetch("/api/inspections/save", {
@@ -208,6 +218,27 @@ export default function WeeklyInspectionPage({
       console.error("Save error:", err);
       alert("Failed to save inspection. Please try again.");
       return;
+    }
+
+    const all = loadAllInspections();
+    const timestamp =
+      existingId
+        ? (all.weekly.find((i: { id: string; timestamp?: number }) => i.id === existingId)?.timestamp ?? now)
+        : now;
+
+    upsertInspectionCache("weekly", {
+      id,
+      type: inspectionType,
+      department: department.trim(),
+      inspectorName: inspectorName.trim(),
+      timestamp,
+      rows,
+    });
+
+    if (department.trim()) {
+      const next = [...departments, department.trim()];
+      saveDepartments(next);
+      setDepartments(Array.from(new Set(next)));
     }
 
     window.location.href = `/inspections/new/weekly/${encodeURIComponent(inspectionType)}?id=${id}`;
@@ -431,7 +462,7 @@ export default function WeeklyInspectionPage({
               View document
             </Link>
             <a
-              href={`/pdf-renderer?type=weekly-inspection&id=${encodeURIComponent(existingId)}`}
+              href={getPdfDownloadUrl("weekly-inspection", existingId)}
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-3 bg-purple-600/70 text-white rounded-lg shadow hover:bg-purple-700/70 transition"

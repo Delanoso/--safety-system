@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileDown, ArrowLeft } from "lucide-react";
+import { getPdfDownloadUrl } from "@/lib/pdf-download";
 
 export const dynamic = "force-dynamic";
 
@@ -40,9 +41,7 @@ export default async function ViewNcrPage({
             Back to Non-Conformance
           </Link>
           <a
-            href={`/pdf-renderer?type=ncr&id=${encodeURIComponent(id)}`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={getPdfDownloadUrl("ncr", id)}
             className="button button-pdf inline-flex items-center gap-2"
           >
             <FileDown size={20} />
@@ -93,7 +92,7 @@ export default async function ViewNcrPage({
         </div>
 
         <footer className="mt-10 pt-4 border-t border-black text-center text-xs text-black">
-          Safety System — Non-Conformance Report
+          Salus — Non-Conformance Report
         </footer>
       </div>
     </div>

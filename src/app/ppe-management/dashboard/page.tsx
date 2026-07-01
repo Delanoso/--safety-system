@@ -59,7 +59,7 @@ export default function PPEDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
+      <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 flex items-center justify-center">
         <p className="text-black/70">Loading...</p>
       </div>
     );
@@ -79,58 +79,58 @@ export default function PPEDashboardPage() {
       };
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
+      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
         {data === null && (
-          <div className="rounded-xl bg-amber-100 text-amber-800 px-4 py-3 text-sm">
+          <div className="rounded-xl bg-amber-100 text-amber-800 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
             Could not load dashboard data. Showing zeros. Check the dashboard API or run database migrations (e.g. <code className="bg-white/50 px-1 rounded">npx prisma db push</code>).
           </div>
         )}
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-black">PPE Dashboard</h1>
-            <p className="text-black/70 mt-1">Stock, issues and signatures at a glance.</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black">PPE Dashboard</h1>
+            <p className="text-black/70 mt-1 text-sm sm:text-base">Stock, issues and signatures at a glance.</p>
           </div>
           <Link
             href="/ppe-management"
-            className="px-4 py-2 rounded-xl bg-white/60 border border-white/40 text-black font-semibold hover:bg-white/80 transition"
+            className="px-3 py-2 sm:px-4 rounded-xl bg-white/60 border border-white/40 text-black font-semibold hover:bg-white/80 transition text-sm sm:text-base shrink-0"
           >
             ← Back to PPE Management
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-            <p className="text-sm font-semibold text-black/70">Active people</p>
-            <p className="text-3xl font-bold text-black mt-1">{d.totalPeople}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+            <p className="text-xs sm:text-sm font-semibold text-black/70">Active people</p>
+            <p className="text-2xl sm:text-3xl font-bold text-black mt-1">{d.totalPeople}</p>
             <Link href="/ppe-management/size-list" className="text-sm text-blue-700 hover:underline mt-2 inline-block">
               Size list →
             </Link>
           </div>
-          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-            <p className="text-sm font-semibold text-black/70">Items in stock</p>
-            <p className="text-3xl font-bold text-black mt-1">{d.totalStockItems}</p>
+          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+            <p className="text-xs sm:text-sm font-semibold text-black/70">Items in stock</p>
+            <p className="text-2xl sm:text-3xl font-bold text-black mt-1">{d.totalStockItems}</p>
             <p className="text-sm text-black/60 mt-1">Total quantity: {d.totalStockQuantity}</p>
             <Link href="/ppe-management/stock-list" className="text-sm text-blue-700 hover:underline mt-2 inline-block">
               Stock list →
             </Link>
           </div>
-          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-            <p className="text-sm font-semibold text-black/70">Pending signatures</p>
-            <p className="text-3xl font-bold text-black mt-1">{d.pendingSignaturesCount}</p>
+          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+            <p className="text-xs sm:text-sm font-semibold text-black/70">Pending signatures</p>
+            <p className="text-2xl sm:text-3xl font-bold text-black mt-1">{d.pendingSignaturesCount}</p>
             <Link href="/ppe-management/issue-register" className="text-sm text-blue-700 hover:underline mt-2 inline-block">
               Issue register →
             </Link>
           </div>
-          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-            <p className="text-sm font-semibold text-black/70">Issues today</p>
-            <p className="text-3xl font-bold text-black mt-1">{d.issuesTodayCount}</p>
+          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+            <p className="text-xs sm:text-sm font-semibold text-black/70">Issues today</p>
+            <p className="text-2xl sm:text-3xl font-bold text-black mt-1">{d.issuesTodayCount}</p>
           </div>
         </div>
 
         {d.lowStockAlerts.length > 0 && (
-          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-            <h2 className="text-lg font-bold text-black mb-3">Low stock alerts</h2>
+          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-black mb-3">Low stock alerts</h2>
             <p className="text-sm text-black/70 mb-4">Items at or below minimum threshold. Consider reordering.</p>
             <ul className="space-y-2">
               {d.lowStockAlerts.map((a) => (
@@ -151,9 +151,9 @@ export default function PPEDashboardPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-            <h2 className="text-lg font-bold text-black mb-3">Issues today</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-black mb-3">Issues today</h2>
             {d.issuesToday.length === 0 ? (
               <p className="text-black/60 text-sm">No issues recorded today.</p>
             ) : (
@@ -169,8 +169,8 @@ export default function PPEDashboardPage() {
               Issue register →
             </Link>
           </div>
-          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-6">
-            <h2 className="text-lg font-bold text-black mb-3">Recent stock movements</h2>
+          <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-black mb-3">Recent stock movements</h2>
             {d.recentMovements.length === 0 ? (
               <p className="text-black/60 text-sm">No movements yet.</p>
             ) : (

@@ -38,12 +38,11 @@ export async function POST(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const created: { email?: string; phone?: string; voteUrl: string; token: string }[] = [];
+  const created: { phone?: string; voteUrl: string; token: string }[] = [];
 
   for (const v of votersInput) {
-    const email = v.email ? String(v.email).trim() : null;
     const phone = v.phone ? String(v.phone).trim() : null;
-    if (!email && !phone) continue;
+    if (!phone) continue;
 
     const token = generateToken();
     const voteUrl = `${baseUrl}/vote/she/${electionId}?token=${token}`;
@@ -51,13 +50,13 @@ export async function POST(
     await prisma.sHEElectionVoter.create({
       data: {
         electionId,
-        email: email || null,
-        phone: phone || null,
+        email: null,
+        phone,
         voteToken: token,
       },
     });
 
-    created.push({ email: email || undefined, phone: phone || undefined, voteUrl, token });
+    created.push({ phone, voteUrl, token });
   }
 
   return NextResponse.json({ created, count: created.length }, { status: 201 });

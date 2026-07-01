@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { computeContractorCompliance } from "@/lib/contractor-compliance";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,56 @@ export async function GET() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
+    const companyId =
+      current.role !== "super" && current.companyId ? current.companyId : undefined;
+
+    const visitorsOnSite = await prisma.visitorRegisterEntry.count({
+      where: {
+        checkOutAt: null,
+        ...(companyId ? { companyId } : {}),
+      },
+    });
+
+    const activePermits = await prisma.permitToWork.count({
+      where: {
+        status: { in: ["active", "issued", "draft"] },
+        OR: [{ endDate: null }, { endDate: { gte: now } }],
+        ...(companyId ? { companyId } : {}),
+      },
+    });
+
+    const complianceReviewOverdue = await prisma.legalComplianceItem.count({
+      where: {
+        nextReviewDue: { lt: now },
+        ...(companyId ? { companyId } : {}),
+      },
+    });
+
+    const contractors = await prisma.contractor.findMany({
+      where: companyId ? { companyId } : {},
+      include: { documents: { select: { section: true } } },
+    });
+    let contractorsLowCompliance = 0;
+    let avgContractorCompliance = 100;
+    if (contractors.length > 0) {
+      const scores = contractors.map((c) =>
+        computeContractorCompliance(c.documents, c.excludedSections).percentage
+      );
+      contractorsLowCompliance = scores.filter((s) => s < 80).length;
+      avgContractorCompliance = Math.round(
+        scores.reduce((a, b) => a + b, 0) / scores.length
+      );
+    }
+
+    const thirtyDaysAhead = new Date(now);
+    thirtyDaysAhead.setDate(thirtyDaysAhead.getDate() + 30);
+    const inductionsExpiringSoon = await prisma.inductionTraining.count({
+      where: {
+        expiryDate: { gte: now, lte: thirtyDaysAhead },
+        ...(companyId ? { companyId } : {}),
+      },
+    });
+
     return NextResponse.json({
       totalIncidents,
       unsignedAppointments,
@@ -108,6 +159,12 @@ export async function GET() {
       ppeStockAlerts,
       incidentsOverTime,
       medicalsByType,
+      visitorsOnSite,
+      activePermits,
+      complianceReviewOverdue,
+      contractorsLowCompliance,
+      avgContractorCompliance,
+      inductionsExpiringSoon,
     });
   } catch (err) {
     console.error("Dashboard stats error:", err);
@@ -119,6 +176,12 @@ export async function GET() {
         ppeStockAlerts: 0,
         incidentsOverTime: [],
         medicalsByType: [],
+        visitorsOnSite: 0,
+        activePermits: 0,
+        complianceReviewOverdue: 0,
+        contractorsLowCompliance: 0,
+        avgContractorCompliance: 100,
+        inductionsExpiringSoon: 0,
       },
       { status: 200 }
     );
