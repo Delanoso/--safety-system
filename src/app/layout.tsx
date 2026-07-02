@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LegalNoticeModal } from "@/components/LegalNoticeModal";
 import ModuleGuard from "@/components/ModuleGuard";
-import AppNavigation from "@/components/AppNavigation";
+import RootPageChrome from "@/components/RootPageChrome";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,6 +24,7 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({
@@ -37,8 +38,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ModuleGuard>
-          <AppNavigation />
-          {children}
+          <RootPageChrome>{children}</RootPageChrome>
           <LegalNoticeModal />
         </ModuleGuard>
       </body>

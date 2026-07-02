@@ -29,7 +29,7 @@ export default async function RequestSignatureListPage() {
   });
 
   return (
-    <div className="space-y-6 sm:space-y-10 min-w-0 max-w-full overflow-x-hidden">
+    <div className="space-y-6 sm:space-y-10 min-w-0 max-w-full overflow-x-hidden p-0">
       <h1 className="text-2xl sm:text-4xl font-bold">Request Signatures</h1>
 
       <p className="opacity-80 max-w-2xl text-sm sm:text-base">

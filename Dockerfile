@@ -24,8 +24,12 @@ ENV DATABASE_URL="${PRISMA_GENERATE_DATABASE_URL}"
 
 ARG NEXT_PUBLIC_BASE_URL=https://onlinesafetysolutions.co.za
 ARG SITE_URL=https://onlinesafetysolutions.co.za
+ARG CACHE_BUST=1
 ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV SITE_URL=$SITE_URL
+ENV CACHE_BUST=$CACHE_BUST
+
+RUN echo "Build cache bust: $CACHE_BUST"
 
 RUN npx prisma generate
 RUN npm run build

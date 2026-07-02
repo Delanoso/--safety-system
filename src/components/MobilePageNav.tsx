@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ArrowLeft, Home } from "lucide-react";
 
 const AUTH_ONLY = ["/", "/login", "/signup"];
 const HAS_SHELL = ["/dashboard", "/docs"];
+const MODULE_LAYOUT = ["/appointments", "/incidents"];
 const PUBLIC_SIGN = [
   "/appointments/sign/",
   "/incidents/sign/",
@@ -19,46 +20,30 @@ function getParentPath(pathname: string): string {
   return `/${segments.slice(0, -1).join("/")}`;
 }
 
+export function shouldShowMobilePageNav(pathname: string): boolean {
+  if (AUTH_ONLY.includes(pathname)) return false;
+  if (HAS_SHELL.some((p) => pathname.startsWith(p))) return false;
+  if (MODULE_LAYOUT.some((p) => pathname.startsWith(p))) return false;
+  if (PUBLIC_SIGN.some((p) => pathname.startsWith(p))) return false;
+  if (pathname.startsWith("/pdf-renderer")) return false;
+  return true;
+}
+
 export default function MobilePageNav() {
   const pathname = usePathname() ?? "";
-  const router = useRouter();
 
-  if (AUTH_ONLY.includes(pathname)) return null;
-  if (HAS_SHELL.some((p) => pathname.startsWith(p))) return null;
-  if (PUBLIC_SIGN.some((p) => pathname.startsWith(p))) return null;
-  if (pathname.startsWith("/pdf-renderer")) return null;
+  if (!shouldShowMobilePageNav(pathname)) return null;
 
   const parentPath = getParentPath(pathname);
 
-  function handleBack() {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push(parentPath);
-  }
-
   return (
-    <nav
-      className="sticky top-0 z-40 flex items-center gap-2 px-3 py-2 border-b border-black/10
-                 bg-[rgba(255,255,255,0.92)] backdrop-blur-md shadow-sm lg:hidden"
-      aria-label="Page navigation"
-    >
-      <button
-        type="button"
-        onClick={handleBack}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold
-                   bg-[var(--button-neutral-bg)] text-white shrink-0"
-      >
-        <ArrowLeft size={18} />
+    <nav className="module-mobile-nav" aria-label="Page navigation">
+      <Link href={parentPath} className="module-mobile-nav__btn module-mobile-nav__btn--primary">
+        <ArrowLeft size={18} aria-hidden />
         Back
-      </button>
-      <Link
-        href="/dashboard"
-        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold
-                   border border-black/15 bg-white/80 shrink-0"
-      >
-        <Home size={18} />
+      </Link>
+      <Link href="/dashboard" className="module-mobile-nav__btn module-mobile-nav__btn--secondary">
+        <Home size={18} aria-hidden />
         Home
       </Link>
     </nav>

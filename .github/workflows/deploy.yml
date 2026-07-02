@@ -67,6 +67,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_BASE_URL=https://onlinesafetysolutions.co.za
             SITE_URL=https://onlinesafetysolutions.co.za
+            CACHE_BUST=${{ github.sha }}
 
   deploy:
     needs: build
