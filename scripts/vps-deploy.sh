@@ -28,8 +28,35 @@ echo "==> Pull app image: $APP_IMAGE"
 docker compose -f "$COMPOSE_FILE" pull app
 
 echo "==> Migrations"
+MIGRATE_LOG="$(mktemp)"
+set +e
 docker compose -f "$COMPOSE_FILE" run --rm --no-deps app \
-  node node_modules/prisma/build/index.js migrate deploy
+  node node_modules/prisma/build/index.js migrate deploy 2>&1 | tee "$MIGRATE_LOG"
+MIGRATE_EXIT="${PIPESTATUS[0]}"
+set -e
+
+if [[ "$MIGRATE_EXIT" -ne 0 ]]; then
+  if grep -q P3005 "$MIGRATE_LOG"; then
+    echo "Database exists without migration history — baselining (one-time)..."
+    mapfile -t MIGRATIONS < <(
+      docker compose -f "$COMPOSE_FILE" run --rm --no-deps app \
+        sh -c 'ls prisma/migrations' | grep -E '^[0-9]' || true
+    )
+    for migration in "${MIGRATIONS[@]}"; do
+      echo "  mark applied: $migration"
+      docker compose -f "$COMPOSE_FILE" run --rm --no-deps app \
+        node node_modules/prisma/build/index.js migrate resolve --applied "$migration" || true
+    done
+    docker compose -f "$COMPOSE_FILE" run --rm --no-deps app \
+      node node_modules/prisma/build/index.js migrate deploy
+  else
+    echo "migrate deploy failed — falling back to db push"
+    cat "$MIGRATE_LOG"
+    docker compose -f "$COMPOSE_FILE" run --rm --no-deps app \
+      node node_modules/prisma/build/index.js db push
+  fi
+fi
+rm -f "$MIGRATE_LOG"
 
 echo "==> Restart app (database unchanged)"
 docker compose -f "$COMPOSE_FILE" up -d --no-deps --force-recreate app
