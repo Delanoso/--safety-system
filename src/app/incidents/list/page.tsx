@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FileDown, Eye, Trash2, Pencil } from "lucide-react";
 import { downloadPdf } from "@/lib/pdf-download";
+import { incidentPdfDownloadType, incidentTypeLabel } from "@/lib/incident-constants";
 
 export default function PastIncidentsPage() {
   const [incidents, setIncidents] = useState([]);
@@ -52,16 +53,16 @@ export default function PastIncidentsPage() {
             border: "1px solid var(--card-border)",
           }}
         >
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">Completed Incidents</h1>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">Completed Reports</h1>
           <p className="opacity-70 mt-2 text-sm sm:text-base">
-            View, download, edit, or delete finalized incident reports.
+            View, download, edit, or delete finalized incident, accident, and near miss reports.
           </p>
         </div>
 
         {/* NO INCIDENTS */}
         {incidents.length === 0 && (
           <p className="text-center text-base sm:text-lg opacity-70">
-            No completed incidents found.
+            No completed reports found.
           </p>
         )}
 
@@ -94,6 +95,17 @@ export default function PastIncidentsPage() {
                 {/* CONTENT */}
                 <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                   <h2 className="text-xl sm:text-2xl font-bold">{incident.title}</h2>
+                  {(incident.type === "accident" || incident.type === "near_miss") && (
+                    <span
+                      className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
+                        incident.type === "accident"
+                          ? "bg-amber-500/20 text-amber-200 border-amber-400/40"
+                          : "bg-sky-500/20 text-sky-200 border-sky-400/40"
+                      }`}
+                    >
+                      {incidentTypeLabel(incident.type)}
+                    </span>
+                  )}
 
                   <p className="opacity-70 text-sm">
                     {incident.description || "No short description provided"}
@@ -101,7 +113,12 @@ export default function PastIncidentsPage() {
 
                   <div className="opacity-80 text-sm space-y-1">
                     <p><strong>Date:</strong> {formatDate(incident.date)}</p>
-                    <p><strong>Department:</strong> {incident.department || "N/A"}</p>
+                    <p>
+                      <strong>
+                        {incident.type === "accident" ? "Area of Accident" : "Department"}:
+                      </strong>{" "}
+                      {incident.department || "N/A"}
+                    </p>
                     <p><strong>Severity:</strong> {incident.severity}</p>
                   </div>
 
@@ -131,10 +148,7 @@ export default function PastIncidentsPage() {
                       type="button"
                       className="button button-pdf flex items-center gap-2"
                       onClick={() =>
-                        downloadPdf(
-                          incident.type === "cost_analysis" ? "cost-analysis" : "incident",
-                          incident.id
-                        )
+                        downloadPdf(incidentPdfDownloadType(incident.type), incident.id)
                       }
                     >
                       <FileDown size={18} />

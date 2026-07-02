@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FileDown, ArrowLeft } from "lucide-react";
 import { downloadPdf } from "@/lib/pdf-download";
@@ -114,7 +114,10 @@ export default function IncidentViewerPage() {
           <div className="space-y-2">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{incident.title}</h1>
             <p className="opacity-70">
-              Completed Incident Report • {formatDate(incident.date)}
+              {incident.type === "accident"
+                ? "Completed Accident Report"
+                : "Completed Incident Report"}{" "}
+              • {formatDate(incident.date)}
             </p>
 
             <div className="flex gap-3 flex-wrap pt-2">
@@ -132,10 +135,28 @@ export default function IncidentViewerPage() {
             <InfoGrid>
               <Info label="Title" value={incident.title} bigLabel />
               <Info label="Date" value={formatDate(incident.date)} bigLabel />
-              <Info label="Department" value={incident.department} bigLabel />
+              <Info
+                label={incident.type === "accident" ? "Area of Accident" : "Department"}
+                value={incident.department}
+                bigLabel
+              />
               <Info label="Location" value={incident.location} bigLabel />
               <Info label="Employee" value={incident.employee} bigLabel />
               <Info label="Employee ID" value={incident.employeeId} bigLabel />
+              {(details.basic?.additionalPeople || []).map((person, index) => (
+                <Fragment key={`person-${index}`}>
+                  <Info
+                    label={`Person Involved ${index + 2}`}
+                    value={person?.name}
+                    bigLabel
+                  />
+                  <Info
+                    label={`Employee ID ${index + 2}`}
+                    value={person?.employeeId}
+                    bigLabel
+                  />
+                </Fragment>
+              ))}
               <Info label="Severity" value={incident.severity} bigLabel />
             </InfoGrid>
           </Section>
@@ -190,11 +211,62 @@ export default function IncidentViewerPage() {
             </Section>
           )}
 
-          {/* INJURED PERSON */}
-          {details.injuredPerson && (
+          {/* ACCIDENT DETAILS */}
+          {incident.type === "accident" && (
             <>
               <Divider />
-              <Section title="Injured Person Details">
+              <Section title="Accident Category">
+                <PillList items={details.basic?.accidentCategories || []} />
+              </Section>
+              <Divider />
+              <Section title="Vehicle / Equipment Details">
+                <InfoGrid>
+                  <Info
+                    label="Vehicle or Equipment"
+                    value={details.basic?.vehicleOrEquipment}
+                    bigLabel
+                  />
+                  <Info
+                    label="Registration / Asset No."
+                    value={details.basic?.registrationOrAssetId}
+                    bigLabel
+                  />
+                  <Info
+                    label="Driver / Operator"
+                    value={details.basic?.operatorOrDriver}
+                    bigLabel
+                  />
+                  <Info
+                    label="Injuries"
+                    value={
+                      details.basic?.hasInjuries
+                        ? "Injuries reported"
+                        : "No injuries"
+                    }
+                    bigLabel
+                  />
+                </InfoGrid>
+                {details.basic?.accidentCircumstances && (
+                  <p className="text-sm whitespace-pre-wrap mt-4 leading-relaxed">
+                    {details.basic.accidentCircumstances}
+                  </p>
+                )}
+              </Section>
+            </>
+          )}
+
+          {/* INJURED PERSON */}
+          {details.injuredPerson &&
+            (incident.type !== "accident" || details.basic?.hasInjuries) && (
+            <>
+              <Divider />
+              <Section
+                title={
+                  incident.type === "accident"
+                    ? "Person Involved"
+                    : "Injured Person Details"
+                }
+              >
                 <InfoGrid>
                   {Object.entries(details.injuredPerson).map(([key, value]) =>
                     value ? (
@@ -202,35 +274,117 @@ export default function IncidentViewerPage() {
                     ) : null
                   )}
                 </InfoGrid>
+
+                {Array.isArray(details.basic?.additionalPeople) &&
+                  details.basic.additionalPeople.length > 0 && (
+                    <div className="mt-8 space-y-3">
+                      <div className="text-sm font-semibold opacity-85">
+                        {incident.type === "accident"
+                          ? "Additional Persons Involved"
+                          : "Additional injured persons"}
+                      </div>
+                      {details.basic.additionalPeople.map((p, index) => (
+                        <div
+                          key={index}
+                          className="rounded-xl p-4"
+                          style={{
+                            background: "var(--card-bg)",
+                            border: "1px solid var(--card-border)",
+                          }}
+                        >
+                          <p className="text-sm font-semibold">
+                            Person {index + 2}
+                          </p>
+                          <p className="text-sm opacity-80">
+                            {p?.name ? p.name : "N/A"}
+                            {p?.employeeId
+                              ? ` (ID: ${p.employeeId})`
+                              : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
               </Section>
             </>
           )}
 
           {/* BODY PARTS */}
-          {details.injuryBodyParts?.length > 0 && (
+          {details.injuryBodyParts?.length > 0 &&
+            (incident.type !== "accident" || details.basic?.hasInjuries) && (
             <>
               <Divider />
               <Section title="Body Parts Affected">
+                {Array.isArray(details.basic?.additionalPeople) &&
+                  details.basic.additionalPeople.length > 0 && (
+                    <p className="text-sm opacity-70 mb-2">
+                      Recorded for:{" "}
+                      {[ 
+                        [details.injuredPerson?.name, details.injuredPerson?.surname]
+                          .filter(Boolean)
+                          .join(" "),
+                        ...details.basic.additionalPeople
+                          .map((p) => p?.name)
+                          .filter(Boolean),
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  )}
                 <PillList items={details.injuryBodyParts} />
               </Section>
             </>
           )}
 
           {/* EFFECTS */}
-          {details.injuryEffects?.length > 0 && (
+          {details.injuryEffects?.length > 0 &&
+            (incident.type !== "accident" || details.basic?.hasInjuries) && (
             <>
               <Divider />
               <Section title="Effects on Person">
+                {Array.isArray(details.basic?.additionalPeople) &&
+                  details.basic.additionalPeople.length > 0 && (
+                    <p className="text-sm opacity-70 mb-2">
+                      Recorded for:{" "}
+                      {[ 
+                        [details.injuredPerson?.name, details.injuredPerson?.surname]
+                          .filter(Boolean)
+                          .join(" "),
+                        ...details.basic.additionalPeople
+                          .map((p) => p?.name)
+                          .filter(Boolean),
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  )}
                 <PillList items={details.injuryEffects} />
               </Section>
             </>
           )}
 
           {/* NATURE OF INJURY */}
-          {details.injuryNature?.length > 0 && (
+          {details.injuryNature?.length > 0 &&
+            (incident.type !== "accident" || details.basic?.hasInjuries) && (
             <>
               <Divider />
               <Section title="Nature of Injury">
+                {Array.isArray(details.basic?.additionalPeople) &&
+                  details.basic.additionalPeople.length > 0 && (
+                    <p className="text-sm opacity-70 mb-2">
+                      Recorded for:{" "}
+                      {[ 
+                        [details.injuredPerson?.name, details.injuredPerson?.surname]
+                          .filter(Boolean)
+                          .join(" "),
+                        ...details.basic.additionalPeople
+                          .map((p) => p?.name)
+                          .filter(Boolean),
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  )}
                 <PillList items={details.injuryNature} />
               </Section>
             </>

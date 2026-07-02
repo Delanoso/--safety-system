@@ -268,6 +268,7 @@ export async function GET(req: NextRequest) {
     }
 
     await page.evaluate(async () => {
+      await document.fonts.ready;
       const images = Array.from(document.images);
       await Promise.all(
         images.map(
@@ -290,8 +291,8 @@ export async function GET(req: NextRequest) {
       printBackground: true,
       preferCSSPageSize: false,
       margin: {
-        top: "15mm",
-        bottom: "15mm",
+        top: "8mm",
+        bottom: "8mm",
         left: "12mm",
         right: "12mm",
       },

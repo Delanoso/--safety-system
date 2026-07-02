@@ -21,6 +21,7 @@ export const MODULES = [
   { slug: "incidents", label: "Incidents" },
   { slug: "maintenance-schedule", label: "Maintenance Schedule" },
   { slug: "users", label: "Users and Staff" },
+  { slug: "settings", label: "Settings" },
   { slug: "contractors", label: "Contractors" },
   { slug: "site-safety", label: "Site Safety" },
   { slug: "toolbox-talks", label: "Toolbox Talks" },
@@ -50,6 +51,7 @@ const PATH_TO_MODULE: { prefix: string; module: ModuleSlug }[] = [
   { prefix: "/incidents", module: "incidents" },
   { prefix: "/maintenance-schedule", module: "maintenance-schedule" },
   { prefix: "/users", module: "users" },
+  { prefix: "/settings", module: "settings" },
   { prefix: "/contractors", module: "contractors" },
   { prefix: "/site-safety", module: "site-safety" },
   { prefix: "/toolbox-talks", module: "toolbox-talks" },
@@ -79,4 +81,17 @@ export function canAccessModule(
 ): boolean {
   if (!allowedModules || allowedModules.length === 0) return true;
   return allowedModules.includes(moduleSlug);
+}
+
+/** Filter search hits (or similar) by the user's allowed module slugs. */
+export function filterByModuleAccess<T extends { href: string }>(
+  items: T[],
+  allowedModules: string[] | null | undefined
+): T[] {
+  if (!allowedModules || allowedModules.length === 0) return items;
+  return items.filter((item) => {
+    const mod = getModuleFromPath(item.href);
+    if (mod === null) return true;
+    return canAccessModule(allowedModules, mod);
+  });
 }

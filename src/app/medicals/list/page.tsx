@@ -28,6 +28,18 @@ export default function MedicalsListPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) return;
+    const num = parseInt(id, 10);
+    if (!Number.isNaN(num)) {
+      setExpandedId(num);
+      requestAnimationFrame(() => {
+        document.getElementById(`medical-row-${num}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }, []);
+
   function formatDate(dateString: string) {
     return new Date(dateString).toISOString().split("T")[0];
   }
@@ -108,8 +120,8 @@ export default function MedicalsListPage() {
             {filtered.map((m) => {
               const status = getStatus(m.expiryDate);
               return (
-                <tbody key={m.id}>
-                  <tr className="border-t border-white/40">
+                <tbody key={m.id} id={`medical-row-${m.id}`}>
+                  <tr className={`border-t border-white/40 ${expandedId === m.id ? "ring-2 ring-blue-400" : ""}`}>
                     <td className="p-2 sm:p-4">{m.employee}</td>
                     <td className="p-2 sm:p-4">{m.medicalType}</td>
                     <td className="p-2 sm:p-4">{formatDate(m.issueDate)}</td>

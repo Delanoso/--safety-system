@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireUser } from "@/lib/auth";
+import { getPublicBaseUrl } from "@/lib/public-base-url";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export async function POST(
     return NextResponse.json({ error: "voters array is required" }, { status: 400 });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = getPublicBaseUrl(req);
   const created: { phone?: string; voteUrl: string; token: string }[] = [];
 
   for (const v of votersInput) {

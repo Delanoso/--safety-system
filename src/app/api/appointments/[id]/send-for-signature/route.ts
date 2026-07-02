@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 
 import { prepareWhatsAppDelivery } from "@/lib/whatsapp";
+import { getPublicBaseUrl } from "@/lib/public-base-url";
 
 
 
@@ -90,7 +91,7 @@ export async function POST(
 
 
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = getPublicBaseUrl(req);
 
     const signUrl = `${baseUrl}/appointments/sign/${id}?role=${role}&token=${token}`;
 

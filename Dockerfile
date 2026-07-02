@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # -----------------------------------------------------------------------------
 # Stage 1: Dependencies
 # -----------------------------------------------------------------------------
@@ -5,7 +6,8 @@ FROM node:20-slim AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # -----------------------------------------------------------------------------
 # Stage 2: Build (Prisma generate + Next.js build)

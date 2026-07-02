@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { MODULES } from "@/lib/module-access";
+import { MODULES, filterByModuleAccess } from "@/lib/module-access";
 import { drillTypeLabel } from "@/lib/emergency-drills";
 import { permitTypeLabel } from "@/lib/site-safety";
 import { computeContractorCompliance } from "@/lib/contractor-compliance";
+import { incidentTypeLabel } from "@/lib/incident-constants";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,7 @@ export async function GET(req: Request) {
         },
         take: TAKE,
         orderBy: { date: "desc" },
-        select: { id: true, title: true, employee: true, date: true },
+        select: { id: true, title: true, employee: true, date: true, type: true },
       }),
       prisma.medical.findMany({
         where: {
@@ -388,7 +389,7 @@ export async function GET(req: Request) {
       results.push({
         category: "Incidents",
         title: i.title,
-        subtitle: i.employee ?? undefined,
+        subtitle: [incidentTypeLabel(i.type ?? ""), i.employee].filter(Boolean).join(" · ") || undefined,
         href: `/incidents/view/${i.id}`,
       });
     }
@@ -396,14 +397,14 @@ export async function GET(req: Request) {
       results.push({
         category: "Medicals",
         title: `${m.employee} — ${m.medicalType}`,
-        href: `/medicals/list`,
+        href: `/medicals/list?id=${m.id}`,
       });
     }
     for (const c of certificates) {
       results.push({
         category: "Training",
         title: `${c.employee} — ${c.certificateName}`,
-        href: `/training/certificates/list`,
+        href: `/training/certificates/list?id=${c.id}`,
       });
     }
     for (const c of contractors) {
@@ -443,7 +444,7 @@ export async function GET(req: Request) {
       results.push({
         category: "Induction Training",
         title: `${ind.employee} — ${ind.inductionType}`,
-        href: `/induction-training/list`,
+        href: `/induction-training/list?id=${ind.id}`,
       });
     }
     for (const v of visitors) {
@@ -451,7 +452,7 @@ export async function GET(req: Request) {
         category: "Visitor Register",
         title: v.visitorName,
         subtitle: `Host: ${v.hostName}`,
-        href: `/visitor-register/list`,
+        href: `/visitor-register/list?id=${v.id}`,
       });
     }
     for (const p of permits) {
@@ -538,7 +539,7 @@ export async function GET(req: Request) {
         category: "Hazardous Chemicals",
         title: c.name,
         subtitle: [c.casNumber, c.location].filter(Boolean).join(" · ") || undefined,
-        href: "/hazardous-chemicals",
+        href: `/hazardous-chemicals?id=${c.id}`,
       });
     }
     for (const n of ncrReports) {
@@ -604,7 +605,10 @@ export async function GET(req: Request) {
     }
   }
 
-    return NextResponse.json({ query: q, results });
+    return NextResponse.json({
+      query: q,
+      results: filterByModuleAccess(results, user.allowedModules),
+    });
   } catch (err) {
     console.error("Search error:", err);
     return NextResponse.json({ error: "Search failed", results: [] }, { status: 500 });

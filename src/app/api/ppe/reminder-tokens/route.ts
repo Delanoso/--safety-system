@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getPublicBaseUrl } from "@/lib/public-base-url";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
     data: { personId, token, expiresAt },
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = getPublicBaseUrl(req);
   const chooseSizesPath = "/ppe-management/choose-sizes";
   const link = `${baseUrl}${chooseSizesPath}?token=${token}`;
 

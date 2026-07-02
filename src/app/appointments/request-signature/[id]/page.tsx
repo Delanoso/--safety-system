@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import AppointmentLetterViewer from "../../../../components/AppointmentLetterViewer";
 import { AppointmentTemplateKey } from "../../../appointments/templates";
 import { openWhatsAppLink } from "@/lib/open-whatsapp";
+import { downloadPdf } from "@/lib/pdf-download";
 
 interface Appointment {
   id: string;
@@ -235,18 +236,8 @@ export default function RequestSignaturePage() {
   const handleMarkSigned = () => updateStatus("signed");
 
   const handleExportPdf = () => {
-    if (!letterRef.current) {
-      window.print();
-      return;
-    }
-
-    const printContents = letterRef.current.innerHTML;
-    const originalContents = document.body.innerHTML;
-
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
+    if (!appointment) return;
+    downloadPdf("appointment", appointment.id);
   };
 
   if (loading) {
@@ -369,6 +360,13 @@ export default function RequestSignaturePage() {
               className="px-4 py-2 rounded-md bg-white text-teal-700 font-semibold hover:bg-gray-200 disabled:opacity-50"
             >
               Mark as Signed
+            </button>
+
+            <button
+              onClick={handleExportPdf}
+              className="px-4 py-2 rounded-md bg-white text-teal-700 font-semibold hover:bg-gray-200"
+            >
+              Download PDF
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { prepareWhatsAppDelivery } from "@/lib/whatsapp";
+import { getPublicBaseUrl } from "@/lib/public-base-url";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function POST(
     });
     if (!election) return NextResponse.json({ error: "Election not found" }, { status: 404 });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = getPublicBaseUrl(req);
     const voters = await prisma.sHEElectionVoter.findMany({
       where: { id: { in: voterIds }, electionId },
     });

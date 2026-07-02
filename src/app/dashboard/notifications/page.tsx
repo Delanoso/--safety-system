@@ -45,6 +45,7 @@ type NotificationData = {
   plannedDrills: NotificationItem[];
   riskAssessmentsReviewDue: NotificationItem[];
   sheMeetingActionsDue: NotificationItem[];
+  unsignedIncidentTeam: NotificationItem[];
   total: number;
 };
 
@@ -66,6 +67,7 @@ const typeIcons: Record<string, React.ReactNode> = {
   drill_planned: <AlertTriangle size={20} />,
   risk_review_due: <Shield size={20} />,
   she_action_due: <ClipboardList size={20} />,
+  unsigned_incident_team: <FileSignature size={20} />,
 };
 
 const typeLabels: Record<string, string> = {
@@ -86,6 +88,7 @@ const typeLabels: Record<string, string> = {
   drill_planned: "Planned emergency drill",
   risk_review_due: "Risk assessment review due",
   she_action_due: "SHE meeting action due",
+  unsigned_incident_team: "Incident team unsigned",
 };
 
 function NotificationCard({ item }: { item: NotificationItem }) {
@@ -146,6 +149,7 @@ export default function NotificationsPage() {
         ...(data.plannedDrills ?? []),
         ...(data.riskAssessmentsReviewDue ?? []),
         ...(data.sheMeetingActionsDue ?? []),
+        ...(data.unsignedIncidentTeam ?? []),
       ].sort(
         (a, b) =>
           new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -221,6 +225,19 @@ export default function NotificationsPage() {
               </h2>
               <div className="space-y-2">
                 {data.unsignedAppointments.map((item) => (
+                  <NotificationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+          {(data.unsignedIncidentTeam?.length ?? 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <FileSignature size={18} />
+                Incident investigation teams awaiting signature
+              </h2>
+              <div className="space-y-2">
+                {data.unsignedIncidentTeam.map((item) => (
                   <NotificationCard key={item.id} item={item} />
                 ))}
               </div>

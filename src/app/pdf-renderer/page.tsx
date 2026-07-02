@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { PdfDocument, PdfImageBw, PdfSection, PdfSignatureBlock, pdfTableStyles } from "@/components/pdf/PdfDocument";
-import { getCompanyLogoUrl } from "@/lib/pdf";
+import { resolvePdfBranding } from "@/lib/pdf";
 import { parseRiskAssessmentControls } from "@/lib/risk-assessment";
 import {
   SHE_REP_COMMITTEE_COMMENTS,
@@ -293,13 +293,15 @@ async function DailyInspectionTemplate({ id }: { id: string }) {
   }
 
   const { columns, legendItems, rows } = parsed;
-  const logoUrl = await getCompanyLogoUrl();
+  const { logoUrl, companyName } = await resolvePdfBranding(inspection.companyId);
 
   return (
     <PdfDocument
       title="Daily Inspection Report"
       documentType="Salus — Daily Inspection Report"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -376,13 +378,15 @@ async function WeeklyInspectionTemplate({ id }: { id: string }) {
     // keep defaults
   }
 
-  const logoUrl = await getCompanyLogoUrl();
+  const { logoUrl, companyName } = await resolvePdfBranding(inspection.companyId);
 
   return (
     <PdfDocument
       title="Weekly Inspection Report"
       documentType="Salus — Weekly Inspection Report"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <div><strong>Inspection ID:</strong> {id}</div>
@@ -448,13 +452,15 @@ async function MonthlyInspectionTemplate({ id }: { id: string }) {
     // keep defaults
   }
 
-  const logoUrl = await getCompanyLogoUrl();
+  const { logoUrl, companyName } = await resolvePdfBranding(inspection.companyId);
 
   return (
     <PdfDocument
       title="Monthly Inspection Report"
       documentType="Salus — Monthly Inspection Report"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <div><strong>Inspection ID:</strong> {id}</div>
@@ -494,6 +500,7 @@ async function MonthlyInspectionTemplate({ id }: { id: string }) {
 async function AppointmentTemplate({ id }: { id: string }) {
   const appointment = await prisma.appointment.findUnique({
     where: { id },
+    include: { company: true },
   });
 
   if (!appointment) {
@@ -505,7 +512,10 @@ async function AppointmentTemplate({ id }: { id: string }) {
     );
   }
 
-  const logoUrl = await getCompanyLogoUrl();
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    appointment.companyId,
+    appointment.company
+  );
   const dateStr = new Date(appointment.date).toLocaleDateString();
   const TemplateComponent = appointmentTemplates[appointment.type as keyof typeof appointmentTemplates];
 
@@ -514,6 +524,8 @@ async function AppointmentTemplate({ id }: { id: string }) {
       title="Appointment Letter"
       documentType="Salus — Appointment Letter"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       {TemplateComponent ? (
         <div style={{ ...bodyTextStyle, marginBottom: 28 }}>
@@ -609,7 +621,11 @@ async function IncidentTemplate({ id }: { id: string }) {
   };
 
   const incidentTypes = details.incidentTypes ?? details.basic?.incidentTypes ?? [];
-  const logoUrl = incident.company?.logoUrl ?? (await getCompanyLogoUrl(incident.companyId));
+  const accidentCategories = details.basic?.accidentCategories ?? [];
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    incident.companyId,
+    incident.company
+  );
 
   // Stable order: creation order
   const team = incident.team?.length
@@ -620,19 +636,38 @@ async function IncidentTemplate({ id }: { id: string }) {
 
   return (
     <PdfDocument
-      title={`Incident Report — ${incident.title}`}
-      documentType="Salus — Incident Report"
+      title={
+        incident.type === "accident"
+          ? `Accident Report — ${incident.title}`
+          : incident.type === "near_miss"
+            ? `Near Miss Report — ${incident.title}`
+            : `Incident Report — ${incident.title}`
+      }
+      documentType={
+        incident.type === "accident"
+          ? "Salus — Accident Report"
+          : incident.type === "near_miss"
+            ? "Salus — Near Miss Report"
+            : "Salus — Incident Report"
+      }
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 20 }}>
         <p><strong>Incident ID:</strong> {incident.id}</p>
-        {incident.company && <p><strong>Company:</strong> {incident.company.name}</p>}
         <p><strong>Title:</strong> {incident.title}</p>
-        <p><strong>Type:</strong> {incident.type}</p>
+        <p><strong>Type:</strong> {incident.type === "near_miss" ? "Near Miss" : incident.type === "accident" ? "Accident" : incident.type}</p>
         <p><strong>Date:</strong> {formatDate(incident.date)}</p>
-        <p><strong>Department:</strong> {incident.department || "N/A"}</p>
+        <p><strong>{incident.type === "accident" ? "Area of Accident" : "Department"}:</strong> {incident.department || "N/A"}</p>
         <p><strong>Location:</strong> {incident.location || "N/A"}</p>
         <p><strong>Employee:</strong> {incident.employee || "N/A"}{incident.employeeId ? ` (ID: ${incident.employeeId})` : ""}</p>
+        {(details.basic?.additionalPeople || []).map((person: any, index: number) => (
+          <p key={`additional-person-${index}`}>
+            <strong>Person Involved {index + 2}:</strong> {person?.name || "N/A"}
+            {person?.employeeId ? ` (ID: ${person.employeeId})` : ""}
+          </p>
+        ))}
         <p><strong>Severity:</strong> {incident.severity}</p>
         <p><strong>Status:</strong> {incident.status}</p>
       </div>
@@ -649,8 +684,44 @@ async function IncidentTemplate({ id }: { id: string }) {
         </PdfSection>
       )}
 
-      {details.injuredPerson && Object.keys(details.injuredPerson).some((k) => details.injuredPerson[k]) && (
-        <PdfSection title="Injured Person Details">
+      {incident.type === "accident" && (
+        <PdfSection title="Accident Details">
+          {accidentCategories.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <strong>Category:</strong> {renderList(accidentCategories)}
+            </div>
+          )}
+          {details.basic?.vehicleOrEquipment && (
+            <p><strong>Vehicle / Equipment:</strong> {details.basic.vehicleOrEquipment}</p>
+          )}
+          {details.basic?.registrationOrAssetId && (
+            <p><strong>Registration / Asset No.:</strong> {details.basic.registrationOrAssetId}</p>
+          )}
+          {details.basic?.operatorOrDriver && (
+            <p><strong>Driver / Operator:</strong> {details.basic.operatorOrDriver}</p>
+          )}
+          <p>
+            <strong>Injuries:</strong>{" "}
+            {details.basic?.hasInjuries ? "Injuries reported" : "No injuries"}
+          </p>
+          {details.basic?.accidentCircumstances && (
+            <p style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>
+              <strong>Circumstances:</strong> {details.basic.accidentCircumstances}
+            </p>
+          )}
+        </PdfSection>
+      )}
+
+      {details.injuredPerson &&
+        Object.keys(details.injuredPerson).some((k) => details.injuredPerson[k]) &&
+        (incident.type !== "accident" || details.basic?.hasInjuries) && (
+        <PdfSection
+          title={
+            incident.type === "accident"
+              ? "Person Involved"
+              : "Injured Person Details"
+          }
+        >
           <table style={pdfTableStyles.table}>
             <tbody>
               {Object.entries(details.injuredPerson).map(
@@ -667,8 +738,54 @@ async function IncidentTemplate({ id }: { id: string }) {
         </PdfSection>
       )}
 
-      {(details.injuryBodyParts?.length > 0 || details.injuryEffects?.length > 0 || details.injuryNature?.length) && (
+      {Array.isArray(details.basic?.additionalPeople) &&
+        details.basic.additionalPeople.length > 0 &&
+        (incident.type !== "accident" || details.basic?.hasInjuries) && (
+          <PdfSection
+            title={
+              incident.type === "accident"
+                ? "Additional Persons Involved"
+                : "Additional Injured Persons"
+            }
+          >
+            <table style={pdfTableStyles.table}>
+              <tbody>
+                {details.basic.additionalPeople.map((p, index) => (
+                  <tr key={index}>
+                    <td style={{ ...pdfTableStyles.td, fontWeight: "bold", width: "30%" }}>
+                      Person {index + 2}
+                    </td>
+                    <td style={pdfTableStyles.td}>
+                      {p?.name || "N/A"}
+                      {p?.employeeId ? ` (ID: ${p.employeeId})` : ""}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </PdfSection>
+        )}
+
+      {(details.injuryBodyParts?.length > 0 || details.injuryEffects?.length > 0 || details.injuryNature?.length) &&
+        (incident.type !== "accident" || details.basic?.hasInjuries) && (
         <PdfSection title="Injury Details">
+          {(() => {
+            const primary = details.injuredPerson
+              ? [details.injuredPerson?.name, details.injuredPerson?.surname]
+                  .filter(Boolean)
+                  .join(" ")
+              : "";
+            const others = Array.isArray(details.basic?.additionalPeople)
+              ? details.basic.additionalPeople.map((p) => p?.name).filter(Boolean)
+              : [];
+            const all = [primary, ...others].filter(Boolean);
+            if (all.length <= 1) return null;
+            return (
+              <div style={{ marginBottom: 8 }}>
+                <strong>Recorded for:</strong> {all.join(", ")}
+              </div>
+            );
+          })()}
           {details.injuryBodyParts?.length > 0 && <div><strong>Body Parts:</strong> {renderList(details.injuryBodyParts)}</div>}
           {details.injuryEffects?.length > 0 && <div style={{ marginTop: 8 }}><strong>Effects:</strong> {renderList(details.injuryEffects)}</div>}
           {details.injuryNature?.length > 0 && <div style={{ marginTop: 8 }}><strong>Nature:</strong> {renderList(details.injuryNature)}</div>}
@@ -779,17 +896,21 @@ async function NcrTemplate({ id }: { id: string }) {
     );
   }
 
-  const logoUrl = report.company?.logoUrl ?? (await getCompanyLogoUrl(report.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    report.companyId,
+    report.company
+  );
 
   return (
     <PdfDocument
       title="Non-Conformance Report"
       documentType="Salus — Non-Conformance Report"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Report ID:</strong> {report.id}</p>
-        {report.company && <p><strong>Company:</strong> {report.company.name}</p>}
         <p><strong>Created:</strong> {new Date(report.createdAt).toLocaleString()}</p>
         <p><strong>Status:</strong> {report.status}</p>
         <p><strong>Department:</strong> {report.department || "N/A"}</p>
@@ -852,6 +973,7 @@ async function CertificateTemplate({ id }: { id: string }) {
 
   const certificate = await prisma.certificate.findUnique({
     where: { id: numericId },
+    include: { company: true },
   });
 
   if (!certificate) {
@@ -869,13 +991,18 @@ async function CertificateTemplate({ id }: { id: string }) {
     return d.toISOString().split("T")[0];
   };
 
-  const logoUrl = await getCompanyLogoUrl();
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    certificate.companyId,
+    certificate.company
+  );
 
   return (
     <PdfDocument
       title="Training Certificate Summary"
       documentType="Salus — Training Certificate"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Certificate ID:</strong> {certificate.id}</p>
@@ -905,6 +1032,7 @@ async function MedicalTemplate({ id }: { id: string }) {
 
   const medical = await prisma.medical.findUnique({
     where: { id: numericId },
+    include: { company: true },
   });
 
   if (!medical) {
@@ -922,13 +1050,18 @@ async function MedicalTemplate({ id }: { id: string }) {
     return d.toISOString().split("T")[0];
   };
 
-  const logoUrl = await getCompanyLogoUrl();
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    medical.companyId,
+    medical.company
+  );
 
   return (
     <PdfDocument
       title="Medical Certificate Summary"
       documentType="Salus — Medical Certificate"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Medical ID:</strong> {medical.id}</p>
@@ -965,7 +1098,10 @@ async function RiskAssessmentTemplate({ id }: { id: string }) {
     return d.toISOString().split("T")[0];
   };
 
-  const logoUrl = assessment.company?.logoUrl ?? (await getCompanyLogoUrl(assessment.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    assessment.companyId,
+    assessment.company
+  );
   const controlsParsed = parseRiskAssessmentControls(assessment.controls);
 
   return (
@@ -973,10 +1109,11 @@ async function RiskAssessmentTemplate({ id }: { id: string }) {
       title={assessment.title}
       documentType="Salus — Risk Assessment"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Assessment ID:</strong> {assessment.id}</p>
-        {assessment.company && <p><strong>Company:</strong> {assessment.company.name}</p>}
         <p><strong>Title:</strong> {assessment.title}</p>
         <p><strong>Risk Level:</strong> {assessment.riskLevel}</p>
         <p><strong>Status:</strong> {assessment.status}</p>
@@ -1059,8 +1196,10 @@ async function SHERepInspectionTemplate({ id }: { id: string }) {
     );
   }
 
-  const logoUrl =
-    inspection.company?.logoUrl ?? (await getCompanyLogoUrl(inspection.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    inspection.companyId,
+    inspection.company
+  );
 
   const blankLine = "_______________________";
 
@@ -1069,11 +1208,12 @@ async function SHERepInspectionTemplate({ id }: { id: string }) {
       title={SHE_REP_INSPECTION_DOC_TITLE}
       documentType={`${SHE_REP_INSPECTION_DOC_NUMBER} — Salus`}
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
+      documentNumber={SHE_REP_INSPECTION_DOC_NUMBER}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 16, fontSize: 12, color: "#6b7280" }}>
-        Document: {SHE_REP_INSPECTION_DOC_NUMBER}
-        {inspection.company && ` · ${inspection.company.name}`}
-        {inspection.period && ` · ${inspection.period}`}
+        {inspection.period && `Period: ${inspection.period}`}
       </div>
 
       <div style={{ ...bodyTextStyle, marginBottom: 20 }}>

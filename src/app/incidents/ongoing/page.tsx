@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2, FileDown } from "lucide-react";
 import TeamInvolvedEditor from "@/components/incident/TeamInvolvedEditor";
+import { downloadPdf } from "@/lib/pdf-download";
+import { incidentPdfDownloadType, incidentTypeLabel } from "@/lib/incident-constants";
 
 /* -------------------------------------------------------
    REUSABLE UI COMPONENTS
@@ -132,7 +134,9 @@ export default function OngoingIncidentsPage() {
     return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
   }
 
-  const fullIncidents = incidents.filter((i) => i.type !== "near_miss");
+  const fullIncidents = incidents.filter(
+    (i) => i.type === "incident" || i.type === "accident" || i.type === "cost_analysis"
+  );
   const nearMisses = incidents.filter((i) => i.type === "near_miss");
 
   return (
@@ -181,6 +185,16 @@ export default function OngoingIncidentsPage() {
                 >
                   <div>
                     <h2 className="text-xl font-semibold">{incident.title}</h2>
+                    {incident.type === "accident" && (
+                      <span className="inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-400/40">
+                        Accident
+                      </span>
+                    )}
+                    {incident.type === "near_miss" && (
+                      <span className="inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-400/40">
+                        Near Miss
+                      </span>
+                    )}
 
                     <p className="opacity-70 text-sm mt-1">
                       {incident.description || "No short description provided"}
@@ -191,11 +205,23 @@ export default function OngoingIncidentsPage() {
                     </p>
 
                     <p className="opacity-70 text-sm">
-                      Department: {incident.department || "N/A"}
+                      {incident.type === "accident" ? "Area of Accident" : "Department"}:{" "}
+                      {incident.department || "N/A"}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadPdf(incidentPdfDownloadType(incident.type), incident.id);
+                      }}
+                      className="cursor-pointer opacity-80 hover:opacity-100"
+                      title="Download PDF"
+                    >
+                      <FileDown size={22} />
+                    </button>
                     <div
                       role="button"
                       onClick={(e) => {
@@ -258,6 +284,9 @@ export default function OngoingIncidentsPage() {
                 >
                   <div>
                     <h2 className="text-xl font-semibold">{incident.title}</h2>
+                    <span className="inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-400/40">
+                      Near Miss
+                    </span>
 
                     <p className="opacity-70 text-sm mt-1">
                       {incident.description || "No short description provided"}
@@ -273,6 +302,17 @@ export default function OngoingIncidentsPage() {
                   </div>
 
                   <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadPdf(incidentPdfDownloadType(incident.type), incident.id);
+                      }}
+                      className="cursor-pointer opacity-80 hover:opacity-100"
+                      title="Download PDF"
+                    >
+                      <FileDown size={22} />
+                    </button>
                     <div
                       role="button"
                       onClick={(e) => {
@@ -318,7 +358,10 @@ export default function OngoingIncidentsPage() {
 
 function IncidentReportLayout({ incident, details }) {
   const basic = details.basic || {};
+  const isAccident = incident.type === "accident";
+  const hasInjuries = isAccident ? Boolean(basic.hasInjuries) : true;
   const injured = details.injuredPerson || {};
+  const additionalPeople = Array.isArray(basic.additionalPeople) ? basic.additionalPeople : [];
   const injuryBodyParts = details.injuryBodyParts || [];
   const injuryEffects = details.injuryEffects || [];
   const injuryNature = details.injuryNature || [];
@@ -332,43 +375,150 @@ function IncidentReportLayout({ incident, details }) {
     <div className="space-y-6">
       <Section title="Basic Information">
         <Grid>
-          <Field label="Incident Title" value={incident.title} />
+          <Field label="Report Title" value={incident.title} />
           <Field
-            label="Incident Type"
-            value={(basic.incidentTypes || []).join(", ")}
+            label={isAccident ? "Report Type" : "Incident Type"}
+            value={
+              isAccident
+                ? (basic.accidentCategories || []).join(", ")
+                : (basic.incidentTypes || []).join(", ")
+            }
           />
-          <Field label="Department" value={incident.department} />
+          <Field
+            label={isAccident ? "Area of Accident" : "Department"}
+            value={incident.department}
+          />
           <Field label="Location" value={incident.location} />
+          <Field
+            label="Person Involved"
+            value={incident.employee ? `${incident.employee}${incident.employeeId ? ` (${incident.employeeId})` : ""}` : undefined}
+          />
+          {(basic.additionalPeople || []).map((person, index) => (
+            <Field
+              key={`additional-person-${index}`}
+              label={`Person Involved ${index + 2}`}
+              value={person?.name ? `${person.name}${person.employeeId ? ` (${person.employeeId})` : ""}` : undefined}
+            />
+          ))}
           <Field label="Severity" value={incident.severity} />
           <Field label="Status" value={incident.status} />
         </Grid>
       </Section>
 
-      <Section title="Injured Person">
-        <Grid>
-          <Field label="Name" value={injured.name} />
-          <Field label="Surname" value={injured.surname} />
-          <Field label="ID Number" value={injured.idNumber} />
-          <Field label="Employee Number" value={injured.employeeNumber} />
-          <Field label="Occupation" value={injured.occupation} />
-          <Field label="Department" value={injured.department} />
-          <Field label="Supervisor" value={injured.supervisor} />
-          <Field label="Contact Number" value={injured.contactNumber} />
-          <Field label="Address" value={injured.address} />
-        </Grid>
-      </Section>
+      {isAccident && (
+        <Section title="Vehicle / Equipment Details">
+          <Grid>
+            <Field label="Vehicle or Equipment" value={basic.vehicleOrEquipment} />
+            <Field label="Registration / Asset No." value={basic.registrationOrAssetId} />
+            <Field label="Driver / Operator" value={basic.operatorOrDriver} />
+            <Field
+              label="Injuries"
+              value={hasInjuries ? "Injuries reported" : "No injuries"}
+            />
+          </Grid>
+          {basic.accidentCircumstances && (
+            <p className="text-sm whitespace-pre-wrap mt-3">
+              {basic.accidentCircumstances}
+            </p>
+          )}
+        </Section>
+      )}
 
+      {hasInjuries && (
+      <Section title={isAccident ? "Person Involved" : "Injured Persons"}>
+        <Grid>
+          <Field label="Person 1 - Name" value={injured.name} />
+          <Field label="Person 1 - Surname" value={injured.surname} />
+          <Field label="Person 1 - ID Number" value={injured.idNumber} />
+          <Field label="Person 1 - Employee Number" value={injured.employeeNumber} />
+          <Field label="Person 1 - Occupation" value={injured.occupation} />
+          <Field label="Person 1 - Department" value={injured.department} />
+          <Field label="Person 1 - Supervisor" value={injured.supervisor} />
+          <Field label="Person 1 - Contact Number" value={injured.contactNumber} />
+          <Field label="Person 1 - Address" value={injured.address} />
+        </Grid>
+
+        {additionalPeople.length > 0 && (
+          <div className="mt-6 space-y-3">
+            {isAccident && (
+              <div className="text-sm font-semibold opacity-90">
+                Additional Persons Involved
+              </div>
+            )}
+            {additionalPeople.map((p, index) => (
+              <div
+                key={index}
+                className="rounded-xl p-4"
+                style={{
+                  background: "var(--card-bg)",
+                  border: "1px solid var(--card-border)",
+                }}
+              >
+                <div className="text-sm font-semibold mb-2 opacity-90">
+                  Person {index + 2}
+                </div>
+                <Grid>
+                  <Field label="Name" value={p?.name} />
+                  <Field label="Employee Number" value={p?.employeeId} />
+                </Grid>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+      )}
+
+      {hasInjuries && (
+      <>
       <Section title="Injury Body Parts">
+        {(() => {
+          const labels = [
+            [injured.name, injured.surname].filter(Boolean).join(" "),
+            ...additionalPeople.map((p) => p?.name).filter(Boolean),
+          ];
+          if (labels.length <= 1) return null;
+          return (
+            <p className="text-sm opacity-70 mb-2">
+              Recorded for: {labels.join(", ")}
+            </p>
+          );
+        })()}
         <PillList items={injuryBodyParts} />
       </Section>
 
       <Section title="Injury Effects">
+        {(() => {
+          const labels = [
+            [injured.name, injured.surname].filter(Boolean).join(" "),
+            ...additionalPeople.map((p) => p?.name).filter(Boolean),
+          ];
+          if (labels.length <= 1) return null;
+          return (
+            <p className="text-sm opacity-70 mb-2">
+              Recorded for: {labels.join(", ")}
+            </p>
+          );
+        })()}
         <PillList items={injuryEffects} />
       </Section>
 
       <Section title="Injury Nature">
+        {(() => {
+          const labels = [
+            [injured.name, injured.surname].filter(Boolean).join(" "),
+            ...additionalPeople.map((p) => p?.name).filter(Boolean),
+          ];
+          if (labels.length <= 1) return null;
+          return (
+            <p className="text-sm opacity-70 mb-2">
+              Recorded for: {labels.join(", ")}
+            </p>
+          );
+        })()}
         <PillList items={injuryNature} />
       </Section>
+      </>
+      )}
 
       <Section title="Hazards">
         <PillList items={hazards} />

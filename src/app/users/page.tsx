@@ -509,44 +509,16 @@ export default function UsersPage() {
     try {
       const data = new FormData();
       data.append("file", file);
-      data.append(
-        "upload_preset",
-        process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET as string
-      );
 
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-      if (!cloudName) {
-        setError("Cloudinary configuration is missing.");
-        setLogoUploading(false);
-        return;
-      }
-
-      const uploadRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        {
-          method: "POST",
-          body: data,
-        }
-      );
-
-      const uploadJson = await uploadRes.json();
-      if (!uploadRes.ok || !uploadJson.secure_url) {
-        setError("Failed to upload logo to Cloudinary.");
-        setLogoUploading(false);
-        return;
-      }
-
-      const logoUrl = uploadJson.secure_url as string;
-
-      const patchRes = await fetch("/api/company/logo", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logoUrl }),
+      const uploadRes = await fetch("/api/company/logo", {
+        method: "POST",
+        credentials: "include",
+        body: data,
       });
 
-      const patchJson = await patchRes.json().catch(() => null);
-      if (!patchRes.ok) {
-        setError(patchJson?.error || "Failed to save company logo.");
+      const uploadJson = await uploadRes.json().catch(() => null);
+      if (!uploadRes.ok || !uploadJson?.logoUrl) {
+        setError(uploadJson?.error || "Failed to upload company logo.");
         setLogoUploading(false);
         return;
       }

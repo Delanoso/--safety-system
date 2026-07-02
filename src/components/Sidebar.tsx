@@ -12,13 +12,14 @@ import {
   HardHat,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings,
   X,
 } from "lucide-react";
 import SidebarDropdown from "./SidebarDropdown";
 import RestrictedAccessModal from "./RestrictedAccessModal";
 import { useMobileSidebar } from "@/contexts/MobileSidebarContext";
 
-type UserMe = { allowedModules: string[] | null };
+type UserMe = { allowedModules: string[] | null; role?: string; companyName?: string | null };
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -34,6 +35,8 @@ export default function Sidebar() {
   }, []);
 
   const allowedModules = user?.allowedModules ?? null;
+  const isAdmin = user?.role === "admin" || user?.role === "super";
+  const brandTitle = user?.companyName?.trim() || "Salus";
   const onRestrictedClick = () => setRestrictedModalOpen(true);
 
   return (
@@ -67,9 +70,16 @@ export default function Sidebar() {
       >
         <div className="flex items-center justify-between gap-2">
           {!collapsed && (
-            <h1 className="text-base sm:text-xl font-bold text-[var(--foreground)] truncate min-w-0">
-              Salus
-            </h1>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-bold text-[var(--foreground)] truncate">
+                Salus
+              </h1>
+              {brandTitle !== "Salus" && (
+                <p className="text-xs text-[var(--muted-foreground)] truncate mt-0.5">
+                  {brandTitle}
+                </p>
+              )}
+            </div>
           )}
           <div className="flex items-center gap-1 shrink-0">
             <button
@@ -233,6 +243,19 @@ export default function Sidebar() {
         <Users size={20} />
         {!collapsed && "Users and Staff"}
       </Link>
+
+      {isAdmin && (
+        <Link
+          href="/settings"
+          className="
+            flex items-center gap-3 px-3 py-2 rounded transition
+            hover:text-[var(--gold)]
+          "
+        >
+          <Settings size={20} />
+          {!collapsed && "Settings"}
+        </Link>
+      )}
 
       <RestrictedAccessModal
         open={restrictedModalOpen}

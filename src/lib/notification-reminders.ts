@@ -517,3 +517,35 @@ export async function getSheMeetingActionReminders(options: {
 
   return hits.sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, limit);
 }
+
+/** Investigation team members who have not signed on open incidents. */
+export async function getUnsignedIncidentTeamReminders(opts: {
+  companyId?: string;
+  limit?: number;
+}): Promise<ReminderHit[]> {
+  const { companyId, limit = 20 } = opts;
+
+  const members = await prisma.investigationTeamMember.findMany({
+    where: {
+      signature: null,
+      incident: {
+        status: { notIn: ["completed", "signed"] },
+        ...(companyId && { companyId }),
+      },
+    },
+    include: {
+      incident: { select: { id: true, title: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+
+  return members.map((m) => ({
+    id: `inc-team-${m.id}`,
+    type: "unsigned_incident_team",
+    title: `${m.name} — ${m.incident.title}`,
+    subtitle: `${m.designation} · awaiting signature`,
+    href: `/incidents/${m.incidentId}`,
+    date: m.createdAt,
+  }));
+}

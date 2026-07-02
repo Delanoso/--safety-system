@@ -1,0 +1,34 @@
+# Production compose — uses a pre-built image from GHCR (never builds on the VPS).
+# On the VPS: keep .env in this directory with DATABASE_URL, Cloudinary, etc.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: safety
+      POSTGRES_PASSWORD: safety
+      POSTGRES_DB: safety
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safety -d safety"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: ${APP_IMAGE:-ghcr.io/delanoso/--safety-system:latest}
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "80:3000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://safety:safety@db:5432/safety
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

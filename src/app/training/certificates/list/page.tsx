@@ -17,6 +17,18 @@ export default function CertificatesListPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) return;
+    const num = parseInt(id, 10);
+    if (!Number.isNaN(num)) {
+      setExpandedId(num);
+      requestAnimationFrame(() => {
+        document.getElementById(`cert-row-${num}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }, []);
+
   function formatDate(dateString) {
     return new Date(dateString).toISOString().split("T")[0];
   }
@@ -110,9 +122,9 @@ export default function CertificatesListPage() {
                 c.fileUrl.toLowerCase().includes(".pdf");
 
               return (
-                <tbody key={c.id}>
+                <tbody key={c.id} id={`cert-row-${c.id}`}>
                   {/* MAIN ROW */}
-                  <tr className="border-t border-white/40">
+                  <tr className={`border-t border-white/40 ${expandedId === c.id ? "ring-2 ring-blue-400" : ""}`}>
                     <td className="p-2 sm:p-4">{c.employee}</td>
                     <td className="p-2 sm:p-4">{c.certificateName}</td>
                     <td className="p-2 sm:p-4">{c.certificateType || "N/A"}</td>

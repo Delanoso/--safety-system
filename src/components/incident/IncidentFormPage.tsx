@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import PersonAutocomplete, { type CompanyPersonRecord } from "@/components/PersonAutocomplete";
-import { INCIDENT_TYPES, BODY_PARTS } from "@/lib/incident-constants";
+import { INCIDENT_TYPES, ACCIDENT_CATEGORIES, BODY_PARTS } from "@/lib/incident-constants";
 import TeamInvolvedEditor from "@/components/incident/TeamInvolvedEditor";
 
 /* -------------------------------------------------------
@@ -39,6 +39,20 @@ const ROOT_CAUSES_HUMAN = [
   "Physical or emotional problems", "Improper attitude or motivation",
   "Tired / stressed / discomfort", "Pre-existing medical conditions",
 ];
+
+const ACCIDENT_ROOT_CAUSES_HUMAN = [
+  "Distracted",
+  "Using Cellphone",
+  "Safety devices turned off",
+  "Not wearing seatbelt",
+  "Fell asleep",
+];
+
+function humanRootCauseOptions(isAccident: boolean) {
+  return isAccident
+    ? [...ROOT_CAUSES_HUMAN, ...ACCIDENT_ROOT_CAUSES_HUMAN]
+    : ROOT_CAUSES_HUMAN;
+}
 
 const ROOT_CAUSES_PHYSICAL = [
   "Inadequately guarded", "Unguarded",
@@ -153,13 +167,29 @@ const SectionCard = ({ title, open, onToggle, children }) => (
    MAIN FORM
 ------------------------------------------------------- */
 
-export default function IncidentFormPage({ editId }: { editId?: string }) {
+export default function IncidentFormPage({
+  editId,
+  variant: variantProp = "incident",
+}: {
+  editId?: string;
+  variant?: "incident" | "accident";
+}) {
+  type AdditionalPerson = { name: string; employeeId: string };
+  const [reportVariant, setReportVariant] = useState<"incident" | "accident">(variantProp);
+  const isAccident = reportVariant === "accident";
   const [loadingExisting, setLoadingExisting] = useState(!!editId);
   const [title, setTitle] = useState("");
   const [incidentType, setIncidentType] = useState<string[]>([]);
+  const [accidentCategories, setAccidentCategories] = useState<string[]>([]);
+  const [hasInjuries, setHasInjuries] = useState(false);
+  const [vehicleOrEquipment, setVehicleOrEquipment] = useState("");
+  const [registrationOrAssetId, setRegistrationOrAssetId] = useState("");
+  const [operatorOrDriver, setOperatorOrDriver] = useState("");
+  const [accidentCircumstances, setAccidentCircumstances] = useState("");
   const [department, setDepartment] = useState("");
   const [employee, setEmployee] = useState("");
   const [employeeId, setEmployeeId] = useState("");
+  const [additionalPeople, setAdditionalPeople] = useState<AdditionalPerson[]>([]);
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
   const [severity, setSeverity] = useState("Low");
@@ -179,6 +209,7 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
 
   const [openBasic, setOpenBasic] = useState(true);
   const [openTypes, setOpenTypes] = useState(true);
+  const [openAccidentVehicle, setOpenAccidentVehicle] = useState(true);
   const [openInjured, setOpenInjured] = useState(true);
   const [openBodyParts, setOpenBodyParts] = useState(true);
   const [openEffects, setOpenEffects] = useState(true);
@@ -218,6 +249,9 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
         if (cancelled) return;
 
         setTitle(data.title || "");
+        if (data.type === "accident" || data.type === "incident") {
+          setReportVariant(data.type);
+        }
         setDepartment(data.department || "");
         setEmployee(data.employee || "");
         setEmployeeId(data.employeeId || "");
@@ -233,8 +267,34 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
           parsed = {};
         }
 
-        const basic = (parsed.basic as { incidentTypes?: string[] }) || {};
+        const basic = (parsed.basic as {
+          incidentTypes?: string[];
+          accidentCategories?: string[];
+          hasInjuries?: boolean;
+          vehicleOrEquipment?: string;
+          registrationOrAssetId?: string;
+          operatorOrDriver?: string;
+          accidentCircumstances?: string;
+          additionalPeople?: AdditionalPerson[];
+        }) || {};
         setIncidentType(basic.incidentTypes || []);
+        setAccidentCategories(basic.accidentCategories || []);
+        setHasInjuries(Boolean(basic.hasInjuries));
+        setVehicleOrEquipment(basic.vehicleOrEquipment || "");
+        setRegistrationOrAssetId(basic.registrationOrAssetId || "");
+        setOperatorOrDriver(basic.operatorOrDriver || "");
+        setAccidentCircumstances(basic.accidentCircumstances || "");
+        const extraPeople = Array.isArray(basic.additionalPeople)
+          ? basic.additionalPeople.slice(0, 2)
+          : [];
+        setAdditionalPeople(
+          extraPeople
+            .map((p: any) => ({
+              name: p?.name || "",
+              employeeId: p?.employeeId || "",
+            }))
+            .filter((p: any) => p.name || p.employeeId)
+        );
 
         const injured = (parsed.injuredPerson as Record<string, string | undefined>) || {};
         setInjuredPerson({
@@ -256,7 +316,8 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
         setHazards((parsed.hazards as string[]) || []);
 
         const roots = (parsed.rootCauses as string[]) || [];
-        setRootCausesHuman(roots.filter((r) => ROOT_CAUSES_HUMAN.includes(r)));
+        const humanOptions = humanRootCauseOptions(data.type === "accident");
+        setRootCausesHuman(roots.filter((r) => humanOptions.includes(r)));
         setRootCausesPhysical(roots.filter((r) => ROOT_CAUSES_PHYSICAL.includes(r)));
         setRootCausesJob(roots.filter((r) => ROOT_CAUSES_JOB.includes(r)));
 
@@ -288,6 +349,28 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     setImages((prev) => [...prev, ...Array.from(e.target.files!)]);
+  };
+
+  const updateAdditionalPerson = (
+    index: number,
+    key: keyof AdditionalPerson,
+    value: string
+  ) => {
+    setAdditionalPeople((prev) =>
+      prev.map((person, personIndex) =>
+        personIndex === index ? { ...person, [key]: value } : person
+      )
+    );
+  };
+
+  const addAdditionalPerson = () => {
+    if (additionalPeople.length >= 2) return;
+    if (isAccident && !hasInjuries) setHasInjuries(true);
+    setAdditionalPeople((prev) => [...prev, { name: "", employeeId: "" }]);
+  };
+
+  const removeAdditionalPerson = (index: number) => {
+    setAdditionalPeople((prev) => prev.filter((_, i) => i !== index));
   };
 
   const applyPerson = (person: CompanyPersonRecord) => {
@@ -323,12 +406,38 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
     setSaving(true);
 
     try {
+      const cleanedAdditionalPeople = additionalPeople
+        .map((person) => ({
+          name: person.name.trim(),
+          employeeId: person.employeeId.trim(),
+        }))
+        .filter((person) => person.name || person.employeeId);
+
+      const basic = isAccident
+        ? {
+            accidentCategories,
+            hasInjuries,
+            vehicleOrEquipment: vehicleOrEquipment || undefined,
+            registrationOrAssetId: registrationOrAssetId || undefined,
+            operatorOrDriver: operatorOrDriver || undefined,
+            accidentCircumstances: accidentCircumstances || undefined,
+            additionalPeople: cleanedAdditionalPeople,
+          }
+        : {
+            incidentTypes: incidentType,
+            additionalPeople: cleanedAdditionalPeople,
+          };
+
       const details = {
-        basic: { incidentTypes: incidentType },
-        injuredPerson,
-        injuryBodyParts: bodyParts,
-        injuryEffects: effects,
-        injuryNature: natureOfInjury ? [natureOfInjury] : [],
+        basic,
+        ...(isAccident && !hasInjuries
+          ? {}
+          : {
+              injuredPerson,
+              injuryBodyParts: bodyParts,
+              injuryEffects: effects,
+              injuryNature: natureOfInjury ? [natureOfInjury] : [],
+            }),
         hazards,
         rootCauses: [
           ...rootCausesHuman,
@@ -341,7 +450,7 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
 
       const payload = {
         title,
-        type: "incident",
+        type: reportVariant,
         description: description || null,
         department: department || null,
         employee: employee || null,
@@ -368,8 +477,6 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
         setSaving(false);
         return;
       }
-
-      // 1. Create incident
       const res = await fetch("/api/incidents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -453,12 +560,18 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
         >
           <h1 className="text-2xl font-semibold mb-1">
             {editId
-              ? "Edit Incident Investigation Report"
+              ? isAccident
+                ? "Edit Accident Investigation Report"
+                : "Edit Incident Investigation Report"
+              : isAccident
+              ? "New Traffic / Equipment Accident Report"
               : "New Internal Incident / Accident Investigation"}
           </h1>
           <p className="text-xs">
             {editId
               ? "Update report details and add more signatures below."
+              : isAccident
+              ? "Record traffic or equipment accidents. Injury details are optional."
               : "Internal Incident or Accident Investigation Report"}
           </p>
         </div>
@@ -504,7 +617,7 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
 
             <div>
               <label className="block text-xs mb-1">
-                Department Where Incident Occurred
+                {isAccident ? "Area of Accident" : "Department Where Incident Occurred"}
               </label>
               <input
                 className="w-full px-3 py-2 rounded-lg border text-sm
@@ -549,6 +662,61 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
                 onChange={(e) => setEmployeeId(e.target.value)}
               />
             </div>
+            {additionalPeople.map((person, index) => (
+              <React.Fragment key={`involved-${index}`}>
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <label className="block text-xs">
+                      Person Involved {index + 2} (Name & Surname)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeAdditionalPerson(index)}
+                      className="text-xs font-medium px-2 py-0.5 rounded
+                        text-red-300 hover:text-red-200 hover:bg-red-500/20"
+                      title="Remove this person"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <input
+                    className="w-full px-3 py-2 rounded-lg border text-sm
+                focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    value={person.name}
+                    onChange={(e) =>
+                      updateAdditionalPerson(index, "name", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs mb-1">
+                    Clock / Employee Number {index + 2}
+                  </label>
+                  <input
+                    className="w-full px-3 py-2 rounded-lg border text-sm
+                focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    value={person.employeeId}
+                    onChange={(e) =>
+                      updateAdditionalPerson(index, "employeeId", e.target.value)
+                    }
+                  />
+                </div>
+              </React.Fragment>
+            ))}
+
+            <div className="md:col-span-2 flex items-start">
+              <button
+                type="button"
+                onClick={addAdditionalPerson}
+                disabled={additionalPeople.length >= 2}
+                className="mt-2 text-sm font-semibold px-4 py-2 rounded-lg border transition
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  bg-white/10 border-white/30 hover:bg-white/20"
+              >
+                + Add another person
+              </button>
+            </div>
 
             <div>
               <label className="block text-xs mb-1">
@@ -583,32 +751,138 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
         </SectionCard>
 
         {/* INCIDENT TYPES */}
-        <SectionCard
-          title="Incident / Accident Type"
-          open={openTypes}
-          onToggle={() => setOpenTypes(!openTypes)}
-        >
-          <div className="flex flex-wrap justify-center gap-3">
-            {INCIDENT_TYPES.map((t) => (
-              <PillToggle
-                key={t}
-                label={t}
-                active={incidentType.includes(t)}
-                onClick={() => toggle(t, incidentType, setIncidentType)}
-              />
-            ))}
-          </div>
-        </SectionCard>
+        {!isAccident && (
+          <SectionCard
+            title="Incident / Accident Type"
+            open={openTypes}
+            onToggle={() => setOpenTypes(!openTypes)}
+          >
+            <div className="flex flex-wrap justify-center gap-3">
+              {INCIDENT_TYPES.map((t) => (
+                <PillToggle
+                  key={t}
+                  label={t}
+                  active={incidentType.includes(t)}
+                  onClick={() => toggle(t, incidentType, setIncidentType)}
+                />
+              ))}
+            </div>
+          </SectionCard>
+        )}
+
+        {isAccident && (
+          <>
+            <SectionCard
+              title="Accident Category"
+              open={openTypes}
+              onToggle={() => setOpenTypes(!openTypes)}
+            >
+              <p className="text-xs opacity-70 mb-4 text-center">
+                Select traffic, vehicle, or equipment-related categories.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                {ACCIDENT_CATEGORIES.map((t) => (
+                  <PillToggle
+                    key={t}
+                    label={t}
+                    active={accidentCategories.includes(t)}
+                    onClick={() => toggle(t, accidentCategories, setAccidentCategories)}
+                  />
+                ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Vehicle / Equipment Details"
+              open={openAccidentVehicle}
+              onToggle={() => setOpenAccidentVehicle(!openAccidentVehicle)}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs mb-1">
+                    Vehicle or Equipment Involved
+                  </label>
+                  <input
+                    className="w-full px-3 py-2 rounded-lg border text-sm
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    value={vehicleOrEquipment}
+                    onChange={(e) => setVehicleOrEquipment(e.target.value)}
+                    placeholder="e.g. Forklift, Truck, Excavator"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">
+                    Registration / Asset Number
+                  </label>
+                  <input
+                    className="w-full px-3 py-2 rounded-lg border text-sm
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    value={registrationOrAssetId}
+                    onChange={(e) => setRegistrationOrAssetId(e.target.value)}
+                    placeholder="Vehicle reg. or asset ID"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">
+                    Driver / Operator
+                  </label>
+                  <input
+                    className="w-full px-3 py-2 rounded-lg border text-sm
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    value={operatorOrDriver}
+                    onChange={(e) => setOperatorOrDriver(e.target.value)}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs mb-1">
+                    Traffic / Equipment Circumstances
+                  </label>
+                  <textarea
+                    className="w-full px-3 py-2 rounded-lg border text-sm
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[100px]"
+                    value={accidentCircumstances}
+                    onChange={(e) => setAccidentCircumstances(e.target.value)}
+                    placeholder="Road conditions, speed, load, machine state, etc."
+                  />
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Injuries"
+              open={openInjured}
+              onToggle={() => setOpenInjured(!openInjured)}
+            >
+              <div className="flex flex-wrap justify-center gap-3">
+                <PillToggle
+                  label="No injuries"
+                  active={!hasInjuries}
+                  onClick={() => setHasInjuries(false)}
+                />
+                <PillToggle
+                  label="Injuries reported"
+                  active={hasInjuries}
+                  onClick={() => setHasInjuries(true)}
+                />
+              </div>
+            </SectionCard>
+          </>
+        )}
 
         {/* INJURED PERSON */}
+        {(!isAccident || hasInjuries) && (
         <SectionCard
-          title="Injured Person Details"
+          title={isAccident ? "Person Involved" : "Injured Person Details"}
           open={openInjured}
           onToggle={() => setOpenInjured(!openInjured)}
         >
           <div className="mb-4">
             <PersonAutocomplete
-              label="Load injured person from company records"
+              label={
+                isAccident
+                  ? "Load person involved from company records"
+                  : "Load injured person from company records"
+              }
               onSelect={applyPerson}
             />
           </div>
@@ -632,9 +906,50 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
               </div>
             ))}
           </div>
+
+          {additionalPeople.length > 0 && (
+            <div className="mt-8 space-y-4">
+              <h3 className="text-sm font-semibold opacity-80">
+                {isAccident
+                  ? "Additional Persons Involved"
+                  : "Additional Injured Persons"}
+              </h3>
+              {additionalPeople.map((person, index) => (
+                <div
+                  key={index}
+                  className="rounded-xl p-4 flex items-start justify-between gap-4"
+                  style={{
+                    background: "var(--card-bg)",
+                    border: "1px solid var(--card-border)",
+                  }}
+                >
+                  <div className="text-sm min-w-0">
+                    <p className="font-semibold mb-1">Person {index + 2}</p>
+                    <p className="opacity-80 truncate">
+                      {person.name || "No name entered"}
+                      {person.employeeId ? ` · ${person.employeeId}` : ""}
+                    </p>
+                    <p className="text-xs opacity-60 mt-1">
+                      Edit name and employee number in Basic Information above.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeAdditionalPerson(index)}
+                    className="shrink-0 text-xs font-medium px-2 py-1 rounded
+                      text-red-300 hover:text-red-200 hover:bg-red-500/20"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </SectionCard>
+        )}
 
         {/* SECTION 4 — BODY PARTS AFFECTED */}
+        {(!isAccident || hasInjuries) && (
         <SectionCard
           title="Part of Body Affected"
           open={openBodyParts}
@@ -651,8 +966,10 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
             ))}
           </div>
         </SectionCard>
+        )}
 
         {/* SECTION 5 — EFFECT ON PERSON */}
+        {(!isAccident || hasInjuries) && (
         <SectionCard
           title="Effect on Person"
           open={openEffects}
@@ -669,8 +986,10 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
             ))}
           </div>
         </SectionCard>
+        )}
 
         {/* SECTION 6 — NATURE OF INJURY */}
+        {(!isAccident || hasInjuries) && (
         <SectionCard
           title="Nature of Injury (Describe the injury)"
           open={openNature}
@@ -683,6 +1002,7 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
             onChange={(e) => setNatureOfInjury(e.target.value)}
           />
         </SectionCard>
+        )}
 
         {/* SECTION 7 — HAZARDS */}
         <SectionCard
@@ -709,7 +1029,7 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
           onToggle={() => setOpenRootHuman(!openRootHuman)}
         >
           <div className="flex flex-wrap justify-center gap-3">
-            {ROOT_CAUSES_HUMAN.map((r) => (
+            {humanRootCauseOptions(isAccident).map((r) => (
               <PillToggle
                 key={r}
                 label={r}
@@ -889,6 +1209,8 @@ export default function IncidentFormPage({ editId }: { editId?: string }) {
               ? "Saving…"
               : editId
               ? "Save changes"
+              : isAccident
+              ? "Save Accident Report"
               : "Save Incident"}
           </button>
         </div>

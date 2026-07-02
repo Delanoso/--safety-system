@@ -758,7 +758,13 @@ const IncidentViewPage: React.FC = () => {
         )}
 
         {hasInjuredPerson && (
-          <SectionCard title="Injured Person Details">
+          <SectionCard
+            title={
+              incident.type === "accident"
+                ? "Person Involved"
+                : "Injured Person Details"
+            }
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               {details.injuredPerson?.name && (
                 <div>
@@ -814,24 +820,94 @@ const IncidentViewPage: React.FC = () => {
                   <div>{details.injuredPerson.address}</div>
                 </div>
               )}
+
+              {Array.isArray((details.basic as any)?.additionalPeople) &&
+                (details.basic as any).additionalPeople.length > 0 && (
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-gray-300 mb-1">
+                      {incident.type === "accident"
+                        ? "Additional Persons Involved"
+                        : "Additional injured persons"}
+                    </div>
+                    <div className="space-y-2">
+                      {(details.basic as any).additionalPeople.map((p, index) => (
+                        <div key={index} className="text-sm">
+                          <span className="font-semibold">
+                            Person {index + 2}:
+                          </span>{" "}
+                          {p?.name || "N/A"}
+                          {p?.employeeId ? ` (ID: ${p.employeeId})` : ""}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </div>
           </SectionCard>
         )}
 
         {hasBodyParts && (
           <SectionCard title="Injury Body Parts">
+            {Array.isArray((details.basic as any)?.additionalPeople) &&
+              (details.basic as any).additionalPeople.length > 0 && (
+                <p className="text-sm text-gray-300 mb-3">
+                  Recorded for:{" "}
+                  {[
+                    [details.injuredPerson?.name, details.injuredPerson?.surname]
+                      .filter(Boolean)
+                      .join(" "),
+                    ...(details.basic as any).additionalPeople
+                      .map((p) => p?.name)
+                      .filter(Boolean),
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+              )}
             <PillList items={details.injuryBodyParts} />
           </SectionCard>
         )}
 
         {hasEffects && (
           <SectionCard title="Injury Effects">
+            {Array.isArray((details.basic as any)?.additionalPeople) &&
+              (details.basic as any).additionalPeople.length > 0 && (
+                <p className="text-sm text-gray-300 mb-3">
+                  Recorded for:{" "}
+                  {[
+                    [details.injuredPerson?.name, details.injuredPerson?.surname]
+                      .filter(Boolean)
+                      .join(" "),
+                    ...(details.basic as any).additionalPeople
+                      .map((p) => p?.name)
+                      .filter(Boolean),
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+              )}
             <PillList items={details.injuryEffects} />
           </SectionCard>
         )}
 
         {hasNature && (
           <SectionCard title="Nature of Injury">
+            {Array.isArray((details.basic as any)?.additionalPeople) &&
+              (details.basic as any).additionalPeople.length > 0 && (
+                <p className="text-sm text-gray-300 mb-3">
+                  Recorded for:{" "}
+                  {[
+                    [details.injuredPerson?.name, details.injuredPerson?.surname]
+                      .filter(Boolean)
+                      .join(" "),
+                    ...(details.basic as any).additionalPeople
+                      .map((p) => p?.name)
+                      .filter(Boolean),
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+              )}
             <PillList items={details.injuryNature} />
           </SectionCard>
         )}

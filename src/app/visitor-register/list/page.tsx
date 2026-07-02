@@ -18,6 +18,7 @@ export default function VisitorRegisterListPage() {
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [filter, setFilter] = useState<"all" | "onSite">("all");
   const [search, setSearch] = useState("");
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   async function load() {
     const url = filter === "onSite" ? "/api/visitor-register?onSite=true" : "/api/visitor-register";
@@ -27,6 +28,15 @@ export default function VisitorRegisterListPage() {
   }
 
   useEffect(() => { load(); }, [filter]);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) return;
+    setHighlightId(id);
+    requestAnimationFrame(() => {
+      document.getElementById(`visitor-row-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [visitors]);
 
   async function checkOut(id: string) {
     await fetch(`/api/visitor-register/${id}`, {
@@ -89,7 +99,11 @@ export default function VisitorRegisterListPage() {
                 <tr><td colSpan={7} className="p-4 text-center text-black/60">No visitors found.</td></tr>
               ) : (
                 filtered.map((v) => (
-                  <tr key={v.id} className="border-t border-white/40">
+                  <tr
+                    key={v.id}
+                    id={`visitor-row-${v.id}`}
+                    className={`border-t border-white/40 ${highlightId === v.id ? "ring-2 ring-blue-400" : ""}`}
+                  >
                     <td className="p-3">{v.visitorName}</td>
                     <td className="p-3">{v.visitorCompany ?? "—"}</td>
                     <td className="p-3">{v.hostName}</td>

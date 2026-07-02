@@ -6,7 +6,7 @@ import {
   PdfSection,
   pdfTableStyles,
 } from "@/components/pdf/PdfDocument";
-import { getCompanyLogoUrl } from "@/lib/pdf";
+import { getCompanyPdfBranding, resolvePdfBranding } from "@/lib/pdf";
 import {
   computeContractorCompliance,
   getApplicableSections,
@@ -73,18 +73,21 @@ export async function ToolboxTalkPdfTemplate({ id }: { id: string }) {
     return <PdfNotFound title="Toolbox talk not found" id={id} />;
   }
 
-  const logoUrl =
-    talk.company?.logoUrl ?? (await getCompanyLogoUrl(talk.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    talk.companyId,
+    talk.company
+  );
 
   return (
     <PdfDocument
       title={talk.title}
       documentType="Salus — Toolbox Talk"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Record ID:</strong> {talk.id}</p>
-        {talk.company && <p><strong>Company:</strong> {talk.company.name}</p>}
         {talk.topic && <p><strong>Topic:</strong> {talk.topic}</p>}
         <p><strong>Date:</strong> {formatDate(talk.talkDate)}</p>
         <p><strong>Presenter:</strong> {talk.presenter ?? "—"}</p>
@@ -166,18 +169,21 @@ export async function PermitToWorkPdfTemplate({ id }: { id: string }) {
     return <PdfNotFound title="Permit to work not found" id={id} />;
   }
 
-  const logoUrl =
-    permit.company?.logoUrl ?? (await getCompanyLogoUrl(permit.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    permit.companyId,
+    permit.company
+  );
 
   return (
     <PdfDocument
       title={permit.title}
       documentType="Salus — Permit to Work"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Permit ID:</strong> {permit.id}</p>
-        {permit.company && <p><strong>Company:</strong> {permit.company.name}</p>}
         <p><strong>Permit Number:</strong> {permit.permitNumber ?? "—"}</p>
         <p><strong>Permit Type:</strong> {permitTypeLabel(permit.permitType)}</p>
         <p><strong>Status:</strong> {permitStatusLabel(permit.status)}</p>
@@ -220,18 +226,21 @@ export async function EmergencyDrillPdfTemplate({ id }: { id: string }) {
     return <PdfNotFound title="Emergency drill not found" id={id} />;
   }
 
-  const logoUrl =
-    drill.company?.logoUrl ?? (await getCompanyLogoUrl(drill.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    drill.companyId,
+    drill.company
+  );
 
   return (
     <PdfDocument
       title={drill.title}
       documentType="Salus — Emergency Drill Report"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Drill ID:</strong> {drill.id}</p>
-        {drill.company && <p><strong>Company:</strong> {drill.company.name}</p>}
         <p><strong>Drill Type:</strong> {drillTypeLabel(drill.drillType)}</p>
         <p><strong>Status:</strong> {drillStatusLabel(drill.status)}</p>
         <p><strong>Date:</strong> {formatDate(drill.drillDate)}</p>
@@ -279,14 +288,18 @@ export async function InductionTrainingPdfTemplate({ id }: { id: string }) {
     return <PdfNotFound title="Induction training not found" id={id} />;
   }
 
-  const logoUrl =
-    record.company?.logoUrl ?? (await getCompanyLogoUrl(record.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    record.companyId,
+    record.company
+  );
 
   return (
     <PdfDocument
       title="Induction Training Record"
       documentType="Salus — Induction Training"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <table style={pdfTableStyles.table}>
         <tbody>
@@ -350,14 +363,18 @@ export async function VisitorRegisterPdfTemplate({ id }: { id: string }) {
     return <PdfNotFound title="Visitor register entry not found" id={id} />;
   }
 
-  const logoUrl =
-    entry.company?.logoUrl ?? (await getCompanyLogoUrl(entry.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    entry.companyId,
+    entry.company
+  );
 
   return (
     <PdfDocument
       title="Visitor Register Entry"
       documentType="Salus — Visitor Register"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <table style={pdfTableStyles.table}>
         <tbody>
@@ -437,14 +454,18 @@ export async function LegalCompliancePdfTemplate({ id }: { id: string }) {
     return <PdfNotFound title="Legal compliance item not found" id={id} />;
   }
 
-  const logoUrl =
-    item.company?.logoUrl ?? (await getCompanyLogoUrl(item.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    item.companyId,
+    item.company
+  );
 
   return (
     <PdfDocument
       title="Legal Compliance Register Item"
       documentType="Salus — Legal Compliance Register"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <table style={pdfTableStyles.table}>
         <tbody>
@@ -561,8 +582,10 @@ export async function ContractorSafetyFilePdfTemplate({ id }: { id: string }) {
     return <PdfNotFound title="Contractor not found" id={id} />;
   }
 
-  const logoUrl =
-    contractor.company?.logoUrl ?? (await getCompanyLogoUrl(contractor.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    contractor.companyId,
+    contractor.company
+  );
 
   const excluded = parseExcludedSections(contractor.excludedSections);
   const applicable = getApplicableSections(excluded);
@@ -585,10 +608,11 @@ export async function ContractorSafetyFilePdfTemplate({ id }: { id: string }) {
       title={`Contractor Safety File — ${contractor.name}`}
       documentType="Salus — Contractor Safety File"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Contractor ID:</strong> {contractor.id}</p>
-        {contractor.company && <p><strong>Company:</strong> {contractor.company.name}</p>}
         <p><strong>Contractor:</strong> {contractor.name}</p>
         <p><strong>Scope:</strong> {scopeLabel}</p>
         {contractor.contactEmail && (
@@ -695,19 +719,22 @@ export async function MaintenanceSchedulePdfTemplate({ id }: { id: string }) {
     return <PdfNotFound title="Maintenance schedule not found" id={id} />;
   }
 
-  const logoUrl =
-    schedule.company?.logoUrl ?? (await getCompanyLogoUrl(schedule.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    schedule.companyId,
+    schedule.company
+  );
 
   return (
     <PdfDocument
       title={schedule.title}
       documentType="Salus — Maintenance Schedule"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Schedule:</strong> {schedule.title}</p>
         <p><strong>Type:</strong> {maintenanceTypeLabel(schedule.type)}</p>
-        {schedule.company && <p><strong>Company:</strong> {schedule.company.name}</p>}
         <p><strong>Items:</strong> {schedule.items.length}</p>
       </div>
 
@@ -763,17 +790,17 @@ export async function HazardousChemicalsRegisterPdfTemplate({
     orderBy: { name: "asc" },
   });
 
-  const logoUrl =
-    company?.logoUrl ?? (await getCompanyLogoUrl(companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(companyId, company);
 
   return (
     <PdfDocument
       title="Hazardous Chemicals Register"
       documentType="Salus — Hazardous Chemicals Register"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={companyId}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
-        {company && <p><strong>Company:</strong> {company.name}</p>}
         <p><strong>Total chemicals:</strong> {chemicals.length}</p>
         <p><strong>Generated:</strong> {formatDateTime(new Date())}</p>
       </div>
@@ -832,15 +859,18 @@ export async function PpeIssuePdfTemplate({ id }: { id: string }) {
     return <PdfNotFound title="PPE issue not found" id={id} />;
   }
 
-  const logoUrl =
-    issue.itemType.company?.logoUrl ??
-    (await getCompanyLogoUrl(issue.itemType.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    issue.itemType.companyId,
+    issue.itemType.company
+  );
 
   return (
     <PdfDocument
       title={`PPE Issue — ${issue.person.name}`}
       documentType="Salus — PPE Issue Record"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Person:</strong> {issue.person.name}</p>
@@ -883,15 +913,18 @@ export async function CostAnalysisPdfTemplate({ id }: { id: string }) {
       return <PdfNotFound title="Cost analysis not found" id={id} />;
     }
 
-    const logoUrl =
-      legacy.incident?.company?.logoUrl ??
-      (await getCompanyLogoUrl(legacy.incident?.companyId));
+    const { logoUrl, companyName } = await resolvePdfBranding(
+      legacy.incident?.companyId,
+      legacy.incident?.company
+    );
 
     return (
       <PdfDocument
         title="Incident Cost Analysis"
         documentType="Salus — Cost Analysis"
         logoUrl={logoUrl}
+        companyName={companyName}
+        entityId={id}
       >
         <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
           {legacy.incident && (
@@ -921,14 +954,18 @@ export async function CostAnalysisPdfTemplate({ id }: { id: string }) {
 
   const currency = (details.currency as string) || "ZAR";
   const basic = (details.basic as Record<string, unknown>) ?? {};
-  const logoUrl =
-    incident.company?.logoUrl ?? (await getCompanyLogoUrl(incident.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    incident.companyId,
+    incident.company
+  );
 
   return (
     <PdfDocument
       title={`Cost Analysis — ${incident.title}`}
       documentType="Salus — Incident Cost Analysis"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Title:</strong> {incident.title}</p>
@@ -1003,18 +1040,21 @@ export async function SheMeetingPdfTemplate({ id }: { id: string }) {
     actionItems = [];
   }
 
-  const logoUrl =
-    meeting.company?.logoUrl ?? (await getCompanyLogoUrl(meeting.companyId));
+  const { logoUrl, companyName } = await resolvePdfBranding(
+    meeting.companyId,
+    meeting.company
+  );
 
   return (
     <PdfDocument
       title={`SHE Committee Meeting — ${formatDate(meeting.date)}`}
       documentType="Salus — SHE Committee Meeting"
       logoUrl={logoUrl}
+      companyName={companyName}
+      entityId={id}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 25 }}>
         <p><strong>Date:</strong> {formatDate(meeting.date)}</p>
-        {meeting.company && <p><strong>Company:</strong> {meeting.company.name}</p>}
       </div>
 
       {meeting.agenda && (

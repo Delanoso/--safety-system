@@ -85,6 +85,17 @@ export default function IncidentsPage() {
                 >
                   Near Miss
                 </Link>
+
+                <Link
+                  href="/incidents/new/accident"
+                  className="block px-4 py-2 rounded-lg font-medium transition"
+                  style={{
+                    background: "var(--card-bg)",
+                    border: "1px solid var(--card-border)",
+                  }}
+                >
+                  Accident
+                </Link>
               </div>
             )}
           </div>

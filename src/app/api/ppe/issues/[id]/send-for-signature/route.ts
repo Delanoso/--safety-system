@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { prepareWhatsAppDelivery } from "@/lib/whatsapp";
+import { getPublicBaseUrl } from "@/lib/public-base-url";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -39,7 +40,7 @@ export async function POST(
   }
 
   const token = generateToken();
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = getPublicBaseUrl(req);
   const signUrl = `${baseUrl}/ppe-management/sign/${id}?token=${token}`;
 
   await prisma.pPEIssue.update({

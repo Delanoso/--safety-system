@@ -20,6 +20,7 @@ export default function HazardousChemicalsPage() {
   const [items, setItems] = useState<Chemical[]>([]);
   const [search, setSearch] = useState("");
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
@@ -36,6 +37,15 @@ export default function HazardousChemicalsPage() {
     }
     load();
   }, []);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) return;
+    setHighlightId(id);
+    requestAnimationFrame(() => {
+      document.getElementById(`chemical-row-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [items]);
 
   async function handleDelete(id: string) {
     if (!confirm("Remove this chemical from the register?")) return;
@@ -119,7 +129,11 @@ export default function HazardousChemicalsPage() {
                 </tr>
               ) : (
                 filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-black/5 hover:bg-white/40">
+                  <tr
+                    key={c.id}
+                    id={`chemical-row-${c.id}`}
+                    className={`border-b border-black/5 hover:bg-white/40 ${highlightId === c.id ? "ring-2 ring-blue-400" : ""}`}
+                  >
                     <td className="p-4 font-medium">{c.name}</td>
                     <td className="p-4">{c.casNumber ?? "—"}</td>
                     <td className="p-4">{c.location ?? "—"}</td>

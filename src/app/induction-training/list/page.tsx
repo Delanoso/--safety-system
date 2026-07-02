@@ -17,6 +17,7 @@ type Induction = {
 export default function InductionTrainingListPage() {
   const [records, setRecords] = useState<Induction[]>([]);
   const [search, setSearch] = useState("");
+  const [highlightId, setHighlightId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/induction-training")
@@ -26,6 +27,18 @@ export default function InductionTrainingListPage() {
       })
       .catch(() => setRecords([]));
   }, []);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) return;
+    const num = parseInt(id, 10);
+    if (!Number.isNaN(num)) {
+      setHighlightId(num);
+      requestAnimationFrame(() => {
+        document.getElementById(`induction-row-${num}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }, [records]);
 
   function formatDate(d: string | null) {
     if (!d) return "—";
@@ -80,7 +93,11 @@ export default function InductionTrainingListPage() {
                 <tr><td colSpan={6} className="p-4 text-center text-black/60">No records found.</td></tr>
               ) : (
                 filtered.map((r) => (
-                  <tr key={r.id} className="border-t border-white/40">
+                  <tr
+                    key={r.id}
+                    id={`induction-row-${r.id}`}
+                    className={`border-t border-white/40 ${highlightId === r.id ? "ring-2 ring-orange-400" : ""}`}
+                  >
                     <td className="p-3">{r.employee}</td>
                     <td className="p-3">{r.inductionType}</td>
                     <td className="p-3">{formatDate(r.issueDate)}</td>

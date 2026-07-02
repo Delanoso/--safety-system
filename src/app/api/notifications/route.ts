@@ -10,6 +10,7 @@ import {
   getPlannedDrillReminders,
   getRiskAssessmentReviewReminders,
   getSheMeetingActionReminders,
+  getUnsignedIncidentTeamReminders,
   getUnsignedToolboxAttendeeReminders,
   getVisitorsOnSiteReminders,
 } from "@/lib/notification-reminders";
@@ -36,6 +37,7 @@ function emptyNotifications() {
     plannedDrills: [],
     riskAssessmentsReviewDue: [],
     sheMeetingActionsDue: [],
+    unsignedIncidentTeam: [],
     total: 0,
   };
 }
@@ -196,6 +198,7 @@ export async function GET() {
       plannedDrills,
       riskAssessmentsReviewDue,
       sheMeetingActionsDue,
+      unsignedIncidentTeam,
     ] = await Promise.all([
       getMaintenanceDueReminders({
         companyId: companyFilter?.companyId,
@@ -238,6 +241,9 @@ export async function GET() {
         now,
         daysAhead: DAYS_AHEAD,
       }),
+      getUnsignedIncidentTeamReminders({
+        companyId: companyFilter?.companyId,
+      }),
     ]);
 
     return NextResponse.json({
@@ -246,7 +252,7 @@ export async function GET() {
         type: "certificate_expiring" as const,
         title: `${c.certificateName} – ${c.employee}`,
         subtitle: `Expires ${c.expiryDate.toLocaleDateString()}`,
-        href: "/training/certificates/list",
+        href: `/training/certificates/list?id=${c.id}`,
         date: c.expiryDate,
       })),
       expiringMedicals: expiringMedicals.map((m) => ({
@@ -254,7 +260,7 @@ export async function GET() {
         type: "medical_expiring" as const,
         title: `${m.medicalType} – ${m.employee}`,
         subtitle: `Expires ${m.expiryDate.toLocaleDateString()}`,
-        href: "/medicals/list",
+        href: `/medicals/list?id=${m.id}`,
         date: m.expiryDate,
       })),
       unsignedAppointments: unsignedAppointments.map((a) => ({
@@ -280,7 +286,7 @@ export async function GET() {
         subtitle: r.expiryDate
           ? `Expires ${r.expiryDate.toLocaleDateString()}`
           : "Expiry due",
-        href: "/induction-training/list",
+        href: `/induction-training/list?id=${r.id}`,
         date: r.expiryDate ?? now,
       })),
       complianceReviewDue: complianceReviewDue.map((item) => ({
@@ -312,6 +318,7 @@ export async function GET() {
       plannedDrills,
       riskAssessmentsReviewDue,
       sheMeetingActionsDue,
+      unsignedIncidentTeam,
       total:
         expiringCerts.length +
         expiringMedicals.length +
@@ -328,7 +335,8 @@ export async function GET() {
         hazardousChemicalsNoSds.length +
         plannedDrills.length +
         riskAssessmentsReviewDue.length +
-        sheMeetingActionsDue.length,
+        sheMeetingActionsDue.length +
+        unsignedIncidentTeam.length,
     });
   } catch (err) {
     console.error("Notifications error:", err);

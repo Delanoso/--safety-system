@@ -1,28 +1,39 @@
 import React from "react";
+import { getPdfFooterMetadata } from "@/lib/pdf-document-metadata";
 
 const PDF_HEADER_BLUE = "#1e40af";
 const PDF_TEXT = "#111827";
 const PDF_BORDER = "#e5e7eb";
 const PDF_TABLE_HEAD_BG = "#f0f9ff";
+const PDF_COMPANY_NAME_FONT =
+  "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
 
 /**
  * Shared PDF document wrapper.
- * Professional layout: blue header, clear hierarchy, optional logo, footer.
+ * Standard header: company logo + name (top left), then document title below.
  */
 export function PdfDocument({
   children,
   title,
-  documentType,
+  documentType: _documentType,
   logoUrl,
+  companyName,
+  entityId,
+  documentNumber,
 }: {
   children: React.ReactNode;
   title: string;
-  documentType: string;
+  /** Kept for compatibility; no longer shown in the header/footer. */
+  documentType?: string;
   logoUrl?: string | null;
+  companyName?: string | null;
+  entityId?: string | null;
+  documentNumber?: string | null;
 }) {
+  const footer = getPdfFooterMetadata({ entityId, documentNumber });
   const baseStyles: React.CSSProperties = {
     margin: 0,
-    padding: "48px 56px 56px",
+    padding: "12px 48px 0",
     fontFamily: "Georgia, 'Times New Roman', serif",
     background: "#ffffff",
     color: PDF_TEXT,
@@ -31,30 +42,96 @@ export function PdfDocument({
     maxWidth: 210 * 3.78,
     marginLeft: "auto",
     marginRight: "auto",
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    boxSizing: "border-box",
   };
 
   const headerStyles: React.CSSProperties = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
     borderBottom: `3px solid ${PDF_HEADER_BLUE}`,
-    paddingBottom: 20,
-    marginBottom: 28,
+    paddingBottom: 14,
+    marginBottom: 22,
+  };
+
+  const brandingRowStyles: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 12,
+    minHeight: 50,
+  };
+
+  const companyNameStyles: React.CSSProperties = {
+    margin: 0,
+    fontFamily: PDF_COMPANY_NAME_FONT,
+    fontSize: 26,
+    fontWeight: 600,
+    color: "#1e293b",
+    letterSpacing: "0.03em",
+    lineHeight: 1.15,
   };
 
   const footerStyles: React.CSSProperties = {
-    marginTop: 48,
-    paddingTop: 16,
+    marginTop: "auto",
+    paddingTop: 12,
+    paddingBottom: 0,
     borderTop: `1px solid ${PDF_BORDER}`,
-    textAlign: "center",
-    fontSize: 11,
+    fontSize: 10,
     color: "#6b7280",
-    letterSpacing: "0.02em",
+    letterSpacing: "0.01em",
+    lineHeight: 1.5,
+    flexShrink: 0,
   };
+
+  const footerGridStyles: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 12,
+    textAlign: "center",
+  };
+
+  const footerLabelStyles: React.CSSProperties = {
+    display: "block",
+    fontSize: 9,
+    fontWeight: 700,
+    color: PDF_HEADER_BLUE,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    marginBottom: 4,
+  };
+
+  const footerValueStyles: React.CSSProperties = {
+    display: "block",
+    fontSize: 10,
+    color: "#374151",
+    fontWeight: 500,
+  };
+
+  const showBranding = Boolean(logoUrl || companyName);
 
   return (
     <div style={baseStyles} className="pdf-page">
       <header style={headerStyles}>
+        {showBranding && (
+          <div style={brandingRowStyles}>
+            {logoUrl && (
+              <img
+                src={logoUrl}
+                alt={companyName ? `${companyName} logo` : "Company logo"}
+                style={{
+                  maxHeight: 60,
+                  maxWidth: 180,
+                  objectFit: "contain",
+                  flexShrink: 0,
+                  display: "block",
+                }}
+              />
+            )}
+            {companyName && <p style={companyNameStyles}>{companyName}</p>}
+          </div>
+        )}
+
         <div>
           <h1
             style={{
@@ -68,35 +145,40 @@ export function PdfDocument({
           >
             {title}
           </h1>
-          <p
-            style={{
-              margin: "6px 0 0",
-              fontSize: 12,
-              color: "#6b7280",
-              fontWeight: 400,
-            }}
-          >
-            {documentType}
-          </p>
         </div>
-        {logoUrl && (
-          <div style={{ flexShrink: 0 }}>
-            <img
-              src={logoUrl}
-              alt="Company logo"
-              style={{
-                maxHeight: 52,
-                maxWidth: 200,
-                objectFit: "contain",
-              }}
-            />
-          </div>
-        )}
       </header>
 
-      <main style={{ color: PDF_TEXT, fontSize: 14, lineHeight: 1.6 }}>{children}</main>
+      <main
+        style={{
+          color: PDF_TEXT,
+          fontSize: 14,
+          lineHeight: 1.6,
+          flex: 1,
+        }}
+      >
+        {children}
+      </main>
 
-      <footer style={footerStyles}>{documentType}</footer>
+      <footer style={footerStyles}>
+        <div style={footerGridStyles}>
+          <div>
+            <span style={footerLabelStyles}>Document No.</span>
+            <span style={footerValueStyles}>{footer.documentNumber}</span>
+          </div>
+          <div>
+            <span style={footerLabelStyles}>Created</span>
+            <span style={footerValueStyles}>{footer.createdDate}</span>
+          </div>
+          <div>
+            <span style={footerLabelStyles}>Review Date</span>
+            <span style={footerValueStyles}>{footer.reviewDate}</span>
+          </div>
+          <div>
+            <span style={footerLabelStyles}>PDF Date</span>
+            <span style={footerValueStyles}>{footer.pdfDate}</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
