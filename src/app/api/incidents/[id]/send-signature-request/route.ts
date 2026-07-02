@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { prepareWhatsAppDelivery } from "@/lib/whatsapp";
+import { prepareWhatsAppDelivery, whatsAppLinkLine } from "@/lib/whatsapp";
 import { getPublicBaseUrl } from "@/lib/public-base-url";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +51,7 @@ export async function POST(
     const baseUrl = getPublicBaseUrl(req);
     const signUrl = `${baseUrl}/incidents/sign/${incidentId}?teamId=${teamId}&token=${token}`;
 
-    const message = `Hi ${member.name}, please review and sign the incident investigation "${incident.title}": ${signUrl}`;
+    const message = `Hi ${member.name}, please review and sign the incident investigation "${incident.title}":${whatsAppLinkLine(signUrl)}`;
 
     let delivery;
     try {

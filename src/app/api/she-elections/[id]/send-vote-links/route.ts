@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { prepareWhatsAppDelivery } from "@/lib/whatsapp";
+import { prepareWhatsAppDelivery, whatsAppLinkLine } from "@/lib/whatsapp";
 import { getPublicBaseUrl } from "@/lib/public-base-url";
 
 export const dynamic = "force-dynamic";
@@ -67,7 +67,7 @@ export async function POST(
         continue;
       }
 
-      const message = `You have been invited to vote in the ${election.title} SHE Rep election. Cast your vote here: ${voteUrl}\n\nThis link is unique to you. Please do not share it.`;
+      const message = `You have been invited to vote in the ${election.title} SHE Rep election. Cast your vote here:${whatsAppLinkLine(voteUrl)}\n\nThis link is unique to you. Please do not share it.`;
 
       try {
         const delivery = prepareWhatsAppDelivery(voter.phone, message);

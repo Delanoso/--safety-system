@@ -47,3 +47,9 @@ export function prepareWhatsAppDelivery(
     whatsappUrl: buildWhatsAppUrl(phone, message),
   };
 }
+
+/** Put a URL on its own line so WhatsApp makes it tappable. */
+export function whatsAppLinkLine(url: string, prefix = ""): string {
+  const line = url.trim();
+  return prefix ? `${prefix}\n\n${line}` : `\n\n${line}`;
+}

@@ -26,6 +26,8 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://safety:safety@db:5432/safety
+      SITE_URL: ${SITE_URL:-https://onlinesafetysolutions.co.za}
+      NEXT_PUBLIC_BASE_URL: ${SITE_URL:-https://onlinesafetysolutions.co.za}
     depends_on:
       db:
         condition: service_healthy

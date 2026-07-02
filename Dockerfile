@@ -22,6 +22,11 @@ COPY . .
 ENV PRISMA_GENERATE_DATABASE_URL="postgresql://placeholder:placeholder@placeholder:5432/placeholder"
 ENV DATABASE_URL="${PRISMA_GENERATE_DATABASE_URL}"
 
+ARG NEXT_PUBLIC_BASE_URL=https://onlinesafetysolutions.co.za
+ARG SITE_URL=https://onlinesafetysolutions.co.za
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+ENV SITE_URL=$SITE_URL
+
 RUN npx prisma generate
 RUN npm run build
 

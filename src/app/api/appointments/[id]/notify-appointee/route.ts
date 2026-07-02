@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 import { requireUser } from "@/lib/auth";
 
-import { prepareWhatsAppDelivery } from "@/lib/whatsapp";
+import { prepareWhatsAppDelivery, whatsAppLinkLine } from "@/lib/whatsapp";
 import { getPublicBaseUrl } from "@/lib/public-base-url";
 
 
@@ -87,7 +87,7 @@ export async function POST(
 
 
 
-    const message = `Hi ${appointment.appointee}, your appointer (${appointment.appointer}) has signed your appointment letter. Please review and sign: ${signUrl}`;
+    const message = `Hi ${appointment.appointee}, your appointer (${appointment.appointer}) has signed your appointment letter. Please review and sign:${whatsAppLinkLine(signUrl)}`;
 
 
 

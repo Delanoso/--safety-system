@@ -1,21 +1,31 @@
 /**
  * Public site URL for outbound links (WhatsApp signatures, vote links, etc.).
- * Prefer NEXT_PUBLIC_BASE_URL; fall back to request host in production.
+ * Prefer SITE_URL (runtime server env) so production domain works without rebuild.
  */
 export function getPublicBaseUrl(req?: Request): string {
+  const runtimeUrl =
+    process.env.SITE_URL?.trim() || process.env.PUBLIC_BASE_URL?.trim();
+  if (runtimeUrl) return runtimeUrl.replace(/\/$/, "");
+
   const envUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim();
   if (envUrl) return envUrl.replace(/\/$/, "");
 
-  const host = req?.headers.get("host")?.trim();
+  const forwardedHost = req?.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || req?.headers.get("host")?.trim();
   if (host) {
+    const hostname = host.split(":")[0];
     const isLocal =
-      host.startsWith("localhost") || host.startsWith("127.0.0.1");
+      hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.");
+    const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
     const proto =
       !isLocal &&
+      !isIp &&
       (req!.headers.get("x-forwarded-proto") === "https" ||
         req!.headers.get("x-forwarded-ssl") === "on")
         ? "https"
-        : "http";
+        : isIp
+          ? "http"
+          : "https";
     return `${proto}://${host}`.replace(/\/$/, "");
   }
 
@@ -24,6 +34,6 @@ export function getPublicBaseUrl(req?: Request): string {
   }
 
   throw new Error(
-    "NEXT_PUBLIC_BASE_URL must be set to your public site URL (e.g. https://your-domain.com)"
+    "SITE_URL or NEXT_PUBLIC_BASE_URL must be set (e.g. https://onlinesafetysolutions.co.za)"
   );
 }
