@@ -159,14 +159,17 @@ export default function SignAppointmentPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         [field]: dataUrl,
-        status:
-          field === "appointeeSignature"
-            ? "appointee_signed"
-            : "appointer_signed",
       }),
     });
 
-    if (res.ok) router.push(`/appointments/view/${id}`);
+    if (res.ok) {
+      const updated = await res.json();
+      const bothSigned =
+        updated.appointerSignature && updated.appointeeSignature;
+      router.push(
+        bothSigned ? "/appointments/view" : `/appointments/view/${id}`
+      );
+    }
   };
 
   const sendWhatsApp = async () => {

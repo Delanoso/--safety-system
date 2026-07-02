@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function ViewAppointmentsPage() {
   const appointments = await prisma.appointment.findMany({
     where: {
-      status: "signed",
+      status: { in: ["signed", "completed"] },
       appointerSignature: { not: null },
       appointeeSignature: { not: null },
       appointerSignedAt: { not: null },

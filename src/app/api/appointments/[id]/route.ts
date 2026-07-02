@@ -78,26 +78,7 @@ export async function PATCH(
     appointerToken,
   } = body;
 
-  const updateData: any = {};
-
-  // Status update
-  if (status) updateData.status = status;
-
-  // Appointee signature + timestamp
-  if (appointeeSignature) {
-    updateData.appointeeSignature = appointeeSignature;
-    updateData.appointeeSignedAt = new Date();
-  }
-
-  // Appointer signature + timestamp
-  if (appointerSignature) {
-    updateData.appointerSignature = appointerSignature;
-    updateData.appointerSignedAt = new Date();
-  }
-
-  // Token updates
-  if (appointeeToken) updateData.appointeeToken = appointeeToken;
-  if (appointerToken) updateData.appointerToken = appointerToken;
+  const updateData: Record<string, unknown> = {};
 
   const existing = await prisma.appointment.findUnique({ where: { id } });
   if (!existing) {
@@ -107,20 +88,35 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // ⭐ AUTO-MARK AS SIGNED WHEN BOTH SIGNATURES EXIST
-  if (appointeeSignature || appointerSignature) {
-    const finalAppointeeSig =
-      appointeeSignature || existing?.appointeeSignature;
-    const finalAppointerSig =
-      appointerSignature || existing?.appointerSignature;
-
-    if (finalAppointeeSig && finalAppointerSig) {
-      updateData.status = "signed";
-    }
+  if (appointeeSignature) {
+    updateData.appointeeSignature = appointeeSignature;
+    updateData.appointeeSignedAt = new Date();
   }
 
-  try {
-    const updated = await prisma.appointment.update({
+  if (appointerSignature) {
+    updateData.appointerSignature = appointerSignature;
+    updateData.appointerSignedAt = new Date();
+  }
+
+  if (appointeeToken) updateData.appointeeToken = appointeeToken;
+  if (appointerToken) updateData.appointerToken = appointerToken;
+
+  const finalAppointeeSig =
+    (appointeeSignature as string | undefined) || existing.appointeeSignature;
+  const finalAppointerSig =
+    (appointerSignature as string | undefined) || existing.appointerSignature;
+
+  if (finalAppointeeSig && finalAppointerSig) {
+    updateData.status = "signed";
+  } else if (appointeeSignature) {
+    updateData.status = "appointee_signed";
+  } else if (appointerSignature) {
+    updateData.status = "appointer_signed";
+  } else if (status) {
+    updateData.status = status;
+  }
+
+  try {    const updated = await prisma.appointment.update({
       where: { id },
       data: updateData,
     });

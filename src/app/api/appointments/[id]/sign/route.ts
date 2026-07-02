@@ -68,7 +68,7 @@ export async function POST(
       (role === "appointee" && appointment.appointerSignature);
 
     if (bothSigned) {
-      updateData.status = "completed";
+      updateData.status = "signed";
     }
 
     await prisma.appointment.update({
