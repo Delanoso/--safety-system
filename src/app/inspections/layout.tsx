@@ -8,7 +8,7 @@ export default function InspectionsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen w-screen overflow-hidden">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden">
       {children}
     </div>
   );

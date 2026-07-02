@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LegalNoticeModal } from "@/components/LegalNoticeModal";
 import ModuleGuard from "@/components/ModuleGuard";
+import AppNavigation from "@/components/AppNavigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ModuleGuard>
+          <AppNavigation />
           {children}
           <LegalNoticeModal />
         </ModuleGuard>

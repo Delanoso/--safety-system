@@ -16,13 +16,13 @@ export default async function ViewAppointmentsPage() {
   });
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6 sm:space-y-10 min-w-0 max-w-full overflow-x-hidden">
       {/* Page Title */}
-      <h1 className="text-4xl font-bold text-[var(--foreground)]">
+      <h1 className="text-2xl sm:text-4xl font-bold text-[var(--foreground)]">
         Completed Appointments
       </h1>
 
-      <p className="text-[var(--foreground)] opacity-80 max-w-2xl">
+      <p className="text-[var(--foreground)] opacity-80 max-w-2xl text-sm sm:text-base">
         These documents are fully signed and completed. You can open any
         appointment to view its final generated document.
       </p>
@@ -30,7 +30,7 @@ export default async function ViewAppointmentsPage() {
       {/* TABLE WRAPPER */}
       <div
         className="
-          rounded-2xl p-6
+          rounded-2xl p-4 sm:p-6 min-w-0 max-w-full
           bg-[rgba(255,255,255,0.55)]
           dark:bg-[rgba(30,60,120,0.45)]
           backdrop-blur-xl
@@ -39,7 +39,8 @@ export default async function ViewAppointmentsPage() {
           shadow-xl
         "
       >
-        <table className="w-full text-left text-[var(--foreground)]">
+        <div className="table-scroll">
+        <table className="w-full text-left text-[var(--foreground)] text-sm">
           <thead>
             <tr className="border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.15)]">
               <th className="py-3">Appointment Type</th>
@@ -101,6 +102,7 @@ export default async function ViewAppointmentsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

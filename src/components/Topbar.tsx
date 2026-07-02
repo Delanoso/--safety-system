@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, Search, User, Menu } from 'lucide-react';
+import { Bell, Search, User, Menu, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -35,6 +35,21 @@ export default function Topbar() {
     router.push(`/dashboard/search?q=${encodeURIComponent(term)}`);
   }
 
+  function handleBack() {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments.length <= 1) {
+      router.push('/dashboard');
+      return;
+    }
+    router.push('/' + segments.slice(0, -1).join('/'));
+  }
+
+  const showBack = pathname !== '/dashboard' && pathname.split('/').filter(Boolean).length > 0;
+
   return (
     <header
       className="w-full min-h-14 h-auto sm:h-16 px-3 sm:px-6 py-2 shadow-sm border-b 
@@ -44,6 +59,17 @@ export default function Topbar() {
     >
       {/* LEFT: Menu (mobile) + Breadcrumbs */}
       <div className="flex items-center gap-2 min-w-0 flex-1 sm:flex-initial">
+        {showBack && (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="p-2 rounded-lg hover:opacity-70 transition shrink-0 lg:hidden
+                       bg-[var(--button-neutral-bg)] text-white"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={20} />
+          </button>
+        )}
         <button
           type="button"
           onClick={toggleMobileSidebar}

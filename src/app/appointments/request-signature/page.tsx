@@ -29,21 +29,22 @@ export default async function RequestSignatureListPage() {
   });
 
   return (
-    <div className="space-y-10">
-      <h1 className="text-4xl font-bold">Request Signatures</h1>
+    <div className="space-y-6 sm:space-y-10 min-w-0 max-w-full overflow-x-hidden">
+      <h1 className="text-2xl sm:text-4xl font-bold">Request Signatures</h1>
 
-      <p className="opacity-80 max-w-2xl">
+      <p className="opacity-80 max-w-2xl text-sm sm:text-base">
         These appointments still require one or more signatures.
       </p>
 
       <div
-        className="rounded-2xl p-6 backdrop-blur-xl shadow-xl"
+        className="rounded-2xl p-4 sm:p-6 backdrop-blur-xl shadow-xl min-w-0 max-w-full"
         style={{
           background: "var(--card-bg)",
           border: "1px solid var(--card-border)",
         }}
       >
-        <table className="w-full text-left">
+        <div className="table-scroll">
+        <table className="w-full text-left text-sm">
           <thead>
             <tr
               style={{
@@ -108,6 +109,7 @@ export default async function RequestSignatureListPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

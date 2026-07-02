@@ -56,7 +56,7 @@ export default function AppointmentsMenuPage() {
   };
 
   return (
-    <div className="min-h-screen w-full p-10">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden p-4 sm:p-10">
       <div className="max-w-4xl mx-auto space-y-10">
 
         {/* ⭐ TOP LEFT DASHBOARD BUTTON (IDENTICAL TO INCIDENTS PAGE) */}
