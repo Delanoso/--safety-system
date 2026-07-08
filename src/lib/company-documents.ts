@@ -14,3 +14,24 @@ export function companyDocumentMimeType(fileName: string): string | null {
   }
   return null;
 }
+
+export function isPdfDocument(fileName: string): boolean {
+  return fileName.toLowerCase().endsWith(".pdf");
+}
+
+export function resolveDocumentName(customName: string, fileName: string): string {
+  const trimmed = customName.trim();
+  if (!trimmed) return fileName;
+
+  const extMatch = fileName.match(/\.[^.]+$/);
+  const ext = extMatch ? extMatch[0] : "";
+  if (!ext) return trimmed;
+
+  if (trimmed.toLowerCase().endsWith(ext.toLowerCase())) return trimmed;
+  return `${trimmed}${ext}`;
+}
+
+export function contentDispositionFilename(name: string): string {
+  const ascii = name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "_");
+  return ascii || "document";
+}

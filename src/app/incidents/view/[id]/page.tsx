@@ -452,26 +452,57 @@ export default function IncidentViewerPage() {
           {incident.images?.length > 0 && (
             <>
               <Divider />
-              <Section title="Photos">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {incident.images.map((img) => (
-                    <div
-                      key={img.id}
-                      className="rounded-xl p-2"
-                      style={{
-                        background: "var(--card-bg)",
-                        border: "1px solid var(--card-border)",
-                      }}
-                    >
-                      <img
-                        src={img.url}
-                        alt="Incident photo"
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </Section>
+              {incident.images.filter((img) => img.category !== "relevant").length > 0 && (
+                <Section title="Photos">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {incident.images
+                      .filter((img) => img.category !== "relevant")
+                      .map((img) => (
+                        <div
+                          key={img.id}
+                          className="rounded-xl p-2"
+                          style={{
+                            background: "var(--card-bg)",
+                            border: "1px solid var(--card-border)",
+                          }}
+                        >
+                          <img
+                            src={img.url}
+                            alt="Incident photo"
+                            className="w-full h-48 object-contain rounded-lg"
+                          />
+                        </div>
+                      ))}
+                  </div>
+                </Section>
+              )}
+              {incident.images.filter((img) => img.category === "relevant").length > 0 && (
+                <Section title="Relevant Information">
+                  <div className="space-y-4">
+                    {incident.images
+                      .filter((img) => img.category === "relevant")
+                      .map((img) => (
+                        <div
+                          key={img.id}
+                          className="rounded-xl p-3"
+                          style={{
+                            background: "var(--card-bg)",
+                            border: "1px solid var(--card-border)",
+                          }}
+                        >
+                          <img
+                            src={img.url}
+                            alt="Relevant information"
+                            className="w-full max-h-64 object-contain rounded-lg mb-2"
+                          />
+                          {img.comment && (
+                            <p className="text-sm opacity-90">{img.comment}</p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </Section>
+              )}
             </>
           )}
 

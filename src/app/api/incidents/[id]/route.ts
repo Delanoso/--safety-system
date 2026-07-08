@@ -79,6 +79,12 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       );
     }
 
+    if (incident.images?.length) {
+      incident.images = [...incident.images].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+    }
+
     return NextResponse.json(incident);
   } catch (error) {
     console.error("GET INCIDENT ERROR:", error);

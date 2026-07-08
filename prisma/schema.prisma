@@ -144,9 +144,14 @@ model Incident {
 model IncidentImage {
   id         String   @id @default(cuid())
   url        String
+  /// "photo" = standard 4-per-page grid; "relevant" = half-page with comment
+  category   String   @default("photo")
+  comment    String?
   incident   Incident @relation(fields: [incidentId], references: [id])
   incidentId String
   createdAt  DateTime @default(now())
+
+  @@index([incidentId])
 }
 
 model CostAnalysis {

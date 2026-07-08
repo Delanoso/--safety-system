@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { uploadAndSaveIncidentImages } from "@/lib/incident-images";
 
 /* -----------------------------
    Collapsible Section (no reset)
@@ -60,8 +61,12 @@ export default function NearMissFormPage() {
   const [hazardOther, setHazardOther] = useState(false);
   const [hazardOtherText, setHazardOtherText] = useState("");
 
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<
+    Array<{ id: string; file: File; preview: string }>
+  >([]);
+  const [pendingRelevant, setPendingRelevant] = useState<
+    Array<{ id: string; file: File; preview: string; comment: string }>
+  >([]);
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -70,20 +75,41 @@ export default function NearMissFormPage() {
     setBasic((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files;
     if (!selected) return;
-
     const newFiles = Array.from(selected);
-    const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
-
-    setFiles((prev) => [...prev, ...newFiles]);
-    setPreviews((prev) => [...prev, ...newPreviews]);
+    setPendingPhotos((prev) => [
+      ...prev,
+      ...newFiles.map((file) => ({
+        id: `${file.name}-${file.lastModified}-${Math.random()}`,
+        file,
+        preview: URL.createObjectURL(file),
+      })),
+    ]);
+    e.target.value = "";
   };
 
-  const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setPreviews((prev) => prev.filter((_, i) => i !== index));
+  const handleRelevantChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files;
+    if (!selected) return;
+    const newFiles = Array.from(selected);
+    setPendingRelevant((prev) => [
+      ...prev,
+      ...newFiles.map((file) => ({
+        id: `${file.name}-${file.lastModified}-${Math.random()}`,
+        file,
+        preview: URL.createObjectURL(file),
+        comment: "",
+      })),
+    ]);
+    e.target.value = "";
+  };
+
+  const updateRelevantComment = (id: string, comment: string) => {
+    setPendingRelevant((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, comment } : item))
+    );
   };
 
   const derivedTitle = useMemo(() => {
@@ -140,21 +166,15 @@ export default function NearMissFormPage() {
       const incident = await incidentRes.json();
       const incidentId = incident.id as string;
 
-      if (files.length > 0) {
-        const formData = new FormData();
-        files.forEach((file) => formData.append("files", file));
-
-        const uploadRes = await fetch(`/api/incidents/${incidentId}/images`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const data = await uploadRes.json().catch(() => ({}));
-          throw new Error(
-            data.error || "Near miss saved, but image upload failed"
-          );
-        }
+      if (pendingPhotos.length > 0 || pendingRelevant.length > 0) {
+        await uploadAndSaveIncidentImages(incidentId, [
+          ...pendingPhotos.map(({ file }) => ({ file, category: "photo" as const })),
+          ...pendingRelevant.map(({ file, comment }) => ({
+            file,
+            category: "relevant" as const,
+            comment,
+          })),
+        ]);
       }
 
       setMessage("Saved successfully. Redirecting...");
@@ -272,44 +292,92 @@ export default function NearMissFormPage() {
               Upload Photos
             </label>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4 mb-4">
               <label className="inline-flex items-center px-4 py-2 bg-white/80 rounded-lg shadow cursor-pointer hover:bg-white">
-                <span className="text-sm font-medium text-black">
-                  Choose Files
-                </span>
+                <span className="text-sm font-medium text-black">Choose Files</span>
                 <input
                   type="file"
                   multiple
+                  accept="image/*"
                   className="hidden"
-                  onChange={handleFileChange}
+                  onChange={handlePhotoChange}
                 />
               </label>
-              <span className="text-sm text-black/70 dark:text-white/70">
-                {files.length === 0
-                  ? "No files chosen"
-                  : `${files.length} file(s) selected`}
-              </span>
+              <label className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg shadow cursor-pointer hover:bg-indigo-700">
+                <span className="text-sm font-medium">Relevant Information</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleRelevantChange}
+                />
+              </label>
             </div>
 
-            {previews.length > 0 && (
+            {pendingPhotos.length > 0 && (
               <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                {previews.map((src, index) => (
+                {pendingPhotos.map((item) => (
                   <div
-                    key={index}
+                    key={item.id}
                     className="relative rounded-xl overflow-hidden shadow-lg bg-black/10"
                   >
                     <img
-                      src={src}
-                      alt={`Upload preview ${index + 1}`}
-                      className="w-full h-32 object-cover"
+                      src={item.preview}
+                      alt="Upload preview"
+                      className="w-full h-32 object-contain"
                     />
                     <button
                       type="button"
-                      onClick={() => removeFile(index)}
+                      onClick={() =>
+                        setPendingPhotos((prev) =>
+                          prev.filter((p) => p.id !== item.id)
+                        )
+                      }
                       className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 shadow hover:bg-red-700"
                     >
                       <X size={14} />
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {pendingRelevant.length > 0 && (
+              <div className="mt-4 space-y-3">
+                {pendingRelevant.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-white/40 bg-white/50 p-3"
+                  >
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative sm:w-40 shrink-0">
+                        <img
+                          src={item.preview}
+                          alt="Relevant preview"
+                          className="w-full h-28 object-contain rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPendingRelevant((prev) =>
+                              prev.filter((p) => p.id !== item.id)
+                            )
+                          }
+                          className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 shadow hover:bg-red-700"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <textarea
+                        className="flex-1 p-2 rounded bg-white/80 text-sm min-h-[80px]"
+                        placeholder="Comment for this image"
+                        value={item.comment}
+                        onChange={(e) =>
+                          updateRelevantComment(item.id, e.target.value)
+                        }
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

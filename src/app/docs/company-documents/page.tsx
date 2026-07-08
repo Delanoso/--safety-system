@@ -43,6 +43,18 @@ function formatSize(size?: number | null) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isPdf(name: string) {
+  return name.toLowerCase().endsWith(".pdf");
+}
+
+function fileViewUrl(id: string) {
+  return `/api/company-documents/${id}/file?disposition=inline`;
+}
+
+function fileDownloadUrl(id: string) {
+  return `/api/company-documents/${id}/file?disposition=attachment`;
+}
+
 export default function CompanyDocumentsPage() {
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [documents, setDocuments] = useState<CompanyDoc[]>([]);
@@ -53,6 +65,9 @@ export default function CompanyDocumentsPage() {
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadDocumentName, setUploadDocumentName] = useState("");
+  const [renamingDocId, setRenamingDocId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   async function loadDivisions() {
     setLoading(true);
@@ -119,10 +134,16 @@ export default function CompanyDocumentsPage() {
     setUploading(true);
     setError(null);
 
-    for (const file of Array.from(fileList)) {
+    const files = Array.from(fileList);
+    const useCustomName = uploadDocumentName.trim() && files.length === 1;
+
+    for (const file of files) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("divisionId", selectedDivision);
+      if (useCustomName) {
+        formData.append("name", uploadDocumentName.trim());
+      }
 
       const res = await fetch("/api/company-documents", {
         method: "POST",
@@ -135,8 +156,32 @@ export default function CompanyDocumentsPage() {
     }
 
     setUploading(false);
+    setUploadDocumentName("");
     loadDocuments(selectedDivision);
     loadDivisions();
+  }
+
+  async function renameDocument(id: string) {
+    const name = renameValue.trim();
+    if (!name) {
+      setRenamingDocId(null);
+      return;
+    }
+
+    const res = await fetch(`/api/company-documents/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Could not rename document");
+    }
+
+    setRenamingDocId(null);
+    setRenameValue("");
+    if (selectedDivision) loadDocuments(selectedDivision);
   }
 
   async function deleteDocument(id: string) {
@@ -264,29 +309,44 @@ export default function CompanyDocumentsPage() {
 
           {selectedDivision && (
             <>
-              <div className="mb-4 flex flex-wrap items-center gap-3">
-                <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white cursor-pointer hover:bg-purple-700 transition">
-                  {uploading ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Upload size={16} />
-                  )}
-                  {uploading ? "Uploading..." : "Upload documents"}
+              <div className="mb-4 space-y-3">
+                <div>
+                  <label className="block text-xs text-white/70 mb-1">
+                    Document name (optional — used when uploading one file)
+                  </label>
                   <input
-                    type="file"
-                    multiple
-                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    className="hidden"
+                    className="w-full rounded-lg bg-white/15 border border-white/20 px-3 py-2 text-white placeholder:text-white/50"
+                    placeholder="e.g. Safety Policy 2026"
+                    value={uploadDocumentName}
+                    onChange={(e) => setUploadDocumentName(e.target.value)}
                     disabled={uploading}
-                    onChange={(e) => {
-                      uploadFiles(e.target.files);
-                      e.target.value = "";
-                    }}
                   />
-                </label>
-                <span className="text-xs text-white/60">
-                  PDF and Word (.doc, .docx) only
-                </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white cursor-pointer hover:bg-purple-700 transition">
+                    {uploading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Upload size={16} />
+                    )}
+                    {uploading ? "Uploading..." : "Upload documents"}
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      disabled={uploading}
+                      onChange={(e) => {
+                        uploadFiles(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <span className="text-xs text-white/60">
+                    PDF and Word (.doc, .docx) only
+                  </span>
+                </div>
               </div>
 
               <div
@@ -311,7 +371,33 @@ export default function CompanyDocumentsPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span>{fileIcon(doc.name)}</span>
-                    <span className="font-medium text-white truncate">{doc.name}</span>
+                    {renamingDocId === doc.id ? (
+                      <input
+                        autoFocus
+                        className="flex-1 min-w-0 rounded bg-white/20 px-2 py-1 text-white"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => renameDocument(doc.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") renameDocument(doc.id);
+                          if (e.key === "Escape") {
+                            setRenamingDocId(null);
+                            setRenameValue("");
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className="font-medium text-white truncate"
+                        title="Double-click to rename"
+                        onDoubleClick={() => {
+                          setRenamingDocId(doc.id);
+                          setRenameValue(doc.name);
+                        }}
+                      >
+                        {doc.name}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-white/60 mt-1">
                     {formatSize(doc.size)}
@@ -322,18 +408,19 @@ export default function CompanyDocumentsPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2 shrink-0">
+                  {isPdf(doc.name) && (
+                    <a
+                      href={fileViewUrl(doc.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
+                    >
+                      <ExternalLink size={14} />
+                      View PDF
+                    </a>
+                  )}
                   <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
-                  >
-                    <ExternalLink size={14} />
-                    View
-                  </a>
-                  <a
-                    href={doc.fileUrl}
-                    download={doc.name}
+                    href={fileDownloadUrl(doc.id)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm hover:bg-green-700"
                   >
                     <Download size={14} />

@@ -11,6 +11,11 @@ import {
   SHE_REP_INSPECTION_DOC_TITLE,
   SHE_REP_INSPECTION_INSTRUCTIONS,
 } from "@/lib/she-rep-inspection";
+import {
+  IncidentPhotoPages,
+  IncidentRelevantInfoPages,
+} from "@/components/pdf/IncidentImagePdfLayouts";
+import { sortIncidentImages } from "@/lib/incident-images";
 import appointmentTemplates from "@/app/appointments/templates";
 import {
   ContractorSafetyFilePdfTemplate,
@@ -634,6 +639,14 @@ async function IncidentTemplate({ id }: { id: string }) {
       )
     : incident.team ?? [];
 
+  const sortedImages = sortIncidentImages(incident.images ?? []);
+  const photoImages = sortedImages.filter(
+    (img) => (img.category ?? "photo") !== "relevant"
+  );
+  const relevantImages = sortedImages.filter(
+    (img) => img.category === "relevant"
+  );
+
   return (
     <PdfDocument
       title={
@@ -855,19 +868,15 @@ async function IncidentTemplate({ id }: { id: string }) {
         )}
       </PdfSection>
 
-      {incident.images.length > 0 && (
+      {photoImages.length > 0 && (
         <PdfSection title="Photos">
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            {incident.images.map((img) => (
-              <div key={img.id} style={{ width: "30%" }}>
-                <PdfImageBw
-                  src={img.url}
-                  alt="Incident"
-                  style={{ width: "100%", height: "auto", border: "1px solid #000" }}
-                />
-              </div>
-            ))}
-          </div>
+          <IncidentPhotoPages images={photoImages} />
+        </PdfSection>
+      )}
+
+      {relevantImages.length > 0 && (
+        <PdfSection title="Relevant Information">
+          <IncidentRelevantInfoPages images={relevantImages} />
         </PdfSection>
       )}
     </PdfDocument>

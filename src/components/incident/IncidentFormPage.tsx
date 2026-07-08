@@ -4,6 +4,12 @@ import React, { useState, useEffect } from "react";
 import PersonAutocomplete, { type CompanyPersonRecord } from "@/components/PersonAutocomplete";
 import { INCIDENT_TYPES, ACCIDENT_CATEGORIES, BODY_PARTS } from "@/lib/incident-constants";
 import TeamInvolvedEditor from "@/components/incident/TeamInvolvedEditor";
+import {
+  deleteIncidentImage,
+  uploadAndSaveIncidentImages,
+  type IncidentImageRecord,
+  type PendingIncidentImage,
+} from "@/lib/incident-images";
 
 /* -------------------------------------------------------
    OPTION ARRAYS (from official DS.009.05.06 document)
@@ -233,7 +239,14 @@ export default function IncidentFormPage({
   const [correctivePersonal, setCorrectivePersonal] = useState<string[]>([]);
   const [correctiveJob, setCorrectiveJob] = useState<string[]>([]);
   const [correctiveNotes, setCorrectiveNotes] = useState("");
-  const [images, setImages] = useState<File[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<
+    Array<{ id: string; file: File; preview: string }>
+  >([]);
+  const [pendingRelevant, setPendingRelevant] = useState<
+    Array<{ id: string; file: File; preview: string; comment: string }>
+  >([]);
+  const [existingImages, setExistingImages] = useState<IncidentImageRecord[]>([]);
+  const [removedImageIds, setRemovedImageIds] = useState<string[]>([]);
 
   const [saving, setSaving] = useState(false);
 
@@ -325,6 +338,10 @@ export default function IncidentFormPage({
         setCorrectivePersonal(actions.filter((a) => CORRECTIVE_PERSONAL.includes(a)));
         setCorrectiveJob(actions.filter((a) => CORRECTIVE_JOB.includes(a)));
         setCorrectiveNotes((parsed.correctiveNotes as string) || "");
+        setExistingImages(Array.isArray(data.images) ? data.images : []);
+        setRemovedImageIds([]);
+        setPendingPhotos([]);
+        setPendingRelevant([]);
       } catch (e) {
         alert(e instanceof Error ? e.message : "Failed to load incident");
       } finally {
@@ -346,10 +363,72 @@ export default function IncidentFormPage({
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    setImages((prev) => [...prev, ...Array.from(e.target.files!)]);
+    const selected = Array.from(e.target.files);
+    setPendingPhotos((prev) => [
+      ...prev,
+      ...selected.map((file) => ({
+        id: `${file.name}-${file.lastModified}-${Math.random()}`,
+        file,
+        preview: URL.createObjectURL(file),
+      })),
+    ]);
+    e.target.value = "";
   };
+
+  const handleRelevantUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const selected = Array.from(e.target.files);
+    setPendingRelevant((prev) => [
+      ...prev,
+      ...selected.map((file) => ({
+        id: `${file.name}-${file.lastModified}-${Math.random()}`,
+        file,
+        preview: URL.createObjectURL(file),
+        comment: "",
+      })),
+    ]);
+    e.target.value = "";
+  };
+
+  const updateRelevantComment = (id: string, comment: string) => {
+    setPendingRelevant((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, comment } : item))
+    );
+  };
+
+  const removePendingPhoto = (id: string) => {
+    setPendingPhotos((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const removePendingRelevant = (id: string) => {
+    setPendingRelevant((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const removeExistingImage = (id: string) => {
+    setExistingImages((prev) => prev.filter((img) => img.id !== id));
+    setRemovedImageIds((prev) => [...prev, id]);
+  };
+
+  async function persistImageChanges(targetIncidentId: string) {
+    for (const imageId of removedImageIds) {
+      await deleteIncidentImage(targetIncidentId, imageId);
+    }
+
+    const pending: PendingIncidentImage[] = [
+      ...pendingPhotos.map(({ file }) => ({ file, category: "photo" as const })),
+      ...pendingRelevant.map(({ file, comment }) => ({
+        file,
+        category: "relevant" as const,
+        comment,
+      })),
+    ];
+
+    if (pending.length > 0) {
+      await uploadAndSaveIncidentImages(targetIncidentId, pending);
+    }
+  }
 
   const updateAdditionalPerson = (
     index: number,
@@ -473,8 +552,23 @@ export default function IncidentFormPage({
           setSaving(false);
           return;
         }
+
+        try {
+          await persistImageChanges(editId);
+        } catch (imageErr) {
+          console.error(imageErr);
+          alert(
+            imageErr instanceof Error
+              ? imageErr.message
+              : "Incident saved, but image changes failed."
+          );
+          setSaving(false);
+          return;
+        }
+
         alert("Incident updated successfully.");
         setSaving(false);
+        window.location.href = "/incidents/list";
         return;
       }
       const res = await fetch("/api/incidents", {
@@ -491,39 +585,17 @@ export default function IncidentFormPage({
 
       const incident = await res.json();
 
-      // 2. Upload images to Cloudinary
-      if (images.length > 0) {
-        const formData = new FormData();
-        images.forEach((file) => formData.append("images", file));
-
-        const uploadRes = await fetch(
-          `/api/incidents/${incident.id}/upload-images`,
-          {
-            method: "POST",
-            body: formData,
-          }
+      try {
+        await persistImageChanges(incident.id);
+      } catch (imageErr) {
+        console.error(imageErr);
+        alert(
+          imageErr instanceof Error
+            ? imageErr.message
+            : "Incident saved, but image upload failed."
         );
-
-        if (!uploadRes.ok) {
-          const errData = await uploadRes.json().catch(() => ({}));
-          alert(
-            errData.error ||
-              "Incident saved, but image upload failed. Check that CLOUDINARY_* vars are set in .env.local."
-          );
-        } else {
-          const uploadJson = await uploadRes.json();
-
-          // 3. Save URLs into Prisma via dedicated /images route
-          const saveRes = await fetch(`/api/incidents/${incident.id}/images`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ images: uploadJson.urls }),
-          });
-          if (!saveRes.ok) {
-            const errData = await saveRes.json().catch(() => ({}));
-            console.error("Save images error:", errData.error);
-          }
-        }
+        setSaving(false);
+        return;
       }
 
       window.location.href = `/incidents/ongoing`;
@@ -1138,45 +1210,139 @@ export default function IncidentFormPage({
           open={openPhotos}
           onToggle={() => setOpenPhotos(!openPhotos)}
         >
-          <input
-            type="file"
-            multiple
-            onChange={handleImageUpload}
-            className="block w-full text-sm
-            file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0
-            file:text-xs file:font-semibold file:bg-emerald-600 file:text-white
-            hover:file:bg-emerald-700"
-          />
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <label className="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold cursor-pointer hover:bg-emerald-700">
+              Choose Files
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </label>
+            <label className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold cursor-pointer hover:bg-indigo-700">
+              Relevant Information
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleRelevantUpload}
+                className="hidden"
+              />
+            </label>
+            <span className="text-xs opacity-70">
+              Photos: 4 per PDF page. Relevant info: 2 per page with comments.
+            </span>
+          </div>
 
-          {images.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-              {images.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="relative rounded-xl overflow-hidden border"
-                  style={{
-                    background: "rgba(0,0,0,0.1)",
-                    borderColor: "var(--card-border)",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setImages(images.filter((_, i) => i !== idx))
-                    }
-                    className="absolute top-2 right-2 bg-red-600 text-white text-xs w-6 h-6
-                    rounded-full flex items-center justify-center shadow-md hover:bg-red-700"
+          {existingImages.length > 0 && (
+            <div className="mb-6 space-y-3">
+              <p className="text-sm font-semibold opacity-90">Uploaded images</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {existingImages.map((img) => (
+                  <div
+                    key={img.id}
+                    className="relative rounded-xl overflow-hidden border"
+                    style={{
+                      background: "rgba(0,0,0,0.1)",
+                      borderColor: "var(--card-border)",
+                    }}
                   >
-                    ✕
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(img.id)}
+                      className="absolute top-2 right-2 bg-red-600 text-white text-xs w-6 h-6
+                      rounded-full flex items-center justify-center shadow-md hover:bg-red-700 z-10"
+                    >
+                      ✕
+                    </button>
+                    <img
+                      src={img.url}
+                      alt="Uploaded incident"
+                      className="w-full h-40 object-contain bg-black/5"
+                    />
+                    <div className="px-2 py-1 text-xs opacity-80">
+                      {img.category === "relevant" ? "Relevant information" : "Photo"}
+                      {img.comment ? ` — ${img.comment}` : ""}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={`Upload ${idx + 1}`}
-                    className="w-full h-40 object-cover"
-                  />
-                </div>
-              ))}
+          {pendingPhotos.length > 0 && (
+            <div className="mb-6 space-y-3">
+              <p className="text-sm font-semibold opacity-90">New photos</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {pendingPhotos.map((item) => (
+                  <div
+                    key={item.id}
+                    className="relative rounded-xl overflow-hidden border"
+                    style={{
+                      background: "rgba(0,0,0,0.1)",
+                      borderColor: "var(--card-border)",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => removePendingPhoto(item.id)}
+                      className="absolute top-2 right-2 bg-red-600 text-white text-xs w-6 h-6
+                      rounded-full flex items-center justify-center shadow-md hover:bg-red-700"
+                    >
+                      ✕
+                    </button>
+                    <img
+                      src={item.preview}
+                      alt="New upload"
+                      className="w-full h-40 object-contain bg-black/5"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {pendingRelevant.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-sm font-semibold opacity-90">
+                New relevant information images
+              </p>
+              <div className="space-y-4">
+                {pendingRelevant.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border p-3"
+                    style={{ borderColor: "var(--card-border)" }}
+                  >
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative sm:w-48 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => removePendingRelevant(item.id)}
+                          className="absolute top-2 right-2 bg-red-600 text-white text-xs w-6 h-6
+                          rounded-full flex items-center justify-center shadow-md hover:bg-red-700 z-10"
+                        >
+                          ✕
+                        </button>
+                        <img
+                          src={item.preview}
+                          alt="Relevant upload"
+                          className="w-full h-32 object-contain rounded-lg bg-black/5"
+                        />
+                      </div>
+                      <textarea
+                        className="flex-1 px-3 py-2 rounded-lg border text-sm min-h-[80px]
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Comment for this image (shown on PDF)"
+                        value={item.comment}
+                        onChange={(e) => updateRelevantComment(item.id, e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </SectionCard>

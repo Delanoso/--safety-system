@@ -5,6 +5,8 @@ import { getCloudinary } from "@/lib/cloudinary";
 import {
   companyDocumentMimeType,
   isAllowedCompanyDocument,
+  isPdfDocument,
+  resolveDocumentName,
 } from "@/lib/company-documents";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +58,7 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const divisionId = formData.get("divisionId") as string | null;
+  const customName = (formData.get("name") as string | null) ?? "";
 
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "No file received" }, { status: 400 });
@@ -75,11 +78,12 @@ export async function POST(req: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
+    const documentName = resolveDocumentName(customName, file.name);
     const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
       const uploadStream = cloud.uploader.upload_stream(
         {
           folder: "company_documents",
-          resource_type: "raw",
+          resource_type: isPdfDocument(file.name) ? "auto" : "raw",
         },
         (error, uploadResult) => {
           if (error) reject(error);
@@ -92,9 +96,9 @@ export async function POST(req: Request) {
 
     const doc = await prisma.companyDocument.create({
       data: {
-        name: file.name,
+        name: documentName,
         fileUrl: result.secure_url,
-        mimeType: companyDocumentMimeType(file.name) ?? (file.type || null),
+        mimeType: companyDocumentMimeType(documentName) ?? (file.type || null),
         size: file.size,
         divisionId,
         uploadedById: current.id,
