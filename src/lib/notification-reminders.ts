@@ -458,66 +458,6 @@ export async function getRiskAssessmentReviewReminders(options: {
   }));
 }
 
-type SheActionItem = {
-  description?: string;
-  assignee?: string;
-  dueDate?: string;
-  done?: boolean;
-};
-
-export async function getSheMeetingActionReminders(options: {
-  companyId?: string;
-  now?: Date;
-  daysAhead?: number;
-  limit?: number;
-}): Promise<ReminderHit[]> {
-  const now = options.now ?? new Date();
-  const cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() + (options.daysAhead ?? 30));
-  const limit = options.limit ?? 15;
-
-  const meetings = await prisma.sHECommitteeMeeting.findMany({
-    where: options.companyId ? { companyId: options.companyId } : {},
-    orderBy: { date: "desc" },
-    take: 50,
-    select: { id: true, date: true, actionItems: true },
-  });
-
-  const hits: ReminderHit[] = [];
-
-  for (const meeting of meetings) {
-    if (!meeting.actionItems?.trim()) continue;
-    let items: SheActionItem[] = [];
-    try {
-      const parsed = JSON.parse(meeting.actionItems) as unknown;
-      items = Array.isArray(parsed) ? (parsed as SheActionItem[]) : [];
-    } catch {
-      continue;
-    }
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.done) continue;
-      if (!item.dueDate) continue;
-      const due = new Date(item.dueDate);
-      if (Number.isNaN(due.getTime()) || due > cutoff) continue;
-
-      hits.push({
-        id: `she-${meeting.id}-${i}`,
-        type: "she_action_due",
-        title: item.description?.slice(0, 120) || "Action item",
-        subtitle: item.assignee
-          ? `Assignee: ${item.assignee} · due ${due.toLocaleDateString()}`
-          : `Due ${due.toLocaleDateString()}`,
-        href: `/she-committee/meetings/${meeting.id}`,
-        date: due,
-      });
-    }
-  }
-
-  return hits.sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, limit);
-}
-
 /** Investigation team members who have not signed on open incidents. */
 export async function getUnsignedIncidentTeamReminders(opts: {
   companyId?: string;

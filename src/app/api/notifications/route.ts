@@ -9,7 +9,6 @@ import {
   getMaintenanceDueReminders,
   getPlannedDrillReminders,
   getRiskAssessmentReviewReminders,
-  getSheMeetingActionReminders,
   getUnsignedIncidentTeamReminders,
   getUnsignedToolboxAttendeeReminders,
   getVisitorsOnSiteReminders,
@@ -36,7 +35,6 @@ function emptyNotifications() {
     hazardousChemicalsNoSds: [],
     plannedDrills: [],
     riskAssessmentsReviewDue: [],
-    sheMeetingActionsDue: [],
     unsignedIncidentTeam: [],
     total: 0,
   };
@@ -197,7 +195,6 @@ export async function GET() {
       hazardousChemicalsNoSds,
       plannedDrills,
       riskAssessmentsReviewDue,
-      sheMeetingActionsDue,
       unsignedIncidentTeam,
     ] = await Promise.all([
       getMaintenanceDueReminders({
@@ -232,11 +229,6 @@ export async function GET() {
         daysAhead: DAYS_AHEAD,
       }),
       getRiskAssessmentReviewReminders({
-        companyId: companyFilter?.companyId,
-        now,
-        daysAhead: DAYS_AHEAD,
-      }),
-      getSheMeetingActionReminders({
         companyId: companyFilter?.companyId,
         now,
         daysAhead: DAYS_AHEAD,
@@ -317,7 +309,6 @@ export async function GET() {
       hazardousChemicalsNoSds,
       plannedDrills,
       riskAssessmentsReviewDue,
-      sheMeetingActionsDue,
       unsignedIncidentTeam,
       total:
         expiringCerts.length +
@@ -335,7 +326,6 @@ export async function GET() {
         hazardousChemicalsNoSds.length +
         plannedDrills.length +
         riskAssessmentsReviewDue.length +
-        sheMeetingActionsDue.length +
         unsignedIncidentTeam.length,
     });
   } catch (err) {
