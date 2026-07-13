@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Plus, ClipboardList, Trash2, ExternalLink } from "lucide-react";
+import { LayoutDashboard, Plus, ClipboardList, Trash2, ExternalLink, Pencil } from "lucide-react";
 
 type Assessment = {
   id: string;
@@ -134,17 +134,21 @@ export default function RiskAssessmentsPage() {
                         ? new Date(a.reviewDate).toLocaleDateString()
                         : "—"}
                     </td>
-                    <td className="p-4 flex gap-2">
-                      <Link
-                        href={
-                          a.status === "draft"
-                            ? `/risk-assessments/${a.id}/edit`
-                            : `/risk-assessments/${a.id}`
-                        }
-                        className="text-blue-600 hover:underline"
-                      >
-                        {a.status === "draft" ? "Edit" : "View"}
-                      </Link>
+                    <td className="p-4">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Link
+                          href={`/risk-assessments/${a.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          View
+                        </Link>
+                        <Link
+                          href={`/risk-assessments/${a.id}/edit`}
+                          className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                        >
+                          <Pencil size={14} />
+                          Edit
+                        </Link>
                       {a.fileUrl && (
                         <a
                           href={a.fileUrl}
@@ -162,6 +166,7 @@ export default function RiskAssessmentsPage() {
                       >
                         <Trash2 size={18} />
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))

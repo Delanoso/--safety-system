@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Plus, Trash2, ExternalLink, FileDown } from "lucide-react";
+import { LayoutDashboard, Plus, Trash2, ExternalLink, FileDown, Pencil } from "lucide-react";
 import { downloadPdf } from "@/lib/pdf-download";
 
 type Chemical = {
@@ -143,25 +143,35 @@ export default function HazardousChemicalsPage() {
                         : "—"}
                     </td>
                     <td className="p-4">{c.hazardClass ?? "—"}</td>
-                    <td className="p-4 flex gap-2">
-                      {c.sdsUrl && (
-                        <a
-                          href={c.sdsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                          title="SDS"
+                    <td className="p-4">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Link
+                          href={`/hazardous-chemicals/${c.id}/edit`}
+                          className="text-blue-600 hover:underline inline-flex items-center gap-1"
                         >
-                          <ExternalLink size={18} />
-                        </a>
-                      )}
-                      <button
-                        onClick={() => handleDelete(c.id)}
-                        className="text-red-600 hover:text-red-700"
-                        title="Remove"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                          <Pencil size={14} />
+                          Edit
+                        </Link>
+                        {c.sdsUrl && (
+                          <a
+                            href={c.sdsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                            title="View SDS"
+                          >
+                            <ExternalLink size={16} />
+                            SDS
+                          </a>
+                        )}
+                        <button
+                          onClick={() => handleDelete(c.id)}
+                          className="text-red-600 hover:text-red-700"
+                          title="Remove"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

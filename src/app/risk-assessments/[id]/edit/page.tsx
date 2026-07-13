@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import RiskAssessmentForm from "@/components/RiskAssessmentForm";
 import type { RiskAssessmentFormValues } from "@/components/RiskAssessmentForm";
+import { ViewSignatureBlock } from "@/components/ViewSignatureBlock";
 import {
   parseRiskAssessmentControls,
   serializeRiskAssessmentControls,
@@ -20,6 +21,8 @@ type Assessment = {
   reviewDate: string | null;
   controls: string | null;
   fileUrl: string | null;
+  signature: string | null;
+  signedAt: string | null;
   status: string;
 };
 
@@ -99,7 +102,7 @@ export default function EditRiskAssessmentPage() {
 
   async function handleSubmit(values: RiskAssessmentFormValues) {
     if (signAndSave && !canvasHasSignature()) {
-      throw new Error("Please draw your signature before signing and finalising.");
+      throw new Error("Please draw your signature before saving with a signature.");
     }
 
     const payload: Record<string, unknown> = {
@@ -130,17 +133,31 @@ export default function EditRiskAssessmentPage() {
 
   const signatureSection = (
     <div className="p-4 rounded-lg bg-white/90 border border-black/10 space-y-3">
+      {assessment?.signature && (
+        <div>
+          <p className="text-sm font-semibold text-black mb-2">Current signature</p>
+          <ViewSignatureBlock
+            label="Assessor"
+            signature={assessment.signature}
+            signedAt={assessment.signedAt}
+          />
+        </div>
+      )}
       <label className="flex items-center gap-2 cursor-pointer">
         <input
           type="checkbox"
           checked={signAndSave}
           onChange={(e) => setSignAndSave(e.target.checked)}
         />
-        <span className="font-semibold text-black">Sign and finalise</span>
+        <span className="font-semibold text-black">
+          {assessment?.signature ? "Replace signature" : "Add signature and finalise"}
+        </span>
       </label>
       {signAndSave && (
         <div className="space-y-2">
-          <p className="text-sm text-black/70">Draw your signature below, then click Sign &amp; save.</p>
+          <p className="text-sm text-black/70">
+            Draw your signature below, then save. This will mark the assessment as signed.
+          </p>
           <canvas
             ref={canvasRef}
             width={400}
@@ -183,33 +200,25 @@ export default function EditRiskAssessmentPage() {
     );
   }
 
-  if (assessment.status === "signed") {
-    return (
-      <div className="min-h-screen p-10 bg-gradient-to-r from-blue-200 to-purple-300">
-        <div className="max-w-3xl mx-auto">
-          <p className="text-black/70">This assessment has been signed. View-only.</p>
-          <Link href={`/risk-assessments/${id}`} className="text-blue-600 hover:underline mt-4 block">
-            View Assessment
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   const parsed = parseRiskAssessmentControls(assessment.controls);
   const isLegacy = parsed.type === "legacy";
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-10 bg-gradient-to-r from-blue-200 to-purple-300 min-w-0">
       <div className="max-w-3xl mx-auto space-y-8">
-        <Link href="/risk-assessments" className="text-black/70 hover:text-black text-sm">
-          ← Risk Assessments
-        </Link>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <Link href={`/risk-assessments/${id}`} className="text-black/70 hover:text-black text-sm">
+            ← View assessment
+          </Link>
+          <Link href="/risk-assessments" className="text-black/70 hover:text-black text-sm">
+            All assessments
+          </Link>
+        </div>
 
         <div>
           <h1 className="text-2xl sm:text-4xl font-bold text-black">Edit Risk Assessment</h1>
           <p className="text-black/70 mt-2 text-sm sm:text-base">
-            Review your assessment, sign if ready, then save.
+            Update hazards and details, or add a signature on the review step.
           </p>
         </div>
 
@@ -224,7 +233,7 @@ export default function EditRiskAssessmentPage() {
         ) : (
           <div className="p-4 sm:p-8 rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40">
             <RiskAssessmentForm
-              initialStep={3}
+              initialStep={1}
               initial={{
                 title: assessment.title,
                 department: assessment.department ?? "",
@@ -237,7 +246,7 @@ export default function EditRiskAssessmentPage() {
                 fileUrl: assessment.fileUrl ?? "",
                 controls: assessment.controls,
               }}
-              submitLabel={signAndSave ? "Sign & save" : "Save changes"}
+              submitLabel={signAndSave ? "Save with signature" : "Save changes"}
               step3Footer={signatureSection}
               onSubmit={handleSubmit}
             />

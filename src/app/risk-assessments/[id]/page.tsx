@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ExternalLink, FileDown, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ExternalLink, FileDown, Trash2, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 import { ViewSignatureBlock } from "@/components/ViewSignatureBlock";
 import { RiskAssessmentHazardsView } from "@/components/RiskAssessmentHazardsView";
 import { getPdfDownloadUrl } from "@/lib/pdf-download";
@@ -77,11 +77,13 @@ export default function RiskAssessmentViewPage() {
             ← Risk Assessments
           </Link>
           <div className="flex gap-2 flex-wrap">
-            {assessment.status === "draft" && (
-              <Link href={`/risk-assessments/${id}/edit`} className="button button-neutral flex items-center gap-2">
-                Edit
-              </Link>
-            )}
+            <Link
+              href={`/risk-assessments/${id}/edit`}
+              className="button button-neutral flex items-center gap-2"
+            >
+              <Pencil size={18} />
+              Edit
+            </Link>
             <a
               href={getPdfDownloadUrl("risk-assessment", id)}
               className="button button-pdf flex items-center gap-2"
