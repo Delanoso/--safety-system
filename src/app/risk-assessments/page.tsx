@@ -94,7 +94,7 @@ export default function RiskAssessmentsPage() {
           className="w-full max-w-md p-3 rounded-xl bg-white/70 border border-white/40"
         />
 
-        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-hidden">
+        <div className="rounded-2xl shadow-xl bg-white/60 backdrop-blur-xl border border-white/40 overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-black/10 bg-black/5">
@@ -134,17 +134,17 @@ export default function RiskAssessmentsPage() {
                         ? new Date(a.reviewDate).toLocaleDateString()
                         : "—"}
                     </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3 flex-wrap">
+                    <td className="p-4 min-w-[200px]">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Link
                           href={`/risk-assessments/${a.id}`}
-                          className="text-blue-600 hover:underline"
+                          className="button button-neutral text-sm py-1.5 px-3 inline-flex items-center gap-1"
                         >
                           View
                         </Link>
                         <Link
                           href={`/risk-assessments/${a.id}/edit`}
-                          className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                          className="button button-save text-sm py-1.5 px-3 inline-flex items-center gap-1"
                         >
                           <Pencil size={14} />
                           Edit
