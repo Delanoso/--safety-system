@@ -1,7 +1,14 @@
 import React from "react";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { PdfDocument, PdfImageBw, PdfSection, PdfSignatureBlock, pdfTableStyles } from "@/components/pdf/PdfDocument";
+import {
+  PdfDocument,
+  PdfImageBw,
+  PdfPrintSheet,
+  PdfSection,
+  PdfSignatureBlock,
+  pdfTableStyles,
+} from "@/components/pdf/PdfDocument";
 import { resolvePdfBranding } from "@/lib/pdf";
 import { parseRiskAssessmentControls } from "@/lib/risk-assessment";
 import {
@@ -12,10 +19,10 @@ import {
   SHE_REP_INSPECTION_INSTRUCTIONS,
 } from "@/lib/she-rep-inspection";
 import {
-  IncidentPhotoPages,
-  IncidentRelevantInfoPages,
+  IncidentPhotoPageGrid,
+  IncidentRelevantInfoPage,
 } from "@/components/pdf/IncidentImagePdfLayouts";
-import { sortIncidentImages } from "@/lib/incident-images";
+import { chunkArray, sortIncidentImages } from "@/lib/incident-images";
 import appointmentTemplates from "@/app/appointments/templates";
 import {
   ContractorSafetyFilePdfTemplate,
@@ -646,8 +653,12 @@ async function IncidentTemplate({ id }: { id: string }) {
   const relevantImages = sortedImages.filter(
     (img) => img.category === "relevant"
   );
+  const photoPages = chunkArray(photoImages, 4);
+  const relevantPages = chunkArray(relevantImages, 2);
+  const hasImageAppendix = photoPages.length > 0 || relevantPages.length > 0;
 
   return (
+    <>
     <PdfDocument
       title={
         incident.type === "accident"
@@ -666,6 +677,7 @@ async function IncidentTemplate({ id }: { id: string }) {
       logoUrl={logoUrl}
       companyName={companyName}
       entityId={id}
+      fillPage={!hasImageAppendix}
     >
       <div style={{ ...bodyTextStyle, marginBottom: 20 }}>
         <p><strong>Incident ID:</strong> {incident.id}</p>
@@ -868,18 +880,30 @@ async function IncidentTemplate({ id }: { id: string }) {
         )}
       </PdfSection>
 
-      {photoImages.length > 0 && (
-        <PdfSection title="Photos">
-          <IncidentPhotoPages images={photoImages} />
-        </PdfSection>
-      )}
-
-      {relevantImages.length > 0 && (
-        <PdfSection title="Relevant Information">
-          <IncidentRelevantInfoPages images={relevantImages} />
-        </PdfSection>
-      )}
     </PdfDocument>
+
+    {photoPages.map((pageImages, pageIndex) => (
+      <PdfPrintSheet
+        key={`photo-sheet-${pageIndex}`}
+        sectionTitle="Photos"
+        entityId={id}
+        isLast={pageIndex === photoPages.length - 1 && relevantPages.length === 0}
+      >
+        <IncidentPhotoPageGrid images={pageImages} pageIndex={pageIndex} />
+      </PdfPrintSheet>
+    ))}
+
+    {relevantPages.map((pageItems, pageIndex) => (
+      <PdfPrintSheet
+        key={`relevant-sheet-${pageIndex}`}
+        sectionTitle="Relevant Information"
+        entityId={id}
+        isLast={pageIndex === relevantPages.length - 1}
+      >
+        <IncidentRelevantInfoPage images={pageItems} pageIndex={pageIndex} />
+      </PdfPrintSheet>
+    ))}
+    </>
   );
 }
 

@@ -8,6 +8,146 @@ const PDF_TABLE_HEAD_BG = "#f0f9ff";
 const PDF_COMPANY_NAME_FONT =
   "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
 
+const PDF_PAGE_WIDTH = 210 * 3.78;
+/** Printable content height on A4 with 8mm top/bottom Puppeteer margins */
+const PDF_SHEET_HEIGHT = "281mm";
+
+const footerLabelStyles: React.CSSProperties = {
+  display: "block",
+  fontSize: 9,
+  fontWeight: 700,
+  color: PDF_HEADER_BLUE,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  marginBottom: 4,
+};
+
+const footerValueStyles: React.CSSProperties = {
+  display: "block",
+  fontSize: 10,
+  color: "#374151",
+  fontWeight: 500,
+};
+
+export function PdfFooter({
+  entityId,
+  documentNumber,
+}: {
+  entityId?: string | null;
+  documentNumber?: string | null;
+}) {
+  const footer = getPdfFooterMetadata({ entityId, documentNumber });
+  return (
+    <footer
+      style={{
+        marginTop: "auto",
+        paddingTop: 12,
+        paddingBottom: 0,
+        borderTop: `1px solid ${PDF_BORDER}`,
+        fontSize: 10,
+        color: "#6b7280",
+        letterSpacing: "0.01em",
+        lineHeight: 1.5,
+        flexShrink: 0,
+        background: "#ffffff",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 12,
+          textAlign: "center",
+        }}
+      >
+        <div>
+          <span style={footerLabelStyles}>Document No.</span>
+          <span style={footerValueStyles}>{footer.documentNumber}</span>
+        </div>
+        <div>
+          <span style={footerLabelStyles}>Created</span>
+          <span style={footerValueStyles}>{footer.createdDate}</span>
+        </div>
+        <div>
+          <span style={footerLabelStyles}>Review Date</span>
+          <span style={footerValueStyles}>{footer.reviewDate}</span>
+        </div>
+        <div>
+          <span style={footerLabelStyles}>PDF Date</span>
+          <span style={footerValueStyles}>{footer.pdfDate}</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/** Full A4 sheet for photo appendix pages — footer pinned to bottom, white background */
+export function PdfPrintSheet({
+  children,
+  sectionTitle,
+  entityId,
+  documentNumber,
+  isLast = false,
+}: {
+  children: React.ReactNode;
+  sectionTitle: string;
+  entityId?: string | null;
+  documentNumber?: string | null;
+  isLast?: boolean;
+}) {
+  return (
+    <div
+      className="pdf-print-sheet"
+      style={{
+        height: PDF_SHEET_HEIGHT,
+        minHeight: PDF_SHEET_HEIGHT,
+        maxHeight: PDF_SHEET_HEIGHT,
+        width: "100%",
+        maxWidth: PDF_PAGE_WIDTH,
+        margin: "0 auto",
+        padding: "12px 48px 8px",
+        boxSizing: "border-box",
+        background: "#ffffff",
+        color: PDF_TEXT,
+        fontFamily: "Georgia, 'Times New Roman', serif",
+        display: "flex",
+        flexDirection: "column",
+        pageBreakBefore: "always",
+        breakBefore: "page",
+        pageBreakAfter: isLast ? "auto" : "always",
+        breakAfter: isLast ? "auto" : "page",
+        overflow: "hidden",
+      }}
+    >
+      <h2
+        style={{
+          fontSize: 16,
+          margin: "0 0 10px",
+          paddingBottom: 8,
+          fontWeight: 700,
+          color: PDF_HEADER_BLUE,
+          borderBottom: `2px solid ${PDF_HEADER_BLUE}`,
+          flexShrink: 0,
+        }}
+      >
+        {sectionTitle}
+      </h2>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          background: "#ffffff",
+        }}
+      >
+        {children}
+      </div>
+      <PdfFooter entityId={entityId} documentNumber={documentNumber} />
+    </div>
+  );
+}
+
 /**
  * Shared PDF document wrapper.
  * Standard header: company logo + name (top left), then document title below.
@@ -20,6 +160,7 @@ export function PdfDocument({
   companyName,
   entityId,
   documentNumber,
+  fillPage = true,
 }: {
   children: React.ReactNode;
   title: string;
@@ -29,8 +170,9 @@ export function PdfDocument({
   companyName?: string | null;
   entityId?: string | null;
   documentNumber?: string | null;
+  /** When false, footer follows content (use for multi-part incident reports). */
+  fillPage?: boolean;
 }) {
-  const footer = getPdfFooterMetadata({ entityId, documentNumber });
   const baseStyles: React.CSSProperties = {
     margin: 0,
     padding: "12px 48px 0",
@@ -39,10 +181,10 @@ export function PdfDocument({
     color: PDF_TEXT,
     fontSize: 14,
     lineHeight: 1.6,
-    maxWidth: 210 * 3.78,
+    maxWidth: PDF_PAGE_WIDTH,
     marginLeft: "auto",
     marginRight: "auto",
-    minHeight: "100vh",
+    minHeight: fillPage ? "100vh" : "auto",
     display: "flex",
     flexDirection: "column",
     boxSizing: "border-box",
@@ -70,42 +212,6 @@ export function PdfDocument({
     color: "#1e293b",
     letterSpacing: "0.03em",
     lineHeight: 1.15,
-  };
-
-  const footerStyles: React.CSSProperties = {
-    marginTop: "auto",
-    paddingTop: 12,
-    paddingBottom: 0,
-    borderTop: `1px solid ${PDF_BORDER}`,
-    fontSize: 10,
-    color: "#6b7280",
-    letterSpacing: "0.01em",
-    lineHeight: 1.5,
-    flexShrink: 0,
-  };
-
-  const footerGridStyles: React.CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 12,
-    textAlign: "center",
-  };
-
-  const footerLabelStyles: React.CSSProperties = {
-    display: "block",
-    fontSize: 9,
-    fontWeight: 700,
-    color: PDF_HEADER_BLUE,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    marginBottom: 4,
-  };
-
-  const footerValueStyles: React.CSSProperties = {
-    display: "block",
-    fontSize: 10,
-    color: "#374151",
-    fontWeight: 500,
   };
 
   const showBranding = Boolean(logoUrl || companyName);
@@ -159,26 +265,7 @@ export function PdfDocument({
         {children}
       </main>
 
-      <footer style={footerStyles}>
-        <div style={footerGridStyles}>
-          <div>
-            <span style={footerLabelStyles}>Document No.</span>
-            <span style={footerValueStyles}>{footer.documentNumber}</span>
-          </div>
-          <div>
-            <span style={footerLabelStyles}>Created</span>
-            <span style={footerValueStyles}>{footer.createdDate}</span>
-          </div>
-          <div>
-            <span style={footerLabelStyles}>Review Date</span>
-            <span style={footerValueStyles}>{footer.reviewDate}</span>
-          </div>
-          <div>
-            <span style={footerLabelStyles}>PDF Date</span>
-            <span style={footerValueStyles}>{footer.pdfDate}</span>
-          </div>
-        </div>
-      </footer>
+      <PdfFooter entityId={entityId} documentNumber={documentNumber} />
     </div>
   );
 }

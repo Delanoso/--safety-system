@@ -18,6 +18,10 @@ export default function PdfRendererLayout({
       <style
         dangerouslySetInnerHTML={{
           __html: `
+            @page {
+              size: A4;
+              margin: 8mm;
+            }
             html, body {
               background: #ffffff !important;
               color: #111827 !important;
@@ -25,7 +29,13 @@ export default function PdfRendererLayout({
               padding: 0;
               overflow: visible !important;
               min-height: 100%;
-              height: 100%;
+              height: auto;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .pdf-page,
+            .pdf-print-sheet {
+              background: #ffffff !important;
             }
           `,
         }}
