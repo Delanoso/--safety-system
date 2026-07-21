@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { downloadPdf } from "@/lib/pdf-download";
 
 type Medical = {
@@ -142,6 +143,12 @@ export default function MedicalsListPage() {
                       >
                         {expandedId === m.id ? "Hide" : "View"}
                       </button>
+                      <Link
+                        href={`/medicals/edit/${m.id}`}
+                        className="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                      >
+                        Edit
+                      </Link>
                       <button
                         onClick={() => handleDelete(m.id)}
                         className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700"
